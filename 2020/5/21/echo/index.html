@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Echo</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Nova+Mono&display=swap");
+
+    body {
+      background-color: black;
+      font-family: "Nova Mono", monospace;
+      color: green;
+      line-height: 2.5;
+    }
+  </style>
+  <body>
+    <input type="text" />
+    <button type="button">
+      Echo
+    </button>
+  </body>
+  <script>
+    const input = document.getElementsByTagName("input")[0];
+    const button = document.getElementsByTagName("button")[0];
+    button.addEventListener("click", _ => {
+      location.href += "/" + input.value;
+    });
+  </script>
+</html>
