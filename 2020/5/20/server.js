@@ -9,7 +9,8 @@ const handlers = {
   },
   "interaction-sprites": require("./interaction-sprites/server.js"),
   "post-finder": require("./post-finder/server.js"),
-  "homepage": require("./homepage/server.js")
+  "homepage": require("./homepage/server.js"),
+  "dannys-page": require("./dannys-page/server.js")
 };
 
 module.exports = handlers;
