@@ -18,7 +18,7 @@ const getNestedDirs = async dir => {
 };
 
 module.exports = async () => {
-  const mayDays = await fs.readdir("2020/5");
+  const mayDays = await getNestedDirs("2020/5");
   const posts = await Promise.all(
     mayDays.map(async day => {
       const nestedDirs = await getNestedDirs(`2020/5/${day}`);
