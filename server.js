@@ -32,16 +32,16 @@ const handle404error = res => {
 
 const paths = {
   "/": handle16,
-  "/14/": handle14,
-  "/15/": handle15,
-  "/16/": handle16
+  "/2020/5/14/": handle14,
+  "/2020/5/15/": handle15,
+  "/2020/5/16/": handle16
 };
 
 for (const day of ["17", "19", "20"]) {
   const serverPath = `2020/5/${day}/server.js`;
   const handlers = requireFile(serverPath);
   for (const [key, value] of Object.entries(handlers)) {
-    const url = `/${day}/${key}`;
+    const url = `/2020/5/${day}/${key}`;
     paths[url] = value;
   }
 }

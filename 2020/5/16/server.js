@@ -4,7 +4,7 @@ const getMayFolders = require("../15/getMayFolders.js");
 
 const makeHtml = async () => {
   const mayFolders = await getMayFolders();
-  const links = mayFolders.map(day => ` <a href="/${day}/">${day}</a> `);
+  const links = mayFolders.map(day => ` <a href="/2020/5/${day}/">${day}</a> `);
   const page = links.join("");
   return page;
 };
