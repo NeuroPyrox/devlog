@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Danny's Page</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+      }
+      img {
+        position: fixed;
+        width: 100px;
+        height: 100px;
+      }
+    </style>
+  </head>
+  <body>
+    Pls don't judge. I was showing my immature little brother how to code.<br />I
+    like poo it is so yummy poop is so beautiful
+    <img
+      src="https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Ftse2.mm.bing.net%2Fth%3Fid%3DOIP.-dUFvXWDLB3PH-lfcP66LgHaHa%26pid%3DApi&f=1"
+      draggable="false"
+      style="width:300px;height:300px;left:100px;top:40px;"
+    />
+    <img
+      src="https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Ftse1.mm.bing.net%2Fth%3Fid%3DOIP.Eu3WuY9WvoYZao2A8nsAnQHaHa%26pid%3DApi&f=1"
+      draggable="false"
+      style="left:0px;top:200px;"
+    />
+
+    <p id="score">
+      0
+    </p>
+
+    <script>
+      const img = document.getElementsByTagName("img")[1];
+      const body = document.getElementsByTagName("body")[0];
+      const scoreElem = document.getElementById("score");
+
+      var score = 0;
+
+      sound = document.createElement("audio");
+      sound.src =
+        "https://drive.google.com/uc?export=download&id=1q2aeKxptuOzIqz6k46_a8z-00wHCJwIO";
+      sound.setAttribute("preload", "auto");
+      sound.setAttribute("controls", "none");
+      sound.style.display = "none";
+      document.body.appendChild(sound);
+
+      var dragging = false;
+
+      const moveImg = (x, y) => {
+        if (dragging) {
+          if (150 < x && x < 350 && 190 < y && y < 290) {
+            img.style.left = 0 + "px";
+            img.style.top = 200 + "px";
+            dragging = false;
+            sound.play();
+            score += 1;
+            scoreElem.innerHTML = score;
+          } else {
+            img.style.left = x - 50 + "px";
+            img.style.top = y - 50 + "px";
+          }
+        }
+      };
+
+      // Desktop
+      img.addEventListener("mousedown", _ => {
+        dragging = true;
+      });
+
+      body.addEventListener("mouseup", _ => {
+        dragging = false;
+      });
+      body.addEventListener("mouseleave", _ => {
+        dragging = false;
+      });
+      body.addEventListener("mousemove", event => {
+        moveImg(event.clientX, event.clientY);
+      });
+
+      // Mobile
+      img.addEventListener("touchstart", _ => {
+        dragging = true;
+      });
+      img.addEventListener("touchend", _ => {
+        dragging = false;
+      });
+      img.addEventListener("touchcanceled", _ => {
+        dragging = false;
+      });
+      img.addEventListener("touchmove", event => {
+        const touch = event.changedTouches[0];
+        moveImg(touch.pageX, touch.pageY);
+      });
+    </script>
+  </body>
+</html>
