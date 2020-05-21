@@ -10,6 +10,7 @@ const writeFile = requireFile("2020/5/17/writeFile.js");
 const paths = requireFile("2020/5/oldHandlers.js");
 paths["/"] = requireFile("2020/5/20/homepage/server.js");
 paths["/2020/5/21/progress-report"] = requireFile("2020/5/21/progress-report/server.js");
+paths["/2020/5/21/previous-blog"] = requireFile("2020/5/21/previous-blog/server.js");
 
 const handle404error = res => {
   res.writeHead(404, { "Content-Type": "text/html" });
