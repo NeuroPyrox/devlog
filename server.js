@@ -9,6 +9,7 @@ const writeFile = requireFile("2020/5/17/writeFile.js");
 
 const paths = requireFile("2020/5/oldHandlers.js");
 paths["/"] = requireFile("2020/5/20/homepage/server.js");
+
 for (const page of ["progress-report", "previous-blog", "file-structure"]) {
   const urlPath = `/2020/5/21/${page}`;
   const filePath = `2020/5/21/${page}/server.js`;
