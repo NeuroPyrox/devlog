@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Interaction Sprites</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <style>
+    .triangle {
+      position: relative;
+      text-align: left;
+      margin: 100px;
+    }
+    .triangle:before,
+    .triangle:after {
+      content: "";
+      position: absolute;
+      background-color: inherit;
+      border-top-right-radius: 50%;
+    }
+    .triangle,
+    .triangle:before,
+    .triangle:after {
+      width: 100px;
+      height: 100px;
+      border: 1px solid black;
+      border-style: solid solid hidden hidden;
+    }
+
+    .triangle {
+      transform: rotate(-60deg) skewX(-30deg) scale(1, 0.866);
+    }
+    .triangle:before {
+      transform: rotate(-135deg) skewX(-45deg) scale(1.414, 0.707)
+        translate(0, -50%) translate(1px, 1px);
+    }
+    .triangle:after {
+      transform: rotate(135deg) skewY(-45deg) scale(0.707, 1.414) translate(50%) translate(-1px, 0px);
+    }
+    
+    .solid,
+    .solid:before,
+    .solid:after {
+      border-color: gray;
+      background-color: gray;
+    }
+  </style>
+  <body>
+    <div class="triangle"></div>
+    <div class="triangle solid"></div>
+    αδγ
+  </body>
+</html>
