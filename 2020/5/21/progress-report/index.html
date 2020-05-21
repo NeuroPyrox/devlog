@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Progress Report</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Nova+Mono&display=swap");
+
+    body {
+      background-color: black;
+      font-family: "Nova Mono", monospace;
+      color: #0F0;
+      line-height: 2.5;
+    }
+
+    a:link,
+    a:visited {
+      color: #FF0;
+    }
+  </style>
+  <body>
+    <h1>
+      Progress Report
+    </h1>
+    <h2>
+      21 May 2020
+    </h2>
+    <p>
+      After a lot of thinking over the past week, I've concluded that I
+      understand neither interaction nets nor agent-based programming well
+      enough to use them in my AI project. I need to understand them in order to
+      make a DSL where processes require some computational currency as input.
+      I'm encountering a chicken and egg type of problem with making such a DSL:
+      how do you distribute the computational currency to initialize processes
+      if you need a distributor process to already be running? Obviously this
+      isn't the right question to ask, but I haven't been able to come up with
+      any better questions all week. If I understood interaction nets and
+      agent-based programming better, I probably would be able to ask the right
+      question.
+      <br /><br />
+      So how do I go about building my understanding? I already understand the
+      theoretical parts of it. The part I'm failing at is implementation. In
+      fact, I have zero idea how I would go about writing any sufficiently
+      complicated program with interaction nets or agents. What I ought to do
+      then is to practice writing programs with them so that I can build
+      intuition that will carry over to my AI.
+      <br /><br />
+      I've already worked a bit toward making a visual interface for interaction
+      nets <a href="/2020/5/20/interaction-sprites">here</a> and ASTs
+      <a href="/2020/5/17/pills">here</a>. They're quite basic so far, but
+      that's only because I haven't gotten into the flow yet. A few weeks of
+      consistent daily progress and I'll be pumping out code in no time. My plan
+      is to make a visual programming language with interaction nets that
+      completely replaces JavaScript in my workflow, then I can explore ways of
+      making functional representations of it and of adding a computational
+      currency. Ideally, I want a functional representation that's isomorphic to
+      every deadlock-free interaction net. <br /><br />
+      I'm really excited to be writing actual code again instead of just
+      thinking all day because this will also build my developer portfolio for
+      getting a programming job. I kind of hope I remain stumped so that I have
+      more reasons to practice coding and people stop viewing me as unproductive
+      for staring off into space all day.
+    </p>
+  </body>
+</html>

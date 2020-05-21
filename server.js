@@ -46,6 +46,8 @@ for (const day of ["17", "19", "20"]) {
   }
 }
 
+paths["/2020/5/21/progress-report"] = requireFile("2020/5/21/progress-report/server.js");
+
 http
   .createServer((req, res) => {
     const handler = paths[req.url];
