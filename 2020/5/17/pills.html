@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Pills</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Nova+Mono&display=swap");
+      body {
+        background-color: black;
+        color: #0C0;
+        font-family: "Nova Mono", monospace;
+      }
+
+      .expr {
+        border: 1px solid #0C0;
+        border-radius: 13px;
+        padding: 6px;
+        margin: 2px;
+        width: min-content;
+        font-size: 12px;
+        background-color: black;
+      }
+
+      .box {
+        position: relative;
+      }
+
+      .circle {
+        height: 8px;
+        width: 8px;
+        border: 1px solid #0C0;
+        border-radius: 50%;
+        position: absolute;
+        bottom: -7px;
+        right: -7px;
+        background-color: #040;
+      }
+
+      p {
+        margin: 0;
+        width: max-content;
+      }
+
+      #clickme {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        border: 1px solid #0C0;
+        border-radius: 13px;
+        padding: 6px;
+        margin: 2px;
+        width: min-content;
+        font-size: 12px;
+      }
+
+      #clickme:hover {
+        background-color: #030;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="expr">
+      HELLO!!!
+      <div class="expr">
+        HELLO
+        <div class="expr">Hey</div>
+        <div class="expr">Hi</div>
+        <div class="expr">hi</div>
+      </div>
+      <div class="expr">HeLLo</div>
+      <div class="box">
+        <div class="circle" onclick="alert('test')"></div>
+      </div>
+    </div>
+    <div class="expr">Hello</div>
+    <div id="clickme">
+      <p>
+        Click me
+      </p>
+      <div class="expr">Hey</div>
+      <div class="expr">Hi</div>
+      <div class="expr">hi</div>
+    </div>
+    
+    <script>
+      const elem = document.getElementById("clickme");
+      elem.addEventListener("click", _ => {
+        if (elem.style["flex-direction"] === "row") {
+          elem.style["flex-direction"] = "column";
+        } else {
+          elem.style["flex-direction"] = "row";
+        }
+      });
+    </script>
+  </body>
+</html>
