@@ -9,7 +9,13 @@ const writeFile = requireFile("2020/5/17/writeFile.js");
 
 const paths = requireFile("2020/5/oldHandlers.js");
 paths["/"] = requireFile("2020/5/20/homepage/server.js");
-for (const page of ["progress-report", "previous-blog", "file-structure", "echo"]) {
+for (const page of [
+  "progress-report",
+  "previous-blog",
+  "file-structure",
+  "echo",
+  "graph"
+]) {
   const urlPath = `/2020/5/21/${page}`;
   const filePath = `2020/5/21/${page}/server.js`;
   paths[urlPath] = requireFile(filePath);
@@ -29,7 +35,7 @@ const handleEcho = (req, res) => {
   });
   res.write(echo);
   res.end();
-}
+};
 
 http
   .createServer((req, res) => {
@@ -37,7 +43,7 @@ http
       handleEcho(req, res);
       return;
     }
-  
+
     const handler = paths[req.url];
     if (handler === undefined) {
       handle404error(res);
