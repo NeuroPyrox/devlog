@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Nested Hover</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Nova+Mono&display=swap");
+
+    body {
+      background-color: black;
+      font-family: "Nova Mono", monospace;
+      color: #0F0;
+    }
+
+    #function {
+      border-radius: 20px;
+      padding: 10px;
+    }
+
+    #argument {
+      background-color: black;
+      border-radius: 20px;
+      padding: 10px;
+    }
+  </style>
+  <body>
+    <div id="function">
+      Function
+      <div id="argument">
+        Argument
+      </div>
+    </div>
+    <script>
+      const functionElem = document.getElementById("function");
+      const argumentElem = document.getElementById("argument");
+
+      const setColor = (elem, color) => {
+        elem.style["background-color"] = color;
+      };
+
+      functionElem.addEventListener("mouseenter", _ => {
+        setColor(functionElem, "#040");
+      });
+      functionElem.addEventListener("mouseleave", _ => {
+        setColor(functionElem, "black");
+      });
+
+      argumentElem.addEventListener("mouseenter", _ => {
+        setColor(functionElem, "black");
+        setColor(argumentElem, "#040");
+      });
+      argumentElem.addEventListener("mouseleave", _ => {
+        setColor(argumentElem, "black");
+        setColor(functionElem, "#040");
+      });
+    </script>
+  </body>
+</html>
