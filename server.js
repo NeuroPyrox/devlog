@@ -5,7 +5,6 @@ const fs = require("fs");
 const path = require("path");
 
 const requireFile = filePath => require(path.join(__dirname, filePath));
-const writeFile = requireFile("2020/5/17/writeFile.js");
 
 const paths = requireFile("2020/5/oldHandlers.js");
 paths["/"] = requireFile("2020/5/20/homepage/server.js");
@@ -18,6 +17,13 @@ for (const page of [
 ]) {
   const urlPath = `/2020/5/21/${page}`;
   const filePath = `2020/5/21/${page}/server.js`;
+  paths[urlPath] = requireFile(filePath);
+}
+for (const page of [
+  "nested-hover"
+]) {
+  const urlPath = `/2020/5/22/${page}`;
+  const filePath = `2020/5/22/${page}/server.js`;
   paths[urlPath] = requireFile(filePath);
 }
 
