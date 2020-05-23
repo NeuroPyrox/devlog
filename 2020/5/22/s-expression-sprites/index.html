@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>S Expression Sprites</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Nova+Mono&display=swap");
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
+      background-color: black;
+      font-family: "Nova Mono", monospace;
+      color: #0F0;
+    }
+
+    .container {
+      background-color: #040;
+      position: fixed;
+    }
+
+    .gap {
+      background-color: black;
+      height: 32px;
+    }
+    
+    .container,
+    .gap {
+      border-radius: 15px;
+      min-width: 32px;
+    }
+
+    .container,
+    .gap,
+    p {
+      margin: 5px;
+    }
+  </style>
+  <body>
+    <script>
+      
+      const windowWidth =
+        window.innerWidth ||
+        document.documentElement.clientWidth ||
+        document.body.clientWidth;
+
+      const windowHeight =
+        window.innerHeight ||
+        document.documentElement.clientHeight ||
+        document.body.clientHeight;
+      
+      const containers = {A: 2, B: 2, C: 1, D: 1, E: 1, F: 0, G: 0, H: 0, I: 0};
+      
+      const createContainer = (name, numGaps) => {
+        const container = document.createElement("div");
+        container.classList.add("container");
+        
+        const nameElem = document.createElement("p");
+        nameElem.innerHTML = name;
+        container.appendChild(nameElem);
+        
+        for (var i = 0; i < numGaps; i++) {
+          const gap = document.createElement("div");
+          gap.classList.add("gap");
+          container.appendChild(gap);
+        }
+        
+        return container;
+      }
+      
+      const randomizeContainerLocation = container => {
+        container.style.left = (Math.random() * (windowWidth - container.clientWidth)) + "px";
+        container.style.top = (Math.random() * (windowHeight - container.clientHeight)) + "px";
+      }
+      
+      const addContainer = (name, numGaps) => {
+        const container = createContainer(name, numGaps);
+        document.body.appendChild(container);
+        randomizeContainerLocation(container);
+      }
+      
+      for (const [name, numGaps] of Object.entries(containers)) {
+        addContainer(name, numGaps);
+      }
+    </script>
+  </body>
+</html>
