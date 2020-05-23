@@ -20,7 +20,7 @@ for (const page of [
   paths[urlPath] = requireFile(filePath);
 }
 for (const page of [
-  "nested-hover"
+  "nested-hover", "s-expression-sprites"
 ]) {
   const urlPath = `/2020/5/22/${page}`;
   const filePath = `2020/5/22/${page}/server.js`;
