@@ -8,22 +8,21 @@ const requireFile = filePath => require(path.join(__dirname, filePath));
 
 const paths = requireFile("2020/5/oldHandlers.js");
 paths["/"] = requireFile("2020/5/20/homepage/server.js");
-for (const page of [
-  "progress-report",
-  "previous-blog",
-  "file-structure",
-  "echo",
-  "graph"
-]) {
-  const urlPath = `/2020/5/21/${page}`;
-  const filePath = `2020/5/21/${page}/server.js`;
-  paths[urlPath] = requireFile(filePath);
-}
-for (const page of [
-  "nested-hover", "s-expression-sprites"
-]) {
-  const urlPath = `/2020/5/22/${page}`;
-  const filePath = `2020/5/22/${page}/server.js`;
+
+const directory = [
+  [21, "progress-report"],
+  [21, "previous-blog"],
+  [21, "file-structure"],
+  [21, "echo"],
+  [21, "graph"],
+  [22, "nested-hover"],
+  [22, "s-expression-sprites"],
+  [27, "progress-report"]
+];
+
+for (const [day, page] of directory) {
+  const urlPath = `/2020/5/${day}/${page}`;
+  const filePath = `2020/5/${day}/${page}/server.js`;
   paths[urlPath] = requireFile(filePath);
 }
 
