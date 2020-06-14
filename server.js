@@ -56,6 +56,9 @@ const handleEcho = (req, res) => {
 
 const main = async () => {
   await addHandlers();
+  paths["/2020/6/14/didnt-solve-agi"] = requireFile(
+    `2020/6/14/didnt-solve-agi/server.js`
+  );
   http
     .createServer((req, res) => {
       // WARNING: this if statement is hardcoded instead of general
