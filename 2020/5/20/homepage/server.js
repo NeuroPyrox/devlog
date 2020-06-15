@@ -1,6 +1,6 @@
 "use strict";
 
-const getMayPosts = require("../post-finder/getMayPosts.js");
+const getPostLocations = require("../../getPostLocations.js");
 
 const templateHtml = listHtml => `
   <!DOCTYPE html>
@@ -70,40 +70,20 @@ const makeItem = (day, title, href) => `
   </a>
 `;
 
-const oldPosts = [
-  { day: 20, title: "20th", href: "/2020/5/20/" },
-  { day: 19, title: "19th", href: "/2020/5/19/" },
-  { day: 17, title: "17th", href: "/2020/5/17/" },
-  { day: 17, title: "Pills", href: "/2020/5/17/pills" },
-  { day: 17, title: "Drag N Drop", href: "/2020/5/17/dragNDrop" },
-  { day: 17, title: "Mobile Drag N Drop", href: "/2020/5/17/mobileDragNDrop" },
-  { day: 17, title: "Follow Mouse", href: "/2020/5/17/followMouse" },
-  { day: 16, title: "Simple Homepage", href: "/2020/5/16/" },
-  { day: 15, title: "May Folders", href: "/2020/5/15/" },
-  { day: 14, title: "Hello World", href: "/2020/5/14/" }
-];
-
-const makeHtml = async () => {
-  const mayPosts = (await getMayPosts())
-    .map(({ day, title }) => ({
-      day: day,
-      title: title,
-      href: `/2020/5/${day}/${title}`
-    }))
-    .reverse();
-  const posts = mayPosts.concat(oldPosts);
-  const listHtml = posts
-    .map(({ day, title, href }) => makeItem(day, title, href))
+const makeHtml = async mayUrl => {
+  const listHtml = (await getPostLocations())
+    .map(({ day, title, href }) => makeItem(day, title, `${mayUrl}/${href}`))
     .join();
   return templateHtml(listHtml);
 };
 
-const html = makeHtml();
-
-module.exports = async res => {
-  res.writeHead(200, {
-    "Content-Type": "text/html"
-  });
-  res.write(await html);
-  res.end();
+module.exports = mayUrl => {
+  const html = makeHtml(mayUrl);
+  return async res => {
+    res.writeHead(200, {
+      "Content-Type": "text/html"
+    });
+    res.write(await html);
+    res.end();
+  };
 };

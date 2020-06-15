@@ -1,5 +1,7 @@
 "use strict";
 
+// HARDCODED: this whole file
+
 const path = require("path");
 
 const requireFile = filePath => require(path.join(__dirname, filePath));
@@ -22,19 +24,21 @@ const handle15 = async res => {
 
 const handle16 = requireFile("16/server.js");
 
-const paths = {
-  "/2020/5/14/": handle14,
-  "/2020/5/15/": handle15,
-  "/2020/5/16/": handle16
-};
-
-for (const day of ["17", "19", "20"]) {
-  const serverPath = `${day}/server.js`;
-  const handlers = requireFile(serverPath);
-  for (const [key, value] of Object.entries(handlers)) {
-    const url = `/2020/5/${day}/${key}`;
-    paths[url] = value;
+module.exports = baseUrl => {
+  const paths = {};
+  paths[`${baseUrl}/14/`] = handle14;
+  paths[`${baseUrl}/15/`] = handle15;
+  paths[`${baseUrl}/16/`] = handle16(baseUrl);
+  
+  for (const day of ["17", "19", "20"]) {
+    const serverPath = `${day}/server.js`;
+    const handlers = requireFile(serverPath);
+    for (const [key, value] of Object.entries(handlers)) {
+      const url = `${baseUrl}/${day}/${key}`;
+      paths[url] = value;
+    }
   }
-}
 
-module.exports = paths;
+  paths[`${baseUrl}/20/homepage`] = require("./20/homepage/server.js")(baseUrl);
+  return paths;
+};
