@@ -3,11 +3,15 @@
 const http = require("http");
 
 const mayUrl = "/2020/5";
+const juneUrl = "/2020/6";
+
+const mayPosts = require("./2020/5/getPostLocations.js")();
 
 // HARDCODED
 const paths = {
   "/": require("./2020/5/20/homepage/server.js")(mayUrl),
-  "/2020/6/14/didnt-solve-agi": require("./2020/6/14/didnt-solve-agi/server.js")
+  "/2020/6/14/didnt-solve-agi": require("./2020/6/14/didnt-solve-agi/server.js"),
+  "/2020/6/15/post-locations": require("./2020/6/15/post-locations/server.js")(juneUrl, mayPosts, mayUrl)
 }
 
 const handle404error = res => {
