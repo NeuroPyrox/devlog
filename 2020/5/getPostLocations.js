@@ -1,5 +1,7 @@
 "use strict";
 
+// We differentiate post locations from http handlers in May because some posts have more than one http handler
+
 const getMayPosts = require("./20/post-finder/getMayPosts.js");
 
 const oldPosts = [
