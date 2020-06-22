@@ -18,6 +18,7 @@ const getNestedDirs = async dir => {
 };
 
 module.exports = async () => {
+  // HARDCODED: "2020/5"
   const mayDays = await getNestedDirs("2020/5");
   const posts = await Promise.all(
     mayDays.map(async day => {
