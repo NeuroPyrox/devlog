@@ -38,6 +38,12 @@ const main = async () => {
         handleMayUrl(req, res);
         return;
       }
+    
+      // HARDCODED: this if statement
+      if (req.url === "/2020/6/27/echo-ip") {
+        require("./2020/6/27/echo-ip/server.js")(req, res);
+        return;
+      }
 
       const handler = paths[req.url];
       if (handler === undefined) {
