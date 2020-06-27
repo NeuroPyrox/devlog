@@ -1,18 +1,6 @@
 "use strict";
 
-// HARDCODED
-const getNewPosts = monthUrl => [
-  {
-    date: "15 June 2020",
-    title: "Post Locations",
-    href: `${monthUrl}/15/post-locations`
-  },
-  {
-    date: "14 June 2020",
-    title: "Didn't Solve AGI",
-    href: `${monthUrl}/14/didnt-solve-agi`
-  }
-];
+const getJunePosts = require("../get-june-posts/getJunePosts.js");
 
 // HARDCODED
 const oldBlog = [
@@ -48,19 +36,15 @@ const oldBlog = [
   }
 ];
 
-module.exports = (juneUrl, mayPosts, mayUrl) => async res => {
+module.exports = async (juneUrl, mayPosts, mayUrl) => {
   mayPosts = (await mayPosts).map(({ day, title, href }) => ({
     date: `${day} May 2020`,
     title: title,
     href: `${mayUrl}/${href}`
   }));
-  const posts = getNewPosts(juneUrl)
+  const posts = (await getJunePosts(juneUrl))
+    .reverse()
     .concat(mayPosts)
     .concat(oldBlog);
-
-  res.writeHead(200, {
-    "Content-Type": "application/json"
-  });
-  res.write(JSON.stringify(posts));
-  res.end();
+  return posts;
 };

@@ -13,7 +13,8 @@ const paths = {
   "/2020/6/14/didnt-solve-agi": require("./2020/6/14/didnt-solve-agi/server.js"),
   "/2020/6/15/post-locations": require("./2020/6/15/post-locations/server.js")(juneUrl, mayPosts, mayUrl),
   "/2020/6/22/get-june-days": require("./2020/6/22/get-june-days/server.js"),
-  "/2020/6/27/get-june-posts": require("./2020/6/27/get-june-posts/server.js")(juneUrl)
+  "/2020/6/27/get-june-posts": require("./2020/6/27/get-june-posts/server.js")(juneUrl),
+  "/2020/6/27/get-posts": require("./2020/6/27/get-posts/server.js")(juneUrl, mayPosts, mayUrl)
 }
 
 const handle404error = res => {
