@@ -17,7 +17,8 @@ const paths = {
   "/2020/6/22/get-june-days": require("./2020/6/22/get-june-days/server.js"),
   "/2020/6/27/get-june-posts": require("./2020/6/27/get-june-posts/server.js")(juneUrl),
   "/2020/6/27/get-posts": require("./2020/6/27/get-posts/server.js")(juneUrl, mayPosts, mayUrl),
-  "/2020/6/27/homepage": homepage
+  "/2020/6/27/homepage": homepage,
+  "/2020/6/28/actor-rules": require("./2020/6/28/actor-rules/server.js"),
 }
 
 const handle404error = res => {
