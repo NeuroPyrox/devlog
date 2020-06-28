@@ -2,7 +2,7 @@
 
 const fs = require("fs").promises;
 
-module.exports = async res => {
+module.exports = _ => async res => {
   const days = await fs.readdir(__dirname + "/../..");
   res.writeHead(200, {
     "Content-Type": "application/json"

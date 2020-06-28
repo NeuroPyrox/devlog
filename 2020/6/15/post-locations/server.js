@@ -48,7 +48,7 @@ const oldBlog = [
   }
 ];
 
-module.exports = (juneUrl, mayPosts, mayUrl) => async res => {
+module.exports = ({juneUrl, mayPosts, mayUrl}) => async res => {
   mayPosts = (await mayPosts).map(({ day, title, href }) => ({
     date: `${day} May 2020`,
     title: title,
