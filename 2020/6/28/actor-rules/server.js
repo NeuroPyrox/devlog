@@ -89,7 +89,7 @@ const genActorSystem = () => {
   return behaviorRules.map((rules, index) => ({size: getNumBehaviorRefs(index), rules: rules}));
 }
 
-module.exports = res => {
+module.exports = _ => res => {
   res.writeHead(200, {
     "Content-Type": "application/json"
   });
