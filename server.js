@@ -48,18 +48,18 @@ const main = async () => {
     .createServer((req, res) => {
       // HARDCODED: this if statement
       if (isMayUrl(req.url)) {
-        handleMayUrl(req, res);
-        return;
+        return handleMayUrl(req, res);
       }
 
       // HARDCODED: these if statements
       if (req.url === "/2020/6/27/echo-ip") {
-        require("./2020/6/27/echo-ip/server.js")(juneContext)(req, res);
-        return;
+        return require("./2020/6/27/echo-ip/server.js")(juneContext)(req, res);
       }
       if (req.url.startsWith("/2020/6/29/url-tail")) {
-        require("./2020/6/29/url-tail/server.js")(juneContext)(req, res);
-        return;
+        return require("./2020/6/29/url-tail/server.js")(juneContext)(req, res);
+      }
+      if (req.url.startsWith("/2020/6/29/multi-page")) {
+        return require("./2020/6/29/multi-page/server.js")(juneContext)(req, res);
       }
 
       const handler = paths[req.url];
