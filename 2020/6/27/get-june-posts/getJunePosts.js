@@ -2,7 +2,12 @@
 
 const fs = require("fs").promises;
 
-const getJuneDays = async () => fs.readdir(__dirname + "/../..");
+const getJuneDays = async () => {
+  const dir = await fs.readdir(__dirname + "/../..");
+  const paths = dir.map(item => `${__dirname}/../../${item}`);
+  const stats = await Promise.all(paths.map(path => fs.lstat(path)));
+  return dir.filter((_, i) => stats[i].isDirectory());
+};
 
 const getPostFoldersFromDay = async day => {
   const folders = await fs.readdir(__dirname + "/../../" + day);
