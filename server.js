@@ -4,7 +4,8 @@ const http = require("http");
 const fs = require("fs");
 
 const paths = {
-  "/2020/7/5/ideas": async res => {
+  "/": require("./2020/8/25/homepage_v3.js"),
+  "/2020/7/5/ideas": async (req, res) => {
     const filePath = "./2020/7/5/ideas.html";
     const stat = await fs.promises.stat(filePath);
     res.writeHead(200, {
@@ -31,7 +32,7 @@ const main = async () => {
       if (handler === undefined) {
         oldHandlerAdapter(req, res, handle404error);
       } else {
-        handler(res);
+        handler(req, res);
       }
     })
     .listen(process.env.PORT, () => {
