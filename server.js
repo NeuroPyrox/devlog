@@ -3,16 +3,9 @@
 const http = require("http");
 const fs = require("fs");
 
-const mayUrl = "/2020/5";
-const juneUrl = "/2020/6";
-
-const mayPosts = require("./2020/5/getPostLocations.js")();
-
-const juneContext = { juneUrl: juneUrl, mayPosts: mayPosts, mayUrl: mayUrl };
-
 const paths = {
-  "/": require("./2020/6/27/homepage/server.js")(juneContext),
-  "/2020/7/5/ideas": async res => {
+  "/": require("./2020/8/25/homepage_v3.js"),
+  "/2020/7/5/ideas": async (req, res) => {
     const filePath = "./2020/7/5/ideas.html";
     const stat = await fs.promises.stat(filePath);
     res.writeHead(200, {
@@ -30,32 +23,16 @@ const handle404error = res => {
   res.end();
 };
 
-const isMayUrl = url => url.startsWith(mayUrl);
-const isJuneUrl = url => url.startsWith(juneUrl);
-
-const handleMayUrl = require("./2020/5/server.js")(mayUrl);
-const handleJuneUrl = require("./2020/6/server.js")({
-  juneUrl: juneUrl,
-  mayPosts: mayPosts,
-  mayUrl: mayUrl
-});
+const oldHandlerAdapter = require("./2020/8/oldHandlerAdapter.js");
 
 const main = async () => {
   http
     .createServer((req, res) => {
-      // HARDCODED: these if statements
-      if (isMayUrl(req.url)) {
-        return handleMayUrl(req, res);
-      }
-      if (isJuneUrl(req.url)) {
-        return handleJuneUrl(req, res);
-      }
-
       const handler = paths[req.url];
       if (handler === undefined) {
-        handle404error(res);
+        oldHandlerAdapter(req, res, handle404error);
       } else {
-        handler(res);
+        handler(req, res);
       }
     })
     .listen(process.env.PORT, () => {
