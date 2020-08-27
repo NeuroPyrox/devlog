@@ -118,19 +118,12 @@ const parseHomepage = homepage => {
   return templateList(result.join());
 }
 
-const getHomepage = (() => {
+module.exports = (() => {
   let homepage;
   return async () => {
     if (homepage === undefined) {
-      homepage = parseHomepage(await fs.readFile("./2020/8/25/homepage_v3.lisp", "utf8"));
+      homepage = parseHomepage(await fs.readFile("./2020/8/25/homepageV3.lisp", "utf8"));
     }
     return homepage;
   }
 })();
-
-module.exports = async (req, res) => {
-  res.writeHead(200, {
-    "Content-Type": "text/html"
-  });
-  res.write(await getHomepage());
-}

@@ -70,20 +70,20 @@ const makeItem = (day, title, href) => `
   </a>
 `;
 
-const makeHtml = async mayUrl => {
+const makeHtml = async () => {
   const listHtml = (await getPostLocations())
-    .map(({ day, title, href }) => makeItem(day, title, `${mayUrl}/${href}`))
+    .map(({ day, title, href }) => makeItem(day, title, `/2020/5/${href}`))
     .join();
   return templateHtml(listHtml);
 };
 
-module.exports = mayUrl => {
-  const html = makeHtml(mayUrl);
-  return async res => {
+module.exports = (() => {
+  const html = makeHtml();
+  return async (req, res) => {
     res.writeHead(200, {
       "Content-Type": "text/html"
     });
     res.write(await html);
     res.end();
   };
-};
+})();

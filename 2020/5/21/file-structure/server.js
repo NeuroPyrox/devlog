@@ -23,10 +23,6 @@ const getAllFilePaths = async dir => {
   return [].concat(...nestedList);
 };
 
-module.exports = async res => {
-  res.writeHead(200, {
-    "Content-Type": "application/json"
-  });
-  res.write(JSON.stringify(await getAllFilePaths("/app")));
-  res.end();
+module.exports = async () => {
+  return await getAllFilePaths("/app");
 };
