@@ -1,9 +1,7 @@
 "use strict";
 
-module.exports = ({ juneUrl }) => (req, res) => {
-  // HARDCODED: "/29/url-tail"
-  const urlHead = juneUrl + "/29/url-tail";
-  let text = req.url.slice(urlHead.length);
+module.exports = baseUrl => (req, res) => {
+  let text = req.url.slice(baseUrl.length);
   if (text === "") {
     text = "Try adding stuff to the end of the url";
   }

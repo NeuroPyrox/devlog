@@ -72,15 +72,14 @@ const templatePost = ({date, title, href}) => `
 
 const templateHtml = posts => templateList(posts.map(templatePost).join());
 
-const makeHtml = async (juneUrl, mayPosts, mayUrl) => templateHtml(await getPosts(juneUrl, mayPosts, mayUrl));
+const makeHtml = async () => templateHtml(await getPosts());
 
-module.exports = ({juneUrl, mayPosts, mayUrl}) => {
-  const html = makeHtml(juneUrl, mayPosts, mayUrl);
-  return async res => {
-    res.writeHead(200, {
-      "Content-Type": "text/html"
-    });
-    res.write(await html);
-    res.end();
-  };
-};
+module.exports = (() => {
+  let html;
+  return async () => {
+    if (html === undefined) {
+      html = makeHtml();
+    }
+    return await html;
+  }
+})();

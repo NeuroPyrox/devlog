@@ -2,7 +2,7 @@
 
 const getMayPosts = require("./getMayPosts.js");
 
-module.exports = async res => {
+module.exports = async (req, res) => {
   res.writeHead(200, {
     "Content-Type": "application/json"
   });

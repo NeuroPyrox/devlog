@@ -1,6 +1,9 @@
 "use strict";
 
-const handleHome = require("../../../5/21/htmlResponse.js")(__dirname);
+const path = require("path");
+const writeFile = require("../../../5/17/writeFile.js");
+
+const handleHome = res => writeFile(res, path.join(__dirname, "index.html"));
 
 const redirect = (res, urlHead) => {
   res.writeHead(302, { Location: urlHead });
@@ -21,15 +24,13 @@ const handle404error = res => {
   res.end();
 };
 
-module.exports = ({ juneUrl }) => (req, res) => {
-  // HARDCODED: "/29/multi-page"
-  const urlHead = juneUrl + "/29/multi-page";
-  const urlTail = req.url.slice(urlHead.length);
+module.exports = baseUrl => (req, res) => {
+  const urlTail = req.url.slice(baseUrl.length);
   if (urlTail === "") {
     return handleHome(res);
   }
   if (urlTail === "/") {
-    return redirect(res, urlHead);
+    return redirect(res, baseUrl);
   }
   if (urlTail === "/123") {
     return writeText(res, "123 page");

@@ -18,19 +18,19 @@ const getPostFoldersFromDay = async day => {
   return folders.filter((_, i) => !isEmpty[i]);
 };
 
-const getPostsOnDay = async (juneUrl, day) => {
+const getPostsOnDay = async day => {
   const folders = await getPostFoldersFromDay(day);
   return folders.map(name => ({
     date: `${day} June 2020`,
     title: name,
-    href: `${juneUrl}/${day}/${name}`
+    href: `/2020/6/${day}/${name}`
   }));
 };
 
-module.exports = async juneUrl => {
+module.exports = async () => {
   const juneDays = await getJuneDays();
   const posts = await Promise.all(
-    juneDays.map(day => getPostsOnDay(juneUrl, day))
+    juneDays.map(day => getPostsOnDay(day))
   );
   return posts.flat();
 };

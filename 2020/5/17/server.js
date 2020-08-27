@@ -8,7 +8,7 @@ const htmlPageNames = ["followMouse", "mobileDragNDrop", "dragNDrop", "pills"];
 
 const textHandlers = textPages.map(([name, text]) => [
   name,
-  res => {
+  (req, res) => {
     res.writeHead(200, {
       "Content-Type": "text/html"
     });
@@ -18,7 +18,7 @@ const textHandlers = textPages.map(([name, text]) => [
 ]);
 
 const htmlHandlers = htmlPageNames.map(name => [
-  name, res => {
+  name, (req, res) => {
     writeFile(res, path.join(__dirname, name + ".html"))
   }
 ]);
@@ -28,7 +28,7 @@ const pageHandlers = textHandlers.concat(htmlHandlers);
 const pageNames = pageHandlers.map(([first, _]) => first);
 const homeHtml = pageNames.map(key => `<a href="${key}">${key}</a>`).join(`<br>`);
 
-const handlers = {"": res => {
+const handlers = {"": (req, res) => {
     res.writeHead(200, {
       "Content-Type": "text/html"
     });
