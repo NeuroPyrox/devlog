@@ -68,6 +68,37 @@ const parseHandlers = handlers => {
   return result;
 }
 
+const createHtmlEndpoint = resource => async (req, res) => {
+  const stat = await fs.promises.stat(resource);
+  res.writeHead(200, {
+    "Content-Type": "text/html",
+    "Content-Length": stat.size
+  });
+  fs.createReadStream(resource).pipe(res);
+}
+
+const createHtmlBuilderEndpoint = resource => {
+  const htmlBuilder = require(resource);
+  return async (req, res) => {
+    res.writeHead(200, {
+      "Content-Type": "text/html"
+    });
+    res.write(await htmlBuilder());
+    res.end();
+  };
+};
+
+const createJsonEndpoint = resource => {
+  const jsonBuilder = require(resource);
+  return async (req, res) => {
+    res.writeHead(200, {
+      "Content-Type": "application/json"
+    });
+    res.write(JSON.stringify(await jsonBuilder()));
+    res.end();
+  };
+}
+
 module.exports = (() => {
   const promise = (async () => {
     const handlersList = parseHandlers(await fs.promises.readFile("handlers.lisp", "utf8"));
@@ -79,34 +110,13 @@ module.exports = (() => {
             `.${path}${source}` : `.${path.slice(0, path.lastIndexOf("/"))}/${source}`;
       switch(type) {
         case "html":
-          endpoints[path] = async (req, res) => {
-            const stat = await fs.promises.stat(resource);
-            res.writeHead(200, {
-              "Content-Type": "text/html",
-              "Content-Length": stat.size
-            });
-            fs.createReadStream(resource).pipe(res);
-          }
+          endpoints[path] = createHtmlEndpoint(resource);
           break;
         case "htmlBuilder":
-          const htmlBuilder = require(resource);
-          endpoints[path] = async (req, res) => {
-            res.writeHead(200, {
-              "Content-Type": "text/html"
-            });
-            res.write(await htmlBuilder());
-            res.end();
-          }
+          endpoints[path] = createHtmlBuilderEndpoint(resource);
           break;
         case "json":
-          const jsonBuilder = require(resource);
-          endpoints[path] = async (req, res) => {
-            res.writeHead(200, {
-              "Content-Type": "application/json"
-            });
-            res.write(JSON.stringify(await jsonBuilder()));
-            res.end();
-          }
+          endpoints[path] = createJsonEndpoint(resource);
           break;
         case "handlerMap":
           for (const [key, value] of Object.entries(require(resource))) {
