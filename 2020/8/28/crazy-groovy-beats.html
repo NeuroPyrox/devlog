@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Crazy Groovy Beats</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Nova+Mono&display=swap");
+
+    body {
+      background-color: black;
+      font-family: "Nova Mono", monospace;
+      color: #0F0;
+      line-height: 2.5;
+    }
+
+    a:link,
+    a:visited {
+      color: #FF0;
+    }
+  </style>
+  <body>
+    <button id="play">
+      Play
+    </button>
+    <p>
+      It doesn't sound exactly like the source, but it's good enough and I don't want to debug it.
+    </p>
+    <a href="https://www.youtube.com/watch?v=V4GfkFbDojc">Source</a>
+  </body>
+  <script>
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    const myArrayBuffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 30, audioCtx.sampleRate / 2);
+    const nowBuffering = myArrayBuffer.getChannelData(0);
+    for (let t = 0; t < myArrayBuffer.length; i=t++) {
+      const a = t-2048;
+      const value = ((t&t>>6)&(t*(t>>((t&65535)>>12))))+((t*3/4&t)&127)+(t*(a>>7&a>>8&a>>9&16)>>t/64)
+      nowBuffering[t] = (value % 256) / 256;
+    }
+    const source = audioCtx.createBufferSource();
+    source.buffer = myArrayBuffer;
+    
+    const biquadFilter = audioCtx.createBiquadFilter();
+    biquadFilter.type = "lowpass";
+    biquadFilter.frequency.setValueAtTime(3000, audioCtx.currentTime);
+    biquadFilter.gain.setValueAtTime(25, audioCtx.currentTime);
+    
+    source.connect(biquadFilter);
+    biquadFilter.connect(audioCtx.destination);
+    
+    document.getElementById("play").onclick = () => source.start();
+  </script>
+</html>

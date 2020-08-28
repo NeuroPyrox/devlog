@@ -1,7 +1,8 @@
 [homepage
-  ("Homepage v3" "25 Aug 2020" "/2020/8/25/homepage-v3")
-  ("Ramblings"   "24 Aug 2020" "/2020/8/24/ramblings")
-  ("Plan"        "24 Aug 2020" "/2020/8/24/plan")
+  ("Crazy Groovy Beats" "28 Aug 2020" "/2020/8/28/crazy-groovy-beats")
+  ("Homepage v3"        "25 Aug 2020" "/2020/8/25/homepage-v3")
+  ("Ramblings"          "24 Aug 2020" "/2020/8/24/ramblings")
+  ("Plan"               "24 Aug 2020" "/2020/8/24/plan")
   ("Ideas" "5 July 2020" "/2020/7/5/ideas")
   ("Url Tail"         "29 June 2020" "/2020/6/29/url-tail")
   ("Multi Page"       "29 June 2020" "/2020/6/29/multi-page")
