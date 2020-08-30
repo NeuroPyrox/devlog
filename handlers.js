@@ -6,12 +6,11 @@ const assert = condition => {
   if (!condition) {
     throw "Assertion Error!";
   }
-}
+};
 
-const isLetter = letter => (
-  letter.length === 1
-  && (("a" <= letter && letter <= "z")
-      || ("A" <= letter && letter <= "Z")))
+const isLetter = letter =>
+  letter.length === 1 &&
+  (("a" <= letter && letter <= "z") || ("A" <= letter && letter <= "Z"));
 
 const parseLetters = (offset, letters) => {
   var end = offset;
@@ -20,93 +19,107 @@ const parseLetters = (offset, letters) => {
   }
   const result = letters.slice(offset, end);
   offset = end;
-  return {offset, result};
-}
+  return { offset, result };
+};
 
 const parseString = (offset, string) => {
-  assert(string[offset++] === "\"");
+  assert(string[offset++] === '"');
   var end = offset;
-  while (string[end] !== "\"") {
+  while (string[end] !== '"') {
     ++end;
   }
   const result = string.slice(offset, end);
   offset = ++end;
-  return {offset, result};
-}
+  return { offset, result };
+};
 
 const parseSpaces = (offset, spaces) => {
   assert(spaces[offset++] === " ");
   while (spaces[offset] === " ") {
     ++offset;
   }
-  return {offset};
-}
+  return { offset };
+};
 
 const parseHandler = (offset, post) => {
   assert(post[offset++] === "(");
-  var {offset, result: type} = parseLetters(offset, post);
-  var {offset} = parseSpaces(offset, post);
-  var {offset, result: source} = parseString(offset, post);
-  var {offset} = parseSpaces(offset, post);
-  var {offset, result: path} = parseString(offset, post);
+  var { offset, result: type } = parseLetters(offset, post);
+  var { offset } = parseSpaces(offset, post);
+  var { offset, result: source } = parseString(offset, post);
+  var { offset } = parseSpaces(offset, post);
+  var { offset, result: path } = parseString(offset, post);
   assert(post[offset++] === ")");
-  return {offset, result: [type, source, path]};
-}
+  return { offset, result: [type, source, path] };
+};
 
 const parseHandlers = handlers => {
   assert(handlers.slice(0, 12) === "(handlers\n  ");
-  var {offset, result: handler} = parseHandler(12, handlers);
+  var { offset, result: handler } = parseHandler(12, handlers);
   const result = [handler];
   while (handlers[offset] !== ")") {
     assert(handlers[offset++] === "\n");
     assert(handlers[offset++] === " ");
     assert(handlers[offset++] === " ");
-    var {offset, result: handler} = parseHandler(offset, handlers);
+    var { offset, result: handler } = parseHandler(offset, handlers);
     result.push(handler);
   }
   assert(++offset === handlers.length);
   return result;
-}
+};
+
+const createHtmlEndpoint = resource => async (req, res) => {
+  const stat = await fs.promises.stat(resource);
+  res.writeHead(200, {
+    "Content-Type": "text/html",
+    "Content-Length": stat.size
+  });
+  fs.createReadStream(resource).pipe(res);
+};
+
+const createHtmlBuilderEndpoint = resource => {
+  const htmlBuilder = require(resource);
+  return async (req, res) => {
+    res.writeHead(200, {
+      "Content-Type": "text/html"
+    });
+    res.write(await htmlBuilder());
+    res.end();
+  };
+};
+
+const createJsonEndpoint = resource => {
+  const jsonBuilder = require(resource);
+  return async (req, res) => {
+    res.writeHead(200, {
+      "Content-Type": "application/json"
+    });
+    res.write(JSON.stringify(await jsonBuilder()));
+    res.end();
+  };
+};
 
 module.exports = (() => {
   const promise = (async () => {
-    const handlersList = parseHandlers(await fs.promises.readFile("handlers.lisp", "utf8"));
+    const handlersList = parseHandlers(
+      await fs.promises.readFile("handlers.lisp", "utf8")
+    );
     const endpoints = {};
     const servers = {};
     for (const [type, source, path] of handlersList) {
       assert(path[0] === "/");
-      const resource = (source[0] === "/") ?
-            `.${path}${source}` : `.${path.slice(0, path.lastIndexOf("/"))}/${source}`;
-      switch(type) {
+      const resource =
+        source[0] === "/"
+          ? `.${path}${source}`
+          : `.${path.slice(0, path.lastIndexOf("/"))}/${source}`;
+      switch (type) {
         case "html":
-          endpoints[path] = async (req, res) => {
-            const stat = await fs.promises.stat(resource);
-            res.writeHead(200, {
-              "Content-Type": "text/html",
-              "Content-Length": stat.size
-            });
-            fs.createReadStream(resource).pipe(res);
-          }
+          endpoints[path] = createHtmlEndpoint(resource);
           break;
         case "htmlBuilder":
-          const htmlBuilder = require(resource);
-          endpoints[path] = async (req, res) => {
-            res.writeHead(200, {
-              "Content-Type": "text/html"
-            });
-            res.write(await htmlBuilder());
-            res.end();
-          }
+          endpoints[path] = createHtmlBuilderEndpoint(resource);
           break;
         case "json":
-          const jsonBuilder = require(resource);
-          endpoints[path] = async (req, res) => {
-            res.writeHead(200, {
-              "Content-Type": "application/json"
-            });
-            res.write(JSON.stringify(await jsonBuilder()));
-            res.end();
-          }
+          endpoints[path] = createJsonEndpoint(resource);
           break;
         case "handlerMap":
           for (const [key, value] of Object.entries(require(resource))) {
