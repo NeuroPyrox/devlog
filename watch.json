@@ -4,7 +4,7 @@
   },
   "restart": {
     "exclude": ["^public/", "^dist/"],
-    "include": ["\\.js$", "\\.jsx$", "\\.json$", "\\.css$"]
+    "include": ["\\.js$", "\\.jsx$", "\\.json$", "\\.css$", "\\.lisp$"]
   },
   "throttle": 1000
 }
