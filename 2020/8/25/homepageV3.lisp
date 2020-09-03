@@ -1,4 +1,5 @@
 [homepage
+  ("String List" "3 Sept 2020" "/2020/9/3/string-list")
   ("Sexpr Mutations"    "29 Aug 2020" "/2020/8/29/sexpr-mutations")
   ("Crazy Groovy Beats" "28 Aug 2020" "/2020/8/28/crazy-groovy-beats")
   ("Homepage v3"        "25 Aug 2020" "/2020/8/25/homepage-v3")
