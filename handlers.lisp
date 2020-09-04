@@ -1,6 +1,7 @@
 (handlers
   (htmlBuilder "2020/8/25/homepageV3.js" "/")
   (html        "genetic-songs.html"      "/wip/genetic-songs")
+  (html        "weighted-tree-push.html" "/2020/9/4/weighted-tree-push")
   (html        "string-list.html"        "/2020/9/3/string-list")
   (json        "sexpr-mutations.js"      "/2020/8/29/sexpr-mutations")
   (html        "crazy-groovy-beats.html" "/2020/8/28/crazy-groovy-beats")
