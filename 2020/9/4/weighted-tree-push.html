@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Weighted Tree Push</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Nova+Mono&display=swap");
+
+    body {
+      background-color: black;
+      font-family: "Nova Mono", monospace;
+      color: #0F0;
+      line-height: 2.5;
+    }
+
+    a:link,
+    a:visited {
+      color: #FF0;
+    }
+    
+    p {
+      margin: 0;
+      line-height: 1;
+    }
+    
+    div {
+      margin-left: 10px;
+    }
+    
+  </style>
+  <body>
+    Value:
+    <br />
+    <input type="text" id="value" />
+    <br />
+    Energy:
+    <br />
+    <input type="text" id="energy" />
+    <br />
+    <button id="push">
+      Push
+    </button>
+    <p>
+      The left is energy and the right is size. For leaves the right is value.
+    </p>
+    <br/>
+    <p id="tree"></p>
+  </body>
+  <script>
+    const createBranch = args => ({
+      match: ({ branch }) => branch(args)
+    });
+
+    const createLeaf = args => ({
+      match: ({ leaf }) => leaf(args)
+    });
+
+    const getTreeSize = tree =>
+      tree.match({
+        branch: ({ size }) => size,
+        leaf: _ => 1
+      });
+
+    const push = (tree, value, energy) =>
+      tree.match({
+        branch: ({ size, energy: branchEnergy, left, right }) => {
+          if (getTreeSize(left) < getTreeSize(right)) {
+            return createBranch({
+              size: size + 1,
+              energy: branchEnergy + energy,
+              left: push(left, value, energy),
+              right
+            });
+          } else {
+            return createBranch({
+              size: size + 1,
+              energy: branchEnergy + energy,
+              left,
+              right: push(right, value, energy)
+            });
+          }
+        },
+        leaf: ({ energy: leafEnergy, value: leafValue }) =>
+          createBranch({
+            size: 2,
+            energy: leafEnergy + energy,
+            left: createLeaf({ energy: leafEnergy, value: leafValue }),
+            right: createLeaf({ energy, value })
+          })
+      });
+
+    const htmlFromTree = tree =>
+      tree.match({
+        branch: ({ size, energy, left, right }) =>
+          `<p>${energy} ${size}</p>` +
+          `<div>${htmlFromTree(left)}${htmlFromTree(right)}</div>`,
+        leaf: ({ energy, value }) => `<p>${energy} ${value}</p>`
+      });
+
+    const isADigit = char => "0" <= char && char <= "9";
+
+    const getEnergyInput = () => {
+      const unparsed = document.getElementById("energy").value;
+      if (unparsed.length === 0) {
+        return {
+          then: _ => alert("Please enter a number for energy.")
+        };
+      }
+      if (unparsed.split("").every(isADigit)) {
+        return { then: f => f(parseInt(unparsed)) };
+      }
+      return {
+        then: _ =>
+          alert(
+            "Energy must be a positive integer! (only contains characters 0-9)"
+          )
+      };
+    };
+
+    const getValueInput = () => document.getElementById("value").value;
+
+    let tree;
+
+    document.getElementById("push").onclick = () => {
+      getEnergyInput().then(energy => {
+        const value = getValueInput();
+        if (tree === undefined) {
+          tree = createLeaf({ value, energy });
+        } else {
+          tree = push(tree, value, energy);
+        }
+        document.getElementById("tree").innerHTML = htmlFromTree(tree);
+      });
+    };
+  </script>
+</html>
