@@ -35,42 +35,113 @@
         throw message;
       }
     };
+    
+    const createBranch = args => ({
+      match: ({ branch }) => branch(args)
+    });
 
-    const songs = {
-      energy: 1000,
-      song: "S"
-    };
+    const createLeaf = args => ({
+      match: ({ leaf }) => leaf(args)
+    });
 
-    const pushSong = (songs, song, energy) => {
-      assert(songs.energy !== undefined);
-      if (songs.numSongs === undefined) {
-        assert(songs.song !== undefined);
-        assert(Object.keys(songs).length === 2);
-        songs.left = {
-          energy: songs.energy,
-          song: songs.song
-        };
-        songs.right = {
-          energy,
-          song
-        };
-        songs.energy += energy;
-        songs.numSongs = 2;
-        delete songs.song;
-        return;
-      }
-      assert(songs.numSongs !== undefined);
-      assert(songs.left !== undefined);
-      assert(songs.right !== undefined);
-      assert(Object.keys(songs).length === 4);
-      songs.energy += energy;
-      songs.numSongs += 1;
-      if ((songs.left.numSongs ?? 1) < (songs.right.numSongs ?? 1)) {
-        pushSong(songs.left, song, energy);
-      } else {
-        pushSong(songs.right, song, energy);
-      }
-    };
+    const getTreeSize = tree =>
+      tree.match({
+        branch: ({ size }) => size,
+        leaf: _ => 1
+      });
+
+    const getTreeEnergy = tree =>
+      tree.match({
+        branch: ({ energy }) => energy,
+        leaf: ({ energy }) => energy
+      });
+
+    const push = (tree, value, energy) =>
+      tree.match({
+        branch: ({ size, energy: branchEnergy, left, right }) => {
+          if (getTreeSize(left) < getTreeSize(right)) {
+            return createBranch({
+              size: size + 1,
+              energy: branchEnergy + energy,
+              left: push(left, value, energy),
+              right
+            });
+          } else {
+            return createBranch({
+              size: size + 1,
+              energy: branchEnergy + energy,
+              left,
+              right: push(right, value, energy)
+            });
+          }
+        },
+        leaf: ({ energy: leafEnergy, value: leafValue }) =>
+          createBranch({
+            size: 2,
+            energy: leafEnergy + energy,
+            left: createLeaf({ energy: leafEnergy, value: leafValue }),
+            right: createLeaf({ energy, value })
+          })
+      });
+
+    // Has the same structure as popByEnergy, but it's not worth refactoring yet
+    const popByIndex = (tree, index) =>
+      tree.match({
+        branch: ({ size, energy, left, right }) => {
+          const leftSize = getTreeSize(left);
+          const branch = index < leftSize;
+          const child = branch ? left : right;
+          const other = branch ? right : left;
+          child.match({
+            branch: _ => {
+              if (!branch) {
+                index -= leftSize;
+              }
+              const { tree: childResult, popped } = popByIndex(child, index);
+              return {
+                tree: createBranch({
+                  size: size - 1,
+                  energy: energy - popped.energy,
+                  left: childResult,
+                  right: other
+                }),
+                popped
+              };
+            },
+            leaf: popped => ({ tree: other, popped })
+          });
+        }
+      });
+
+    const popByEnergy = (tree, energy) =>
+      tree.match({
+        branch: ({ size, branchEnergy, left, right }) => {
+          const leftEnergy = getTreeEnergy(left);
+          const branch = energy < leftEnergy;
+          const child = branch ? left : right;
+          const other = branch ? right : left;
+          child.match({
+            branch: _ => {
+              if (!branch) {
+                energy -= leftEnergy;
+              }
+              const { tree: childResult, popped } = popByEnergy(child, energy);
+              return {
+                tree: createBranch({
+                  size: size - 1,
+                  energy: branchEnergy - popped.energy,
+                  left: childResult,
+                  right: other
+                }),
+                popped
+              };
+            },
+            leaf: popped => ({ tree: other, popped })
+          });
+        }
+      });
+    
+    let songs = createLeaf({energy: 1000, value: "S"});
 
     for (const song of [
       "K",
@@ -91,95 +162,37 @@
       ">>>",
       1
     ]) {
-      pushSong(songs, song, 1000);
+      push(songs, song, 1000);
     }
-    
-    const popSongByEnergy = (songs, energy) => {
-      assert(songs.numSongs !== undefined);
-      const branch = energy < songs.left.energy;
-      const child = branch ? songs.left : songs.right;
-      if (child.numSongs === undefined) {
-        const become = branch ? songs.right : songs.left;
-        songs.energy = become.energy;
-        if (become.numSongs === undefined) {
-          songs.song = become.song;
-          delete songs.numSongs;
-          delete songs.left;
-          delete songs.right;
-        } else {
-          songs.numSongs = become.numSongs;
-          songs.left = become.left;
-          songs.right = become.right;
-        }
-        return child;
-      }
-      if (!branch) {
-        energy -= songs.left.energy;
-      }
-      songs.numSongs -= 1;
-      const song = popSongByEnergy(child, energy);
-      songs.energy -= song.energy;
-      return song;
-    }
-    
-    const popSongByIndex = (songs, index) => {
-      assert(songs.numSongs !== undefined);
-      const branch = index < (songs.left.numSongs ?? 1);
-      const child = branch ? songs.left : songs.right;
-      if (child.numSongs === undefined) {
-        const become = branch ? songs.right : songs.left;
-        songs.energy = become.energy;
-        if (become.numSongs === undefined) {
-          songs.song = become.song;
-          delete songs.numSongs;
-          delete songs.left;
-          delete songs.right;
-        } else {
-          songs.numSongs = become.numSongs;
-          songs.left = become.left;
-          songs.right = become.right;
-        }
-        return child;
-      }
-      if (!branch) {
-        index -= (songs.left.numSongs ?? 1);
-      }
-      songs.numSongs -= 1;
-      const song = popSongByIndex(child, index);
-      songs.energy -= song.energy;
-      return song;
-    }
-    
-    const popRandomSongByEnergy = () => {
-      assert(songs.numSongs !== undefined);
-      const energy = Math.random() * songs.energy;
-      return popSongByEnergy(songs, energy);
-    }
-    
-    const popRandomSongByIndex = () => {
-      assert(songs.numSongs !== undefined);
-      const index = Math.floor(Math.random() * songs.numSongs);
-      return popSongByIndex(songs, index);
-    }
-    
+
+    const pickNextSong = () => {
+      const energy = Math.random() * getTreeEnergy(songs);
+      return popByEnergy(songs, energy);
+    };
+
+    const removeOneSong = () => {
+      const index = Math.floor(Math.random() * getTreeSize(songs));
+      popByIndex(songs, index);
+    };
+
     const evalS = (x, y, z, gas) => {
       let xz, yz;
       [xz, gas] = reducePartially(x, z, gas);
       [yz, gas] = reducePartially(y, z, gas);
       return reducePartially(xz, yz, gas);
-    }
-    
+    };
+
     const evalB = (x, y, z, gas) => {
       let yz;
       [yz, gas] = reducePartially(y, z, gas);
       return reducePartially(x, yz, gas);
-    }
-    
+    };
+
     const evalC = (x, y, z, gas) => {
       const xz = reducePartially(x, z, gas);
       return reducePartially(xz, y, gas);
-    }
-    
+    };
+
     // Assume inputs are evaluated and non-null
     const evalLambda1 = (f, x, gas) => {
       if (f === "I") {
@@ -192,42 +205,58 @@
         return [null, 0];
       }
       return [[f, x], gas];
-    }
-    
+    };
+
     // Assume inputs are evaluated and non-null
     const evalLambda2 = (f, x, y, gas) => {
       if (f === "K") {
         return [x, gas];
       }
-      if ((typeof x !== "number") || (typeof y !== "number")) {
+      if (typeof x !== "number" || typeof y !== "number") {
         return [null, 0];
       }
       switch (f) {
-        case "+": return [x + y, gas];
-        case "-": return [x - y, gas];
-        case "*": return [x * y, gas];
-        case "/": return [x / y, gas];
-        case "%": return [x % y, gas];
-        case "&": return [x & y, gas];
-        case "|": return [x | y, gas];
-        case "^": return [x ^ y, gas];
-        case "<<": return [x << y, gas];
-        case ">>": return [x >> y, gas];
-        case ">>>": return [x >>> y, gas];
-        default: return [[f, x, y], gas];
+        case "+":
+          return [x + y, gas];
+        case "-":
+          return [x - y, gas];
+        case "*":
+          return [x * y, gas];
+        case "/":
+          return [x / y, gas];
+        case "%":
+          return [x % y, gas];
+        case "&":
+          return [x & y, gas];
+        case "|":
+          return [x | y, gas];
+        case "^":
+          return [x ^ y, gas];
+        case "<<":
+          return [x << y, gas];
+        case ">>":
+          return [x >> y, gas];
+        case ">>>":
+          return [x >>> y, gas];
+        default:
+          return [[f, x, y], gas];
       }
-    }
-    
+    };
+
     // Assume inputs are evaluated and non-null
     const evalLambda3 = (f, x, y, z, gas) => {
       switch (f) {
-        case "S": return evalS(x, y, z, gas);
-        case "B": return evalB(x, y, z, gas);
-        case "C": return evalC(x, y, z, gas);
-        default: assert(false);
+        case "S":
+          return evalS(x, y, z, gas);
+        case "B":
+          return evalB(x, y, z, gas);
+        case "C":
+          return evalC(x, y, z, gas);
+        default:
+          assert(false);
       }
-    }
-    
+    };
+
     // Assume inputs are evaluated and non-null
     const reducePartially = (a, b, gas) => {
       --gas;
@@ -246,8 +275,8 @@
       }
       assert(a.length === 3);
       return evalLambda3(a[0], a[1], a[2], b, gas);
-    }
-    
+    };
+
     // Assume sexpr isn't evaluated
     const reduceFully = (sexpr, gas) => {
       if (typeof sexpr === "number") {
@@ -262,14 +291,14 @@
       [a, gas] = reduceFully(sexpr[0], gas);
       [b, gas] = reduceFully(sexpr[1], gas);
       return reducePartially(a, b, gas);
-    }
-    
+    };
+
     const renderSong = song => {
-      [song,] = reduceFully(song, 1000);
+      [song] = reduceFully(song, 1000);
       if (song === null) {
         return null;
       }
-      const [test,] = reducePartially(song, 0, 100);
+      const [test] = reducePartially(song, 0, 100);
       if (test === null) {
         return null;
       }
@@ -280,13 +309,13 @@
       );
       const nowBuffering = myArrayBuffer.getChannelData(0);
       for (let t = 0; t < myArrayBuffer.length; ++t) {
-        const [value,] = reducePartially(song, t, 100);
+        const [value] = reducePartially(song, t, 100);
         nowBuffering[t] = value;
       }
-      const song = audioCtx.createBufferSource();
+      song = audioCtx.createBufferSource();
       song.buffer = myArrayBuffer;
       return song;
-    }
+    };
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -310,7 +339,7 @@
         if (source === null) {
           // todo
         }
-        
+
         startNextSong();
       } else {
         source.stop();
