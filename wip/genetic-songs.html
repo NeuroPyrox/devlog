@@ -35,7 +35,7 @@
         throw message;
       }
     };
-    
+
     const createBranch = args => ({
       match: ({ branch }) => branch(args)
     });
@@ -140,210 +140,160 @@
           });
         }
       });
-    
-    let songs = createLeaf({energy: 1000, value: "S"});
 
-    for (const song of [
-      "K",
-      "I",
-      "B",
-      "C",
-      "+",
-      "-",
-      "*",
-      "/",
-      "%",
-      "&",
-      "|",
-      "~",
-      "^",
-      "<<",
-      ">>",
-      ">>>",
-      1
-    ]) {
-      push(songs, song, 1000);
-    }
+    //     const pickNextSong = () => {
+    //       const energy = Math.random() * getTreeEnergy(songs);
+    //       return popByEnergy(songs, energy);
+    //     };
 
-    const pickNextSong = () => {
-      const energy = Math.random() * getTreeEnergy(songs);
-      return popByEnergy(songs, energy);
+    //     const removeOneSong = () => {
+    //       const index = Math.floor(Math.random() * getTreeSize(songs));
+    //       popByIndex(songs, index);
+    //     };
+
+    const combinatorS = {
+      apply: x => ({
+        apply: y => ({
+          apply: z => x.apply(z).apply(y.apply(z))
+        })
+      })
     };
 
-    const removeOneSong = () => {
-      const index = Math.floor(Math.random() * getTreeSize(songs));
-      popByIndex(songs, index);
+    const combinatorK = {
+      apply: x => ({
+        apply: y => x
+      })
     };
 
-    const evalS = (x, y, z, gas) => {
-      let xz, yz;
-      [xz, gas] = reducePartially(x, z, gas);
-      [yz, gas] = reducePartially(y, z, gas);
-      return reducePartially(xz, yz, gas);
+    const combinatorI = {
+      apply: x => x
     };
 
-    const evalB = (x, y, z, gas) => {
-      let yz;
-      [yz, gas] = reducePartially(y, z, gas);
-      return reducePartially(x, yz, gas);
+    const combinatorB = {
+      apply: x => ({
+        apply: y => ({
+          apply: z => x.apply(y.apply(z))
+        })
+      })
     };
 
-    const evalC = (x, y, z, gas) => {
-      const xz = reducePartially(x, z, gas);
-      return reducePartially(xz, y, gas);
+    const combinatorC = {
+      apply: x => ({
+        apply: y => ({
+          apply: z => x.apply(z).apply(y)
+        })
+      })
     };
 
-    // Assume inputs are evaluated and non-null
-    const evalLambda1 = (f, x, gas) => {
-      if (f === "I") {
-        return [x, gas];
-      }
-      if (f === "~") {
-        if (typeof x === "number") {
-          return [~x, gas];
-        }
-        return [null, 0];
-      }
-      return [[f, x], gas];
+    const newNumber = x => ({
+      apply: op => ({
+        apply: y => op.applyOperator(x, y)
+      })
+    });
+
+    const operatorAdd = {
+      applyOperator: (x, y) => x + y
     };
 
-    // Assume inputs are evaluated and non-null
-    const evalLambda2 = (f, x, y, gas) => {
-      if (f === "K") {
-        return [x, gas];
-      }
-      if (typeof x !== "number" || typeof y !== "number") {
-        return [null, 0];
-      }
-      switch (f) {
-        case "+":
-          return [x + y, gas];
-        case "-":
-          return [x - y, gas];
-        case "*":
-          return [x * y, gas];
-        case "/":
-          return [x / y, gas];
-        case "%":
-          return [x % y, gas];
-        case "&":
-          return [x & y, gas];
-        case "|":
-          return [x | y, gas];
-        case "^":
-          return [x ^ y, gas];
-        case "<<":
-          return [x << y, gas];
-        case ">>":
-          return [x >> y, gas];
-        case ">>>":
-          return [x >>> y, gas];
-        default:
-          return [[f, x, y], gas];
-      }
+    const operatorSubtract = {
+      applyOperator: (x, y) => x - y
     };
 
-    // Assume inputs are evaluated and non-null
-    const evalLambda3 = (f, x, y, z, gas) => {
-      switch (f) {
-        case "S":
-          return evalS(x, y, z, gas);
-        case "B":
-          return evalB(x, y, z, gas);
-        case "C":
-          return evalC(x, y, z, gas);
-        default:
-          assert(false);
-      }
+    const operatorMultiply = {
+      applyOperator: (x, y) => x * y
     };
 
-    // Assume inputs are evaluated and non-null
-    const reducePartially = (a, b, gas) => {
-      --gas;
-      if (gas <= 0) {
-        return [null, 0];
-      }
-      if (typeof a === "number") {
-        return [null, 0];
-      }
-      if (typeof a === "string") {
-        return evalLambda1(a, b, gas);
-      }
-      assert(Array.isArray(a));
-      if (a.length === 2) {
-        return evalLambda2(a[0], a[1], b, gas);
-      }
-      assert(a.length === 3);
-      return evalLambda3(a[0], a[1], a[2], b, gas);
+    const operatorDivide = {
+      applyOperator: (x, y) => x / y
     };
 
-    // Assume sexpr isn't evaluated
-    const reduceFully = (sexpr, gas) => {
-      if (typeof sexpr === "number") {
-        return sexpr;
-      }
-      if (typeof sexpr === "string") {
-        return sexpr;
-      }
-      assert(Array.isArray(sexpr));
-      assert(sexpr.length === 2);
-      let a, b;
-      [a, gas] = reduceFully(sexpr[0], gas);
-      [b, gas] = reduceFully(sexpr[1], gas);
-      return reducePartially(a, b, gas);
+    const operatorModulus = {
+      applyOperator: (x, y) => x % y
     };
 
-    const renderSong = song => {
-      [song] = reduceFully(song, 1000);
-      if (song === null) {
-        return null;
-      }
-      const [test] = reducePartially(song, 0, 100);
-      if (test === null) {
-        return null;
-      }
-      const myArrayBuffer = audioCtx.createBuffer(
-        1,
-        audioCtx.sampleRate * 30,
-        audioCtx.sampleRate
-      );
-      const nowBuffering = myArrayBuffer.getChannelData(0);
-      for (let t = 0; t < myArrayBuffer.length; ++t) {
-        const [value] = reducePartially(song, t, 100);
-        nowBuffering[t] = value;
-      }
-      song = audioCtx.createBufferSource();
-      song.buffer = myArrayBuffer;
-      return song;
+    const operatorAnd = {
+      applyOperator: (x, y) => x & y
     };
 
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-    let currentSong = null;
-    let lastStartTime = 0;
-
-    const startNextSong = () => {
-      source = generateSong();
-      source.onended = startNextSong;
-      source.connect(audioCtx.destination);
-      source.start();
-      const nextStartTime = audioCtx.currentTime;
-      console.log(nextStartTime - lastStartTime);
-      lastStartTime = nextStartTime;
+    const operatorOr = {
+      applyOperator: (x, y) => x | y
     };
 
-    document.getElementById("next").onclick = () => {
-      if (currentSong === null) {
-        currentSong = popRandomSongByEnergy();
-        const source = renderSong(currentSong);
-        if (source === null) {
-          // todo
-        }
+    const operatorXor = {
+      applyOperator: (x, y) => x ^ y
+    };
 
-        startNextSong();
-      } else {
-        source.stop();
+    const operatorLeftShift = {
+      applyOperator: (x, y) => x << y
+    };
+
+    const operatorSignedRightShift = {
+      applyOperator: (x, y) => x >> y
+    };
+
+    const operatorUnsignedRightShift = {
+      applyOperator: (x, y) => x >>> y
+    };
+
+    const newExpression = (a, b) => ({
+      eval: () => {
+        const evalA = (a.eval ?? (() => a))();
+        const evalB = (b.eval ?? (() => b))();
+        return evalA.apply(evalB);
       }
-    };
+    });
+
+    //         const renderSong = song => {
+    //           [song] = reduceFully(song, 1000);
+    //           if (song === null) {
+    //             return null;
+    //           }
+    //           const [test] = reducePartially(song, 0, 100);
+    //           if (test === null) {
+    //             return null;
+    //           }
+    //           const myArrayBuffer = audioCtx.createBuffer(
+    //             1,
+    //             audioCtx.sampleRate * 30,
+    //             audioCtx.sampleRate
+    //           );
+    //           const nowBuffering = myArrayBuffer.getChannelData(0);
+    //           for (let t = 0; t < myArrayBuffer.length; ++t) {
+    //             const [value] = reducePartially(song, t, 100);
+    //             nowBuffering[t] = value;
+    //           }
+    //           song = audioCtx.createBufferSource();
+    //           song.buffer = myArrayBuffer;
+    //           return song;
+    //         };
+
+    //         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    //         let currentSong = null;
+    //         let lastStartTime = 0;
+
+    //         const startNextSong = () => {
+    //           source = generateSong();
+    //           source.onended = startNextSong;
+    //           source.connect(audioCtx.destination);
+    //           source.start();
+    //           const nextStartTime = audioCtx.currentTime;
+    //           console.log(nextStartTime - lastStartTime);
+    //           lastStartTime = nextStartTime;
+    //         };
+
+    //         document.getElementById("next").onclick = () => {
+    //           if (currentSong === null) {
+    //             currentSong = popRandomSongByEnergy();
+    //             const source = renderSong(currentSong);
+    //             if (source === null) {
+    //               // todo
+    //             }
+
+    //             startNextSong();
+    //           } else {
+    //             source.stop();
+    //           }
+    //         };
   </script>
 </html>
