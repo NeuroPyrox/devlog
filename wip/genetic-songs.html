@@ -30,291 +30,198 @@
     </p>
   </body>
   <script>
-    const assert = (condition, message = "Assertion Error!") => {
-      if (!condition) {
-        throw message;
-      }
+    // I'd use classes instead of closures, but that would be too verbose
+    const newWeightedLeaf = (value, weight) => ({
+      weight,
+      size: 1,
+      pushWeightedLeaf: leaf =>
+        newWeightedBranch(newWeightedLeaf(value, weight), leaf),
+      popChildIndex: (index, sibling) => [sibling, value],
+      removeChildWeight: (weight, sibling) => sibling
+    });
+
+    const newWeightedBranch = (left, right) => {
+      const popIndex = index =>
+        index < left.size
+          ? left.popChildIndex(index, right)
+          : right.popChildIndex(index - left.size, left);
+      const popChildIndex = (index, sibling) => {
+        const [newChild, value] = popIndex(index);
+        return [newWeightedBranch(newChild, sibling), value];
+      };
+      const removeWeight = weight =>
+        weight < left.weight
+          ? left.removeChildWeight(weight, right)
+          : right.removeChildWeight(weight - left.weight, left);
+      const removeChildWeight = (weight, sibling) =>
+        newWeightedBranch(removeWeight(weight), sibling);
+      return {
+        weight: left.weight + right.weight,
+        size: left.size + right.size,
+        pushWeightedLeaf: leaf =>
+          left.size < right.size
+            ? newWeightedBranch(left.pushWeightedLeaf(leaf), right)
+            : newWeightedBranch(left, right.pushWeightedLeaf(leaf)),
+        popIndex,
+        popChildIndex,
+        removeWeight,
+        removeChildWeight
+      };
     };
 
-    const songs = {
-      energy: 1000,
-      song: "S"
+    //     const pickNextSong = () => {
+    //       const energy = Math.random() * getTreeEnergy(songs);
+    //       return popByEnergy(songs, energy);
+    //     };
+
+    //     const removeOneSong = () => {
+    //       const index = Math.floor(Math.random() * getTreeSize(songs));
+    //       popByIndex(songs, index);
+    //     };
+
+    const combinatorS = {
+      apply: x => ({
+        apply: y => ({
+          apply: z => x.apply(z).apply(y.apply(z))
+        })
+      })
     };
 
-    const pushSong = (songs, song, energy) => {
-      assert(songs.energy !== undefined);
-      if (songs.numSongs === undefined) {
-        assert(songs.song !== undefined);
-        assert(Object.keys(songs).length === 2);
-        songs.left = {
-          energy: songs.energy,
-          song: songs.song
-        };
-        songs.right = {
-          energy,
-          song
-        };
-        songs.energy += energy;
-        songs.numSongs = 2;
-        delete songs.song;
-        return;
-      }
-      assert(songs.numSongs !== undefined);
-      assert(songs.left !== undefined);
-      assert(songs.right !== undefined);
-      assert(Object.keys(songs).length === 4);
-      songs.energy += energy;
-      songs.numSongs += 1;
-      if ((songs.left.numSongs ?? 1) < (songs.right.numSongs ?? 1)) {
-        pushSong(songs.left, song, energy);
-      } else {
-        pushSong(songs.right, song, energy);
-      }
+    const combinatorK = {
+      apply: x => ({
+        apply: y => x
+      })
     };
 
-    for (const song of [
-      "K",
-      "I",
-      "B",
-      "C",
-      "+",
-      "-",
-      "*",
-      "/",
-      "%",
-      "&",
-      "|",
-      "~",
-      "^",
-      "<<",
-      ">>",
-      ">>>",
-      1
-    ]) {
-      pushSong(songs, song, 1000);
-    }
-    
-    const popSongByEnergy = (songs, energy) => {
-      assert(songs.numSongs !== undefined);
-      const branch = energy < songs.left.energy;
-      const child = branch ? songs.left : songs.right;
-      if (child.numSongs === undefined) {
-        const become = branch ? songs.right : songs.left;
-        songs.energy = become.energy;
-        if (become.numSongs === undefined) {
-          songs.song = become.song;
-          delete songs.numSongs;
-          delete songs.left;
-          delete songs.right;
-        } else {
-          songs.numSongs = become.numSongs;
-          songs.left = become.left;
-          songs.right = become.right;
-        }
-        return child;
-      }
-      if (!branch) {
-        energy -= songs.left.energy;
-      }
-      songs.numSongs -= 1;
-      const song = popSongByEnergy(child, energy);
-      songs.energy -= song.energy;
-      return song;
-    }
-    
-    const popSongByIndex = (songs, index) => {
-      assert(songs.numSongs !== undefined);
-      const branch = index < (songs.left.numSongs ?? 1);
-      const child = branch ? songs.left : songs.right;
-      if (child.numSongs === undefined) {
-        const become = branch ? songs.right : songs.left;
-        songs.energy = become.energy;
-        if (become.numSongs === undefined) {
-          songs.song = become.song;
-          delete songs.numSongs;
-          delete songs.left;
-          delete songs.right;
-        } else {
-          songs.numSongs = become.numSongs;
-          songs.left = become.left;
-          songs.right = become.right;
-        }
-        return child;
-      }
-      if (!branch) {
-        index -= (songs.left.numSongs ?? 1);
-      }
-      songs.numSongs -= 1;
-      const song = popSongByIndex(child, index);
-      songs.energy -= song.energy;
-      return song;
-    }
-    
-    const popRandomSongByEnergy = () => {
-      assert(songs.numSongs !== undefined);
-      const energy = Math.random() * songs.energy;
-      return popSongByEnergy(songs, energy);
-    }
-    
-    const popRandomSongByIndex = () => {
-      assert(songs.numSongs !== undefined);
-      const index = Math.floor(Math.random() * songs.numSongs);
-      return popSongByIndex(songs, index);
-    }
-    
-    const evalS = (x, y, z, gas) => {
-      let xz, yz;
-      [xz, gas] = reducePartially(x, z, gas);
-      [yz, gas] = reducePartially(y, z, gas);
-      return reducePartially(xz, yz, gas);
-    }
-    
-    const evalB = (x, y, z, gas) => {
-      let yz;
-      [yz, gas] = reducePartially(y, z, gas);
-      return reducePartially(x, yz, gas);
-    }
-    
-    const evalC = (x, y, z, gas) => {
-      const xz = reducePartially(x, z, gas);
-      return reducePartially(xz, y, gas);
-    }
-    
-    // Assume inputs are evaluated and non-null
-    const evalLambda1 = (f, x, gas) => {
-      if (f === "I") {
-        return [x, gas];
-      }
-      if (f === "~") {
-        if (typeof x === "number") {
-          return [~x, gas];
-        }
-        return [null, 0];
-      }
-      return [[f, x], gas];
-    }
-    
-    // Assume inputs are evaluated and non-null
-    const evalLambda2 = (f, x, y, gas) => {
-      if (f === "K") {
-        return [x, gas];
-      }
-      if ((typeof x !== "number") || (typeof y !== "number")) {
-        return [null, 0];
-      }
-      switch (f) {
-        case "+": return [x + y, gas];
-        case "-": return [x - y, gas];
-        case "*": return [x * y, gas];
-        case "/": return [x / y, gas];
-        case "%": return [x % y, gas];
-        case "&": return [x & y, gas];
-        case "|": return [x | y, gas];
-        case "^": return [x ^ y, gas];
-        case "<<": return [x << y, gas];
-        case ">>": return [x >> y, gas];
-        case ">>>": return [x >>> y, gas];
-        default: return [[f, x, y], gas];
-      }
-    }
-    
-    // Assume inputs are evaluated and non-null
-    const evalLambda3 = (f, x, y, z, gas) => {
-      switch (f) {
-        case "S": return evalS(x, y, z, gas);
-        case "B": return evalB(x, y, z, gas);
-        case "C": return evalC(x, y, z, gas);
-        default: assert(false);
-      }
-    }
-    
-    // Assume inputs are evaluated and non-null
-    const reducePartially = (a, b, gas) => {
-      --gas;
-      if (gas <= 0) {
-        return [null, 0];
-      }
-      if (typeof a === "number") {
-        return [null, 0];
-      }
-      if (typeof a === "string") {
-        return evalLambda1(a, b, gas);
-      }
-      assert(Array.isArray(a));
-      if (a.length === 2) {
-        return evalLambda2(a[0], a[1], b, gas);
-      }
-      assert(a.length === 3);
-      return evalLambda3(a[0], a[1], a[2], b, gas);
-    }
-    
-    // Assume sexpr isn't evaluated
-    const reduceFully = (sexpr, gas) => {
-      if (typeof sexpr === "number") {
-        return sexpr;
-      }
-      if (typeof sexpr === "string") {
-        return sexpr;
-      }
-      assert(Array.isArray(sexpr));
-      assert(sexpr.length === 2);
-      let a, b;
-      [a, gas] = reduceFully(sexpr[0], gas);
-      [b, gas] = reduceFully(sexpr[1], gas);
-      return reducePartially(a, b, gas);
-    }
-    
-    const renderSong = song => {
-      [song,] = reduceFully(song, 1000);
-      if (song === null) {
-        return null;
-      }
-      const [test,] = reducePartially(song, 0, 100);
-      if (test === null) {
-        return null;
-      }
-      const myArrayBuffer = audioCtx.createBuffer(
-        1,
-        audioCtx.sampleRate * 30,
-        audioCtx.sampleRate
-      );
-      const nowBuffering = myArrayBuffer.getChannelData(0);
-      for (let t = 0; t < myArrayBuffer.length; ++t) {
-        const [value,] = reducePartially(song, t, 100);
-        nowBuffering[t] = value;
-      }
-      const song = audioCtx.createBufferSource();
-      song.buffer = myArrayBuffer;
-      return song;
-    }
-
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-    let currentSong = null;
-    let lastStartTime = 0;
-
-    const startNextSong = () => {
-      source = generateSong();
-      source.onended = startNextSong;
-      source.connect(audioCtx.destination);
-      source.start();
-      const nextStartTime = audioCtx.currentTime;
-      console.log(nextStartTime - lastStartTime);
-      lastStartTime = nextStartTime;
+    const combinatorI = {
+      apply: x => x
     };
 
-    document.getElementById("next").onclick = () => {
-      if (currentSong === null) {
-        currentSong = popRandomSongByEnergy();
-        const source = renderSong(currentSong);
-        if (source === null) {
-          // todo
-        }
-        
-        startNextSong();
-      } else {
-        source.stop();
-      }
+    const combinatorB = {
+      apply: x => ({
+        apply: y => ({
+          apply: z => x.apply(y.apply(z))
+        })
+      })
     };
+
+    const combinatorC = {
+      apply: x => ({
+        apply: y => ({
+          apply: z => x.apply(z).apply(y)
+        })
+      })
+    };
+
+    const newNumber = x => ({
+      apply: op => ({
+        apply: y => op.applyOperator(x, y)
+      })
+    });
+
+    const operatorAdd = {
+      applyOperator: (x, y) => x + y
+    };
+
+    const operatorSubtract = {
+      applyOperator: (x, y) => x - y
+    };
+
+    const operatorMultiply = {
+      applyOperator: (x, y) => x * y
+    };
+
+    const operatorDivide = {
+      applyOperator: (x, y) => x / y
+    };
+
+    const operatorModulus = {
+      applyOperator: (x, y) => x % y
+    };
+
+    const operatorAnd = {
+      applyOperator: (x, y) => x & y
+    };
+
+    const operatorOr = {
+      applyOperator: (x, y) => x | y
+    };
+
+    const operatorXor = {
+      applyOperator: (x, y) => x ^ y
+    };
+
+    const operatorLeftShift = {
+      applyOperator: (x, y) => x << y
+    };
+
+    const operatorSignedRightShift = {
+      applyOperator: (x, y) => x >> y
+    };
+
+    const operatorUnsignedRightShift = {
+      applyOperator: (x, y) => x >>> y
+    };
+
+    const newExpression = (a, b) => ({
+      eval: () => {
+        const evalA = (a.eval ?? (() => a))();
+        const evalB = (b.eval ?? (() => b))();
+        return evalA.apply(evalB);
+      }
+    });
+
+    //         const renderSong = song => {
+    //           [song] = reduceFully(song, 1000);
+    //           if (song === null) {
+    //             return null;
+    //           }
+    //           const [test] = reducePartially(song, 0, 100);
+    //           if (test === null) {
+    //             return null;
+    //           }
+    //           const myArrayBuffer = audioCtx.createBuffer(
+    //             1,
+    //             audioCtx.sampleRate * 30,
+    //             audioCtx.sampleRate
+    //           );
+    //           const nowBuffering = myArrayBuffer.getChannelData(0);
+    //           for (let t = 0; t < myArrayBuffer.length; ++t) {
+    //             const [value] = reducePartially(song, t, 100);
+    //             nowBuffering[t] = value;
+    //           }
+    //           song = audioCtx.createBufferSource();
+    //           song.buffer = myArrayBuffer;
+    //           return song;
+    //         };
+
+    //         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    //         let currentSong = null;
+    //         let lastStartTime = 0;
+
+    //         const startNextSong = () => {
+    //           source = generateSong();
+    //           source.onended = startNextSong;
+    //           source.connect(audioCtx.destination);
+    //           source.start();
+    //           const nextStartTime = audioCtx.currentTime;
+    //           console.log(nextStartTime - lastStartTime);
+    //           lastStartTime = nextStartTime;
+    //         };
+
+    //         document.getElementById("next").onclick = () => {
+    //           if (currentSong === null) {
+    //             currentSong = popRandomSongByEnergy();
+    //             const source = renderSong(currentSong);
+    //             if (source === null) {
+    //               // todo
+    //             }
+
+    //             startNextSong();
+    //           } else {
+    //             source.stop();
+    //           }
+    //         };
   </script>
 </html>
