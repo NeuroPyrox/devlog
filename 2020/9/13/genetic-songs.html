@@ -28,8 +28,9 @@
     <button id="next">
       Next
     </button>
-    <br>
-    The fitness of each song is measured by how long you let it play. "Next" skips to the next song.
+    <br />
+    The fitness of each song is measured by how long you let it play. "Next"
+    skips to the next song.
   </body>
   <script>
     const assert = condition => {
@@ -79,82 +80,71 @@
       };
     };
 
-    // I failed to make this lambda evaluation code DRYer
-    // I'll try harder to come up with an abstraction once I encounter more instances of this pattern
-
-    const newLambda = f => ({
-      apply: (x, gas) => (0 < gas ? [f(x), gas - 1] : [null, 0])
-    });
-
-    const combinatorS = newLambda(x =>
-      newLambda(y => ({
-        apply: (z, gas) => {
-          if (gas <= 0) {
+    const newLambda = fInner => {
+      const f = {};
+      f.eval = gas => (gas < 0 ? [null, 0] : [f, gas]);
+      f.apply = x => {
+        const fx = {};
+        fx.eval = gas => {
+          if (gas < 0) {
             return [null, 0];
           }
-          const xApply = x.apply ?? (() => [null, 0]);
-          const yApply = y.apply ?? (() => [null, 0]);
-          const [xz, xzGas] = xApply(z, gas - 1);
-          const [yz, yzGas] = yApply(z, xzGas);
-          if (yzGas <= 0) {
-            return [null, 0];
-          }
-          const xzApply = xz.apply ?? (() => [null, 0]);
-          return xzApply(yz, yzGas);
+          const [evalX, gasX] = x.eval(gas - 1);
+          return fInner(evalX).eval(gasX);
+        };
+        fx.apply = y => newLambdaApplication(fx, y);
+        return fx;
+      };
+      return f;
+    };
+
+    const newLambdaApplication = (f, x) => {
+      const fx = {};
+      fx.eval = gas => {
+        if (gas < 0) {
+          return [null, 0];
         }
-      }))
-    );
-
-    const combinatorK = newLambda(x => newLambda(y => x));
-
-    const combinatorI = newLambda(x => x);
-
-    const combinatorB = newLambda(x =>
-      newLambda(y => ({
-        apply: (z, gas) => {
-          if (gas <= 0) {
-            return [null, 0];
-          }
-          const xApply = x.apply ?? (() => [null, 0]);
-          const yApply = y.apply ?? (() => [null, 0]);
-          const [yz, yzGas] = yApply(z, gas - 1);
-          return xApply(yz, yzGas);
+        const [evalF, gasF] = f.eval(gas - 1);
+        const [evalX, gasX] = x.eval(gasF);
+        if (evalF.applyOperator !== undefined) {
+          return [null, 0];
         }
-      }))
-    );
+        return evalF.apply(evalX).eval(gasX);
+      };
+      fx.apply = y => newLambdaApplication(fx, y);
+      return fx;
+    };
 
-    const combinatorC = newLambda(x =>
-      newLambda(y => ({
-        apply: (z, gas) => {
-          if (gas <= 0) {
-            return [null, 0];
-          }
-          const xApply = x.apply ?? (() => [null, 0]);
-          const [xz, xzGas] = xApply(z, gas - 1);
-          if (xzGas <= 0) {
-            return [null, 0];
-          }
-          const xzApply = xz.apply ?? (() => [null, 0]);
-          return xzApply(y, xzGas);
-        }
-      }))
-    );
-
-    const newNumber = x => {
-      const number = newLambda(operator => ({
-        apply: (y, gas) => {
-          if (
-            gas <= 0 ||
-            operator.applyOperator === undefined ||
-            y.number === undefined
-          ) {
-            return [null, 0];
-          }
-          return [newNumber(operator.applyOperator(x, y.number)), gas - 1];
-        }
+    const newLambdaNumber = xNumber => {
+      const x = newLambda(operator => newLambda(y => {
+        const xy = {};
+        xy.eval = gas =>
+          gas <= 0 ||
+          operator.applyOperator === undefined ||
+          y.number === undefined
+            ? [null, 0]
+            : [newLambdaNumber(operator.applyOperator(xNumber, y.number)), gas - 1]
+        xy.apply = z => newLambdaApplication(xy, z);
+        return xy;
       }));
-      number.number = x;
-      return number;
+      x.number = xNumber;
+      return x;
+    };
+
+    const combinators = {
+      // Thank auto-format for this
+      s: newLambda(x =>
+        newLambda(y => newLambda(z => x.apply(z).apply(y.apply(z))))
+      ),
+      k: newLambda(x => newLambda(y => x)),
+      i: newLambda(x => x),
+      a: newLambda(x => newLambda(y => y.apply(x))),
+      b: newLambda(x => newLambda(y => newLambda(z => x.apply(y.apply(z))))),
+      c: newLambda(x => newLambda(y => newLambda(z => x.apply(z).apply(y)))),
+      d: newLambda(x => newLambda(y => newLambda(z => x.apply(y)))),
+      u: newLambda(z => z.apply(z)),
+      v: newLambda(y => newLambda(z => z.apply(y.apply(z)))),
+      w: newLambda(x => newLambda(z => x.apply(z).apply(z)))
     };
 
     const operators = [
@@ -195,11 +185,11 @@
             return [null, 0];
           }
           const [evalA, gasA] = a.eval(gas - 1);
-          if (gasA === 0 || evalA.apply === undefined) {
+          if (gasA === 0 || evalA.applyEval === undefined) {
             return [null, 0];
           }
           const [evalB, gasB] = b.eval(gasA);
-          return evalA.apply(evalB, gasB);
+          return evalA.applyEval(evalB, gasB);
         }
       };
       result.getMutations = () =>
@@ -256,8 +246,8 @@
       for (;;) {
         const [song, weight] = popUnrenderedSong();
         const [evalSong] = song.eval(songGas);
-        if (evalSong !== null && evalSong.apply !== undefined) {
-          const [evalSample, gas] = evalSong.apply(newNumber(0), sampleGas);
+        if (evalSong !== null && evalSong.applyEval !== undefined) {
+          const [evalSample, gas] = evalSong.applyEval(newNumber(0), sampleGas);
           if (evalSample !== null && evalSample.number !== undefined) {
             return [song, evalSong, weight];
           }
@@ -274,7 +264,7 @@
       );
       const channel = buffer.getChannelData(0);
       for (let t = 0; t < buffer.length; ++t) {
-        const [value] = evalSong.apply(newNumber(t), sampleGas);
+        const [value] = evalSong.applyEval(newNumber(t), sampleGas);
         channel[t] = value.number;
       }
       bufferSource = audioCtx.createBufferSource();
@@ -297,10 +287,7 @@
       source.onended = playNextSong;
       source.connect(audioCtx.destination);
       if (currentSong !== null) {
-        pushSongMutations(
-          currentSong,
-          currentWeight + endTime - lastStartTime
-        );
+        pushSongMutations(currentSong, currentWeight + endTime - lastStartTime);
       }
       currentSource = source;
       currentSong = song;
