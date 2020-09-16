@@ -28,18 +28,12 @@
     <button id="next">
       Next
     </button>
-    <br>
-    The fitness of each song is measured by how long you let it play. "Next" skips to the next song.
+    <br />
+    The fitness of each song is measured by how long you let it play. "Next"
+    skips to the next song.
   </body>
   <script>
-    const assert = condition => {
-      if (!condition) {
-        throw "Assertion Error!";
-      }
-    };
-
     const newWeightedLeaf = (value, weight) => {
-      assert(value.eval !== undefined);
       const result = {
         weight,
         size: 1,
@@ -78,84 +72,103 @@
         removeChildIndex
       };
     };
+    
+    const test = x => {
+      if (x.apply === undefined) {
+        console.log(x)
+      }
+      return x;
+    }
 
-    // I failed to make this lambda evaluation code DRYer
-    // I'll try harder to come up with an abstraction once I encounter more instances of this pattern
+    const getLeafMutations = f =>
+      [x => test(x).apply(f), x => f.apply(x)]
+        .map(mutation => initialLambdas.map(mutation))
+        .flat();
 
-    const newLambda = f => ({
-      apply: (x, gas) => (0 < gas ? [f(x), gas - 1] : [null, 0])
-    });
+    const getBranchMutations = (fx, f, x) =>
+      getLeafMutations(fx)
+        .concat(f.isLeaf ? [x] : [])
+        .concat(x.isLeaf ? [f] : [])
+        .concat(f.getMutations().map(mf => mf.apply(x)))
+        .concat(x.getMutations().map(mx => f.apply(mx)));
 
-    const combinatorS = newLambda(x =>
-      newLambda(y => ({
-        apply: (z, gas) => {
+    const newLambda = fInner => {
+      const f = {};
+      f.isLeaf = true;
+      f.getMutations = () => getLeafMutations(f);
+      f.eval = gas => [f, gas];
+      f.apply = x => {
+        const fx = {};
+        fx.getMutations = () => getBranchMutations(fx, f, x);
+        fx.eval = gas => {
           if (gas <= 0) {
-            return [null, 0];
+            return [null, -1];
           }
-          const xApply = x.apply ?? (() => [null, 0]);
-          const yApply = y.apply ?? (() => [null, 0]);
-          const [xz, xzGas] = xApply(z, gas - 1);
-          const [yz, yzGas] = yApply(z, xzGas);
-          if (yzGas <= 0) {
-            return [null, 0];
+          const [evalX, gasX] = x.eval(gas - 1);
+          if (gasX < 0) {
+            return [null, -1];
           }
-          const xzApply = xz.apply ?? (() => [null, 0]);
-          return xzApply(yz, yzGas);
+          return fInner(evalX).eval(gasX);
+        };
+        fx.apply = y => newLambdaApplication(fx, y);
+        return fx;
+      };
+      return f;
+    };
+
+    const newLambdaApplication = (f, x) => {
+      const fx = {};
+      fx.getMutations = () => getBranchMutations(fx, f, x);
+      fx.eval = gas => {
+        if (gas <= 0) {
+          return [null, -1];
         }
-      }))
-    );
-
-    const combinatorK = newLambda(x => newLambda(y => x));
-
-    const combinatorI = newLambda(x => x);
-
-    const combinatorB = newLambda(x =>
-      newLambda(y => ({
-        apply: (z, gas) => {
-          if (gas <= 0) {
-            return [null, 0];
-          }
-          const xApply = x.apply ?? (() => [null, 0]);
-          const yApply = y.apply ?? (() => [null, 0]);
-          const [yz, yzGas] = yApply(z, gas - 1);
-          return xApply(yz, yzGas);
+        const [evalF, gasF] = f.eval(gas - 1);
+        const [evalX, gasX] = x.eval(gasF);
+        if (gasX < 0) {
+          return [null, -1];
         }
-      }))
-    );
+        return evalF.apply(evalX).eval(gasX);
+      };
+      fx.apply = y => newLambdaApplication(fx, y);
+      return fx;
+    };
 
-    const combinatorC = newLambda(x =>
-      newLambda(y => ({
-        apply: (z, gas) => {
-          if (gas <= 0) {
-            return [null, 0];
-          }
-          const xApply = x.apply ?? (() => [null, 0]);
-          const [xz, xzGas] = xApply(z, gas - 1);
-          if (xzGas <= 0) {
-            return [null, 0];
-          }
-          const xzApply = xz.apply ?? (() => [null, 0]);
-          return xzApply(y, xzGas);
-        }
-      }))
-    );
-
-    const newNumber = x => {
-      const number = newLambda(operator => ({
-        apply: (y, gas) => {
-          if (
+    const newLambdaNumber = xNumber => {
+      const x = newLambda(operator =>
+        newLambda(y => {
+          const xy = {};
+          xy.eval = gas =>
             gas <= 0 ||
             operator.applyOperator === undefined ||
             y.number === undefined
-          ) {
-            return [null, 0];
-          }
-          return [newNumber(operator.applyOperator(x, y.number)), gas - 1];
-        }
-      }));
-      number.number = x;
-      return number;
+              ? [null, -1]
+              : [
+                  newLambdaNumber(operator.applyOperator(xNumber, y.number)),
+                  gas - 1
+                ];
+          xy.apply = z => newLambdaApplication(xy, z);
+          return xy;
+        })
+      );
+      x.number = xNumber;
+      return x;
     };
+
+    const combinators = [
+      newLambda(x =>
+        newLambda(y => newLambda(z => x.apply(z).apply(y.apply(z))))
+      ),
+      newLambda(x => newLambda(y => x)),
+      newLambda(x => x),
+      newLambda(x => newLambda(y => y.apply(x))),
+      newLambda(x => newLambda(y => newLambda(z => x.apply(y.apply(z))))),
+      newLambda(x => newLambda(y => newLambda(z => x.apply(z).apply(y)))),
+      newLambda(x => newLambda(y => newLambda(z => x.apply(y)))),
+      newLambda(z => z.apply(z)),
+      newLambda(y => newLambda(z => z.apply(y.apply(z)))),
+      newLambda(x => newLambda(z => x.apply(z).apply(z)))
+    ];
 
     const operators = [
       (x, y) => x + y,
@@ -169,61 +182,28 @@
       (x, y) => x << y,
       (x, y) => x >> y,
       (x, y) => x >>> y
-    ].map(operator => ({ applyOperator: operator }));
+    ].map(applyOperator => {
+      const result = {applyOperator};
+      result.eval = gas => [result, gas];
+      result.apply = _ => {
+        const err = {};
+        err.eval = _ => [null, -1];
+        err.apply = _ => err;
+        return err;
+      }
+    });
 
-    const getAppendMutations = expression =>
-      [
-        i => newExpressionBranch(i, expression),
-        i => newExpressionBranch(expression, i)
-      ]
-        .map(f => initialExpressions.map(f))
-        .flat();
+    const initialLambdas = [newLambdaNumber(1)]
+      .concat(combinators)
+      .concat(operators);
 
-    const newExpressionLeaf = lambda => {
-      const result = {
-        isLeaf: true,
-        eval: gas => (0 < gas ? [lambda, gas - 1] : [null, 0])
-      };
-      result.getMutations = () => getAppendMutations(result);
-      return result;
-    };
-
-    const newExpressionBranch = (a, b) => {
-      const result = {
-        eval: gas => {
-          if (gas <= 0) {
-            return [null, 0];
-          }
-          const [evalA, gasA] = a.eval(gas - 1);
-          if (gasA === 0 || evalA.apply === undefined) {
-            return [null, 0];
-          }
-          const [evalB, gasB] = b.eval(gasA);
-          return evalA.apply(evalB, gasB);
-        }
-      };
-      result.getMutations = () =>
-        getAppendMutations(result)
-          .concat(a.isLeaf ? [b] : [])
-          .concat(b.isLeaf ? [a] : [])
-          .concat(a.getMutations().map(ma => newExpressionBranch(ma, b)))
-          .concat(b.getMutations().map(mb => newExpressionBranch(a, mb)));
-      return result;
-    };
-
-    // Initial in the sense that they're added when mutating an expression, not for initializing songs
-    const initialExpressions = [
-      combinatorS,
-      combinatorK,
-      combinatorI,
-      combinatorB,
-      combinatorC,
-      newNumber(1)
-    ]
-      .concat(operators)
-      .map(newExpressionLeaf);
-
-    let songs = newWeightedLeaf(newExpressionLeaf(combinatorI), 10);
+    const initialSongWeight = 100;
+    let songs = newWeightedLeaf(initialLambdas[0], initialSongWeight);
+    initialLambdas.slice(1).forEach(lambda => {
+      songs = songs.pushWeightedLeaf(
+        newWeightedLeaf(lambda, initialSongWeight)
+      );
+    });
     const maxNumSongs = 10000;
     const songGas = 1000;
     const sampleGas = 20;
@@ -237,14 +217,11 @@
     const pushSongMutations = (song, weight) => {
       const mutations = song.getMutations();
       weight /= mutations.length;
-      for (const mutation of mutations) {
-        assert(mutation.eval !== undefined);
+      mutations.foreach(mutation => {
         songs = songs.pushWeightedLeaf(newWeightedLeaf(mutation, weight));
-      }
+      });
       removeExcessSongs();
     };
-
-    pushSongMutations(newExpressionLeaf(combinatorI), 10);
 
     const popUnrenderedSong = () => {
       const [newSongs, result] = songs.popWeight(Math.random() * songs.weight);
@@ -252,14 +229,20 @@
       return result;
     };
 
+    // The code from here onward is messy because I'm not reusing functions enough to know the correct abstractions
+
     const popNextValidSong = () => {
       for (;;) {
         const [song, weight] = popUnrenderedSong();
-        const [evalSong] = song.eval(songGas);
-        if (evalSong !== null && evalSong.apply !== undefined) {
-          const [evalSample, gas] = evalSong.apply(newNumber(0), sampleGas);
-          if (evalSample !== null && evalSample.number !== undefined) {
-            return [song, evalSong, weight];
+        if (song.applyOperator === undefined) {
+          const [evalSong] = song.eval(songGas);
+          if (evalSong !== null && evalSong.applyOperator === undefined) {
+            const [evalSample] = evalSong
+              .apply(newLambdaNumber(0))
+              .eval(sampleGas);
+            if (evalSample !== null && evalSample.number !== undefined) {
+              return [song, evalSong, weight];
+            }
           }
         }
         pushSongMutations(song, weight);
@@ -274,7 +257,7 @@
       );
       const channel = buffer.getChannelData(0);
       for (let t = 0; t < buffer.length; ++t) {
-        const [value] = evalSong.apply(newNumber(t), sampleGas);
+        const [value] = evalSong.apply(newLambdaNumber(t)).eval(sampleGas);
         channel[t] = value.number;
       }
       bufferSource = audioCtx.createBufferSource();
@@ -289,7 +272,6 @@
     let currentWeight = null;
     let lastStartTime = 0;
 
-    // This function is messy for the sake of finishing faster
     const playNextSong = () => {
       const endTime = audioCtx.currentTime;
       const [song, evalSong, weight] = popNextValidSong();
@@ -297,10 +279,7 @@
       source.onended = playNextSong;
       source.connect(audioCtx.destination);
       if (currentSong !== null) {
-        pushSongMutations(
-          currentSong,
-          currentWeight + endTime - lastStartTime
-        );
+        pushSongMutations(currentSong, currentWeight + endTime - lastStartTime);
       }
       currentSource = source;
       currentSong = song;
