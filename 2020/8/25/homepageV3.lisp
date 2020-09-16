@@ -1,4 +1,5 @@
 [homepage
+  ("Sql Counter"        "16 Sept 2020" "/2020/9/16/sql-counter")
   ("Genetic Songs v0"   "13 Sept 2020" "/2020/9/13/genetic-songs")
   ("Weighted Tree Push" "4 Sept 2020"  "/2020/9/4/weighted-tree-push")
   ("String List"        "3 Sept 2020"  "/2020/9/3/string-list")
