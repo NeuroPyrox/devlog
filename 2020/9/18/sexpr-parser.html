@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Sexpr Parser</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Nova+Mono&display=swap");
+
+    body {
+      background-color: black;
+      font-family: "Nova Mono", monospace;
+      color: #0F0;
+      line-height: 2.5;
+    }
+
+    a:link,
+    a:visited {
+      color: #FF0;
+    }
+  </style>
+  <body>
+    <p>
+      Only handles whitespace and parentheses
+    </p>
+    <input type="text" id="text" />
+    <button id="log">
+      Show In Console
+    </button>
+  </body>
+  <script>
+    const isASymbolChar = char =>
+      typeof char === "string" && " \n\t()".indexOf(char) === -1;
+
+    const parseSymbol = (string, index) => {
+      const start = index;
+      if (!isASymbolChar(string[index])) {
+        return [null, index];
+      }
+      index += 1;
+      while (isASymbolChar(string[index])) {
+        index += 1;
+      }
+      return [string.slice(start, index), index];
+    };
+
+    const isAWhiteSpaceChar = char =>
+      typeof char === "string" && " \n\t".indexOf(char) !== -1;
+
+    const parseWhiteSpace = (string, index) => {
+      while (isAWhiteSpaceChar(string[index])) {
+        index += 1;
+      }
+      return index;
+    };
+
+    const parseSexprInner = (string, index) => {
+      const items = [];
+      let nextSymbol;
+      index = parseWhiteSpace(string, index);
+      [nextSymbol, index] = parseSexpr(string, index);
+      while (nextSymbol !== null) {
+        items.push(nextSymbol);
+        index = parseWhiteSpace(string, index);
+        [nextSymbol, index] = parseSexpr(string, index);
+      }
+      return [items, index];
+    };
+
+    const parseSexpr = (string, index) => {
+      if (string[index] !== "(") {
+        return parseSymbol(string, index);
+      }
+      const start = index;
+      let items;
+      [items, index] = parseSexprInner(string, index + 1);
+      if (string[index] !== ")") {
+        return [null, start];
+      }
+      return [items, index + 1];
+    };
+
+    document.getElementById("log").onclick = () => {
+      const text = document.getElementById("text").value;
+      const [sexpr, index] = parseSexprInner(text, 0);
+      console.log(index === text.length ? sexpr : null);
+    };
+  </script>
+</html>
