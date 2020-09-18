@@ -1,4 +1,5 @@
 [homepage
+  ("Sexpr Parser"       "18 Sept 2020" "/2020/9/18/sexpr-parser")
   ("Sql Counter"        "16 Sept 2020" "/2020/9/16/sql-counter")
   ("Genetic Songs v0"   "13 Sept 2020" "/2020/9/13/genetic-songs")
   ("Weighted Tree Push" "4 Sept 2020"  "/2020/9/4/weighted-tree-push")
