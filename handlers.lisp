@@ -1,5 +1,6 @@
 (handlers
-  (htmlBuilder "2020/8/25/homepageV3.js" "/")
+  (htmlBuilder "2020/9/21/homepage-v4.js" "/")
+  (htmlBuilder "homepage-v4.js"          "/2020/9/21/homepage-v4")
   (server      "sql-string-list.js"      "/2020/9/20/sql-string-list")
   (html        "sexpr-parser.html"       "/2020/9/18/sexpr-parser")
   (json        "sql-counter.js"          "/2020/9/16/sql-counter")
