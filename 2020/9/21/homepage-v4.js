@@ -18,7 +18,7 @@ const templateList = listHtml => `
           font-family: "Nova Mono", monospace;
         }
 
-        a, h1, h2 {
+        a, p {
           color: #0D0;
         }
 
@@ -53,9 +53,17 @@ const templateList = listHtml => `
     </head>
     <body>
       <div class="list">
-        <h1>"Always Produce"</h1>
-        <h2>- Paul Graham</h2>
-        <br><br><br>
+        <p>
+          If you start with too big a problem,
+          you may never quite be able to encompass it.
+          So if you need to write a big, complex program,
+          the best way to begin may not be to write a spec for it,
+          but to write a prototype that solves a subset of the problem.
+          Whatever the advantages of planning,
+          they're often outweighed by the advantages of being able to keep a program in your head. 
+        </p>
+        <p>- Paul Graham</p>
+        <br><br>
         ${listHtml}
       </div>
     </body>
