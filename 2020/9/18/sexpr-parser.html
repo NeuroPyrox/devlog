@@ -31,61 +31,76 @@
     </button>
   </body>
   <script>
-    const isASymbolChar = char =>
-      typeof char === "string" && " \n\t()".indexOf(char) === -1;
+    const Just = x => ({
+      chain: f => f(x),
+      or: _ => Just(x),
+      unwrap: _ => x
+    });
 
-    const parseSymbol = (string, index) => {
-      const start = index;
-      if (!isASymbolChar(string[index])) {
-        return [null, index];
-      }
-      index += 1;
-      while (isASymbolChar(string[index])) {
-        index += 1;
-      }
-      return [string.slice(start, index), index];
-    };
+    const Nothing = { chain: _ => Nothing, or: f => f() };
 
-    const isAWhiteSpaceChar = char =>
-      typeof char === "string" && " \n\t".indexOf(char) !== -1;
+    const Maybe = x => (x === undefined || x === null ? Nothing : Just(x));
 
-    const parseWhiteSpace = (string, index) => {
-      while (isAWhiteSpaceChar(string[index])) {
-        index += 1;
-      }
-      return index;
-    };
+    // Parse returns a maybe monad of a parse result and the next index
+    const Parser = parse => ({
+      parse,
+      chain: f =>
+        Parser((string, index) =>
+          parse(string, index).chain(([result, index]) =>
+            f(result).parse(string, index)
+          )
+        ),
+      or: other =>
+        Parser((string, index) =>
+          parse(string, index).or(() => other.parse(string, index))
+        )
+    });
 
-    const parseSexprInner = (string, index) => {
-      const items = [];
-      let nextSymbol;
-      index = parseWhiteSpace(string, index);
-      [nextSymbol, index] = parseSexpr(string, index);
-      while (nextSymbol !== null) {
-        items.push(nextSymbol);
-        index = parseWhiteSpace(string, index);
-        [nextSymbol, index] = parseSexpr(string, index);
-      }
-      return [items, index];
-    };
+    const ReturnParser = x => Parser((_, index) => Just([x, index]));
 
-    const parseSexpr = (string, index) => {
-      if (string[index] !== "(") {
-        return parseSymbol(string, index);
-      }
-      const start = index;
-      let items;
-      [items, index] = parseSexprInner(string, index + 1);
-      if (string[index] !== ")") {
-        return [null, start];
-      }
-      return [items, index + 1];
-    };
+    const CharParser = predicate =>
+      Parser((string, index) =>
+        index < string.length && predicate(string[index])
+          ? Just([null, index + 1])
+          : Nothing
+      );
+
+    const CharClassParser = predicate =>
+      CharParser(predicate)
+        .chain(_ => CharClassParser(predicate))
+        .or(ReturnParser(null));
+
+    const SymbolParser = Parser((string, start) =>
+      CharClassParser(char => " \n\t()".indexOf(char) === -1)
+        .parse(string, start)
+        .chain(([, end]) =>
+          start === end ? Nothing : Just([string.slice(start, end), end])
+        )
+    );
+
+    const InnerSexprParser = CharClassParser(
+      char => " \n\t".indexOf(char) !== -1
+    ).chain(_ =>
+      SexprParser.chain(head =>
+        InnerSexprParser.chain(rest => {
+          rest.unshift(head);
+          return ReturnParser(rest);
+        })
+      ).or(ReturnParser([]))
+    );
+
+    const SexprParser = CharParser(char => char === "(")
+      .chain(_ =>
+        InnerSexprParser.chain(sexpr =>
+          CharParser(char => char === ")").chain(_ => ReturnParser(sexpr))
+        )
+      )
+      .or(SymbolParser);
 
     document.getElementById("log").onclick = () => {
       const text = document.getElementById("text").value;
-      const [sexpr, index] = parseSexprInner(text, 0);
-      console.log(index === text.length ? sexpr : null);
+      const [sexpr, index] = InnerSexprParser.parse(text, 0).unwrap();
+      console.log(JSON.stringify(index === text.length ? sexpr : null));
     };
   </script>
 </html>
