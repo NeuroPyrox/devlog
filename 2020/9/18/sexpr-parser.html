@@ -32,24 +32,35 @@
   </body>
   <script>
     const Just = x => ({
+      map: f => Just(f(x)),
       chain: f => f(x),
       or: _ => Just(x),
       unwrap: _ => x
     });
 
-    const Nothing = { chain: _ => Nothing, or: f => f() };
-
-    const Maybe = x => (x === undefined || x === null ? Nothing : Just(x));
+    const Nothing = { map: _ => Nothing, chain: _ => Nothing, or: f => f() };
 
     // Parse returns a maybe monad of a parse result and the next index
     const Parser = parse => ({
       parse,
-      chain: f =>
+      map: f =>
         Parser((string, index) =>
-          parse(string, index).chain(([result, index]) =>
-            f(result).parse(string, index)
+          parse(string, index).map(([result, index]) => [f(result), index])
+        ),
+      apply: other =>
+        Parser((string, index) =>
+          parse(string, index).chain(([f, indexF]) =>
+            other.parse(string, indexF).map(([x, indexX]) => [f(x), indexX])
           )
         ),
+      applyLeft: other =>
+        Parser(parse)
+          .map(a => b => a)
+          .apply(other),
+      applyRight: other =>
+        Parser(parse)
+          .map(a => b => b)
+          .apply(other),
       or: other =>
         Parser((string, index) =>
           parse(string, index).or(() => other.parse(string, index))
@@ -65,37 +76,42 @@
           : Nothing
       );
 
-    const CharClassParser = predicate =>
-      CharParser(predicate)
-        .chain(_ => CharClassParser(predicate))
-        .or(ReturnParser(null));
+    const ManyCharParser = predicate => {
+      // Recursive object definition
+      const result = {};
+      return Object.assign(
+        result,
+        CharParser(predicate)
+          .applyLeft(result)
+          .or(ReturnParser(null))
+      );
+    };
 
     const SymbolParser = Parser((string, start) =>
-      CharClassParser(char => " \n\t()".indexOf(char) === -1)
+      ManyCharParser(char => " \n\t()".indexOf(char) === -1)
         .parse(string, start)
         .chain(([, end]) =>
           start === end ? Nothing : Just([string.slice(start, end), end])
         )
     );
 
-    const InnerSexprParser = CharClassParser(
-      char => " \n\t".indexOf(char) !== -1
-    ).chain(_ =>
-      SexprParser.chain(head =>
-        InnerSexprParser.chain(rest => {
-          rest.unshift(head);
-          return ReturnParser(rest);
-        })
-      ).or(ReturnParser([]))
-    );
+    // Forward declaration
+    const InnerSexprParser = {};
 
     const SexprParser = CharParser(char => char === "(")
-      .chain(_ =>
-        InnerSexprParser.chain(sexpr =>
-          CharParser(char => char === ")").chain(_ => ReturnParser(sexpr))
-        )
-      )
+      .applyRight(InnerSexprParser)
+      .applyLeft(CharParser(char => char === ")"))
       .or(SymbolParser);
+
+    // Actual value
+    Object.assign(
+      InnerSexprParser,
+      ManyCharParser(char => " \n\t".indexOf(char) !== -1).applyRight(
+        SexprParser.map(head => tail => [head, ...tail])
+          .apply(InnerSexprParser)
+          .or(ReturnParser([]))
+      )
+    );
 
     document.getElementById("log").onclick = () => {
       const text = document.getElementById("text").value;
