@@ -1,5 +1,92 @@
 "use strict";
 
+const just = x => ({
+  map: f => just(f(x)),
+  chain: f => f(x),
+  or: _ => just(x),
+  unwrap: _ => x
+});
+
+const nothing = { map: _ => nothing, chain: _ => nothing, or: f => f() };
+
+// Parse returns a maybe monad of a parse result and the next index
+const parser = parse => ({
+  parse,
+  map: f =>
+    parser((string, index) =>
+      parse(string, index).map(([result, index]) => [f(result), index])
+    ),
+  apply: other =>
+    parser((string, index) =>
+      parse(string, index).chain(([f, indexF]) =>
+        other.parse(string, indexF).map(([x, indexX]) => [f(x), indexX])
+      )
+    ),
+  applyLeft: other =>
+    parser(parse)
+      .map(a => b => a)
+      .apply(other),
+  applyRight: other =>
+    parser(parse)
+      .map(a => b => b)
+      .apply(other),
+  or: other =>
+    parser((string, index) =>
+      parse(string, index).or(() => other.parse(string, index))
+    )
+});
+
+const returnParser = x => parser((_, index) => just([x, index]));
+
+const skipCharParser = predicate =>
+  parser((string, index) =>
+    index < string.length && predicate(string[index])
+      ? just([null, index + 1])
+      : nothing
+  );
+
+const skipManyCharParser = predicate => {
+  // Recursive object definition
+  const result = {};
+  return Object.assign(
+    result,
+    skipCharParser(predicate)
+      .applyLeft(result)
+      .or(returnParser(null))
+  );
+};
+
+const manyCharParser = predicate =>
+  parser((string, start) =>
+    skipManyCharParser(predicate)
+      .parse(string, start)
+      .map(([, end]) => [string.slice(start, end), end])
+  );
+
+const manyLetterParser = manyCharParser(
+  char => ("a" <= char && char <= "z") || ("A" <= char && char <= "Z")
+);
+
+const stringParser = skipCharParser(char => char === '"')
+  .applyRight(manyCharParser(char => char !== '"'))
+  .applyLeft(skipCharParser(_ => true));
+
+const skipManySpaceParser = skipManyCharParser(char => char === " ");
+
+const handlerParser = skipCharParser(char => char === "(")
+  .applyRight(manyLetterParser)
+  .map(type => source => path => [type, source, path])
+  .applyLeft(skipManySpaceParser)
+  .apply(stringParser)
+  .applyLeft(skipManySpaceParser)
+  .apply(stringParser)
+  .applyLeft(skipCharParser(char => char === ")"));
+
+const skipStringParser = skipString => parser((string, start) => {
+  const end = start + skipString.length;
+  return (end < string.length && string.slice(start, end) === skipString) ? just([null, end]) : nothing
+})
+
 const fs = require("fs");
 
 const assert = condition => {
@@ -8,59 +95,17 @@ const assert = condition => {
   }
 };
 
-const isLetter = letter =>
-  letter.length === 1 &&
-  (("a" <= letter && letter <= "z") || ("A" <= letter && letter <= "Z"));
-
-const parseLetters = (offset, letters) => {
-  var end = offset;
-  while (isLetter(letters[end])) {
-    ++end;
-  }
-  const result = letters.slice(offset, end);
-  offset = end;
-  return { offset, result };
-};
-
-const parseString = (offset, string) => {
-  assert(string[offset++] === '"');
-  var end = offset;
-  while (string[end] !== '"') {
-    ++end;
-  }
-  const result = string.slice(offset, end);
-  offset = ++end;
-  return { offset, result };
-};
-
-const parseSpaces = (offset, spaces) => {
-  assert(spaces[offset++] === " ");
-  while (spaces[offset] === " ") {
-    ++offset;
-  }
-  return { offset };
-};
-
-const parseHandler = (offset, post) => {
-  assert(post[offset++] === "(");
-  var { offset, result: type } = parseLetters(offset, post);
-  var { offset } = parseSpaces(offset, post);
-  var { offset, result: source } = parseString(offset, post);
-  var { offset } = parseSpaces(offset, post);
-  var { offset, result: path } = parseString(offset, post);
-  assert(post[offset++] === ")");
-  return { offset, result: [type, source, path] };
-};
+const handlersParser = skipStringParser("(handlers\n  ")
 
 const parseHandlers = handlers => {
   assert(handlers.slice(0, 12) === "(handlers\n  ");
-  var { offset, result: handler } = parseHandler(12, handlers);
+  var [handler, offset] = handlerParser.parse(handlers, 12).unwrap();
   const result = [handler];
   while (handlers[offset] !== ")") {
     assert(handlers[offset++] === "\n");
     assert(handlers[offset++] === " ");
     assert(handlers[offset++] === " ");
-    var { offset, result: handler } = parseHandler(offset, handlers);
+    var [handler, offset] = handlerParser.parse(handlers, offset).unwrap();
     result.push(handler);
   }
   assert(++offset === handlers.length);
