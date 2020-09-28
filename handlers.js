@@ -95,8 +95,6 @@ const assert = condition => {
   }
 };
 
-const handlersParser = skipStringParser("(handlers\n  ")
-
 const parseHandlers = handlers => {
   assert(handlers.slice(0, 12) === "(handlers\n  ");
   var [handler, offset] = handlerParser.parse(handlers, 12).unwrap();
