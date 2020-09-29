@@ -33,6 +33,16 @@ const pure = x => parser((_, index) => maybe([x, index]));
 
 const lazy = p => parser((string, index) => p().parse(string, index));
 
+const fail = parser(() => maybe(null));
+
+const end = parser((string, index) =>
+  maybe(index === string.length ? [null, index] : null)
+);
+
+// A temporary hack
+// TODO delete
+const head = parser((string, index) => maybe([string.slice(0, index), index]))
+
 const skipString = skipMe =>
   parser((string, start) => {
     const end = start + skipMe.length;
@@ -84,4 +94,8 @@ module.exports = {
   stringOf,
   skipSpaces1,
   simpleString,
+  end,
+  fail,
+  head,
+  pure
 };

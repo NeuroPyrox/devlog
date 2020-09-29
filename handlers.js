@@ -3,59 +3,62 @@
 const fs = require("fs");
 const P = require("./parsers.js");
 
-// Each function here returns a list of pairs [[path, handler], ...]
+// Each value is a parser of url tails to handlers
 const handlerTypes = {
-  html: (path, resource) => [
-    [
-      path,
-      async (req, res) => {
-        const stat = await fs.promises.stat(resource);
-        res.writeHead(200, {
-          "Content-Type": "text/html",
-          "Content-Length": stat.size
-        });
-        fs.createReadStream(resource).pipe(res);
-      }
-    ]
-  ],
-  htmlBuilder: (path, resource) => {
+  html: resource =>
+    P.end.map(_ => async (req, res) => {
+      const stat = await fs.promises.stat(resource);
+      res.writeHead(200, {
+        "Content-Type": "text/html",
+        "Content-Length": stat.size
+      });
+      fs.createReadStream(resource).pipe(res);
+    }),
+  htmlBuilder: resource => {
     const htmlBuilder = require(resource);
-    return [
-      [
-        path,
-        async (req, res) => {
-          res.writeHead(200, {
-            "Content-Type": "text/html"
-          });
-          res.write(await htmlBuilder());
-          res.end();
-        }
-      ]
-    ];
+    return P.end.map(_ => async (req, res) => {
+      res.writeHead(200, {
+        "Content-Type": "text/html"
+      });
+      res.write(await htmlBuilder());
+      res.end();
+    });
   },
-  json: (path, resource) => {
+  json: resource => {
     const jsonBuilder = require(resource);
-    return [
-      [
-        path,
-        async (req, res) => {
-          res.writeHead(200, {
-            "Content-Type": "application/json"
-          });
-          res.write(JSON.stringify(await jsonBuilder()));
-          res.end();
-        }
-      ]
-    ];
+    return P.end.map(_ => async (req, res) => {
+      res.writeHead(200, {
+        "Content-Type": "application/json"
+      });
+      res.write(JSON.stringify(await jsonBuilder()));
+      res.end();
+    });
   },
-  handlerMap: (path, resource) =>
-    Object.entries(require(resource)).map(([key, value]) => [
-      path + key,
-      value
-    ]),
-  server: (path, resource) => [[path, require(resource)(path)]]
+  handlerMap: resource =>
+    Object.entries(require(resource)).reduce(
+      (total, [key, value]) =>
+        P.skipString(key)
+          .skipLeft(P.end)
+          .map(_ => value)
+          .or(total),
+      P.fail
+    ),
+  // P.head is a temporary hack to maintain backward compatibility
+  // It possibly reloads the whole subdirectory every time you visit one of its urls
+  // TODO get rid of P.head by converting server files to parsers
+  server: resource => {
+    const server = require(resource);
+    return P.head.map(head => server(head));
+  }
 };
 
+const handle404error = (req, res) => {
+  res.writeHead(404, { "Content-Type": "text/html" });
+  res.write("404 not found");
+  res.end();
+};
+
+// A doubly nested parser: parser(handlers.lisp -> parser(url -> ((req, res) -> void)))
 // It's probably better to encode handlers.lisp as json, but I wanted to have fun
 const handlersParser = P.inParentheses(
   P.skipString("handlers").skipLeft(
@@ -65,46 +68,39 @@ const handlersParser = P.inParentheses(
           P.stringOf(
             char => ("a" <= char && char <= "z") || ("A" <= char && char <= "Z")
           )
-            .map(type => source => path =>
+            .map(type => source => path => [
+              path,
               handlerTypes[type](
-                path,
                 source[0] === "/"
                   ? `.${path}${source}`
                   : `.${path.slice(0, path.lastIndexOf("/"))}/${source}`
               )
-            )
+            ])
             .skipRight(P.skipSpaces1)
             .apply(P.simpleString)
             .skipRight(P.skipSpaces1)
             .apply(P.simpleString)
         )
       )
-    ).map(listOfListOfPairs => listOfListOfPairs.flat())
+    )
   )
-);
+)
+  .skipRight(P.end)
+  .map(handlers =>
+    handlers.reduce(
+      (total, [key, value]) =>
+        P.skipString(key)
+          .skipLeft(value)
+          .or(total),
+      P.pure(handle404error)
+    )
+  );
 
 const handlersPromise = fs.promises
   .readFile("handlers.lisp", "utf8")
-  .then(string => {
-    const [result, index] = handlersParser.parse(string, 0).unwrap();
-    if (index !== string.length) {
-      throw "Didn't parse whole file";
-    }
-    return result;
-  });
+  .then(string => handlersParser.parse(string, 0).unwrap()[0]);
 
-module.exports = async (req, res, handle404error) => {
-  const handlers = await handlersPromise;
-  // This is inefficient
-  for (const [key, value] of handlers) {
-    if (req.url === key) {
-      return value(req, res);
-    }
-  }
-  for (const [key, value] of handlers) {
-    if (req.url.startsWith(key)) {
-      return value(req, res);
-    }
-  }
-  handle404error(req, res);
-};
+module.exports = async (req, res) =>
+  (await handlersPromise)
+    .parse(req.url, 0)
+    .unwrap()[0](req, res);
