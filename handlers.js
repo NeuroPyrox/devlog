@@ -3,7 +3,7 @@
 const fs = require("fs");
 const P = require("./parsers.js");
 
-// Each value is a parser of url tails to handlers
+// Each value maps a file path (resource) to a parser of url tails to handlers
 const handlerTypes = {
   html: resource =>
     P.end.map(_ => async (req, res) => {
