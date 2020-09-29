@@ -58,9 +58,9 @@ const handlerTypes = {
 
 // It's probably better to encode handlers.lisp as json, but I wanted to have fun
 const handlersParser = P.inParentheses(
-  P.skipString("handlers").applyRight(
+  P.skipString("handlers").skipLeft(
     P.many(
-      P.skipString("\n  ").applyRight(
+      P.skipString("\n  ").skipLeft(
         P.inParentheses(
           P.stringOf(
             char => ("a" <= char && char <= "z") || ("A" <= char && char <= "Z")
@@ -73,9 +73,9 @@ const handlersParser = P.inParentheses(
                   : `.${path.slice(0, path.lastIndexOf("/"))}/${source}`
               )
             )
-            .applyLeft(P.skipSpaces1)
+            .skipRight(P.skipSpaces1)
             .apply(P.simpleString)
-            .applyLeft(P.skipSpaces1)
+            .skipRight(P.skipSpaces1)
             .apply(P.simpleString)
         )
       )

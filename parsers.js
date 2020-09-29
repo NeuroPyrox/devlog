@@ -15,13 +15,13 @@ const parser = parse => ({
         other.parse(string, indexF).map(([x, indexX]) => [f(x), indexX])
       )
     ),
-  applyLeft: other =>
-    parser(parse)
-      .map(a => b => a)
-      .apply(other),
-  applyRight: other =>
+  skipLeft: other =>
     parser(parse)
       .map(a => b => b)
+      .apply(other),
+  skipRight: other =>
+    parser(parse)
+      .map(a => b => a)
       .apply(other),
   or: other =>
     parser((string, index) =>
@@ -54,8 +54,8 @@ const skipCharClass = predicate =>
 
 const inParentheses = p =>
   skipString("(")
-    .applyRight(p)
-    .applyLeft(skipString(")"));
+    .skipLeft(p)
+    .skipRight(skipString(")"));
 
 const many = p => many1(p).or(pure([]));
 
@@ -74,8 +74,8 @@ const stringOf = predicate =>
 const skipSpaces1 = many1(skipCharClass(char => char === " "));
 
 const simpleString = skipString('"')
-  .applyRight(stringOf(char => char !== '"'))
-  .applyLeft(skipString('"'));
+  .skipLeft(stringOf(char => char !== '"'))
+  .skipRight(skipString('"'));
 
 module.exports = {
   skipString,
