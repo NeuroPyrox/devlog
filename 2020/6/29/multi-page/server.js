@@ -2,41 +2,25 @@
 
 const path = require("path");
 const writeFile = require("../../../5/17/writeFile.js");
+const P = require("../../../../parsers.js");
 
 const handleHome = res => writeFile(res, path.join(__dirname, "index.html"));
 
-const redirect = (res, urlHead) => {
-  res.writeHead(302, { Location: urlHead });
-  res.end();
-};
-
-const writeText = (res, text) => {
+const writeText = text => (req, res) => {
   res.writeHead(200, {
     "Content-Type": "text"
   });
   res.write(text);
   res.end();
-}
-
-const handle404error = res => {
-  res.writeHead(404, { "Content-Type": "text/html" });
-  res.write("404 not found");
-  res.end();
 };
 
-module.exports = baseUrl => (req, res) => {
-  const urlTail = req.url.slice(baseUrl.length);
-  if (urlTail === "") {
-    return handleHome(res);
-  }
-  if (urlTail === "/") {
-    return redirect(res, baseUrl);
-  }
-  if (urlTail === "/123") {
-    return writeText(res, "123 page");
-  }
-  if (urlTail === "/abc") {
-    return writeText(res, "abc page");
-  }
-  handle404error(res);
-};
+module.exports = P.end("")
+  .map(_ => (req, res) => handleHome(res))
+  .or(
+    P.end("/").map(_ => (req, res) => {
+      res.writeHead(302, { Location: req.url.slice(0, -1) });
+      res.end();
+    })
+  )
+  .or(P.end("/123").map(_ => writeText("123 page")))
+  .or(P.end("/abc").map(_ => writeText("abc page")));

@@ -9,5 +9,7 @@ const just = x => ({
 
 const nothing = { map: _ => nothing, chain: _ => nothing, or: f => f() };
 
-module.exports = value =>
-  value === null || value === undefined ? nothing : just(value);
+const maybe = value =>
+  value === null || value === undefined ? nothing : just(value)
+
+module.exports = {just, nothing, maybe};

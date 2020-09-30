@@ -1,6 +1,6 @@
 "use strict";
 
-const maybe = require("./maybe.js");
+const {just, nothing} = require("./maybe.js");
 
 // Parse returns a maybe monad of a parse result and the next index
 const parser = parse => ({
@@ -15,13 +15,13 @@ const parser = parse => ({
         other.parse(string, indexF).map(([x, indexX]) => [f(x), indexX])
       )
     ),
-  applyLeft: other =>
-    parser(parse)
-      .map(a => b => a)
-      .apply(other),
-  applyRight: other =>
+  skipLeft: other =>
     parser(parse)
       .map(a => b => b)
+      .apply(other),
+  skipRight: other =>
+    parser(parse)
+      .map(a => b => a)
       .apply(other),
   or: other =>
     parser((string, index) =>
@@ -29,33 +29,40 @@ const parser = parse => ({
     )
 });
 
-const pure = x => parser((_, index) => maybe([x, index]));
+const pure = x => parser((_, index) => just([x, index]));
 
 const lazy = p => parser((string, index) => p().parse(string, index));
+
+const fail = parser(() => nothing);
+
+const any = parser((string, index) =>
+  just([string.slice(index), string.length])
+);
+
+const end = rest =>
+  parser((string, index) =>
+    string.slice(index) === rest ? just([null, string.length]) : nothing
+  );
 
 const skipString = skipMe =>
   parser((string, start) => {
     const end = start + skipMe.length;
-    return maybe(
-      end <= string.length && skipMe === string.slice(start, end)
-        ? [null, end]
-        : null
-    );
+    return end <= string.length && skipMe === string.slice(start, end)
+        ? just([null, end])
+        : nothing
   });
 
 const skipCharClass = predicate =>
   parser((string, index) =>
-    maybe(
       index < string.length && predicate(string[index])
-        ? [null, index + 1]
-        : null
-    )
+        ? just([null, index + 1])
+        : nothing
   );
 
 const inParentheses = p =>
   skipString("(")
-    .applyRight(p)
-    .applyLeft(skipString(")"));
+    .skipLeft(p)
+    .skipRight(skipString(")"));
 
 const many = p => many1(p).or(pure([]));
 
@@ -66,22 +73,26 @@ const stringOf = predicate =>
   parser((string, start) =>
     many(skipCharClass(predicate))
       .parse(string, start)
-      .chain(([, end]) =>
-        maybe(start === end ? null : [string.slice(start, end), end])
+      .map(([, end]) =>
+        [string.slice(start, end), end]
       )
   );
 
 const skipSpaces1 = many1(skipCharClass(char => char === " "));
 
 const simpleString = skipString('"')
-  .applyRight(stringOf(char => char !== '"'))
-  .applyLeft(skipString('"'));
+  .skipLeft(stringOf(char => char !== '"'))
+  .skipRight(skipString('"'));
 
 module.exports = {
+  pure,
+  fail,
+  any,
+  end,
   skipString,
   inParentheses,
   many,
   stringOf,
   skipSpaces1,
-  simpleString,
+  simpleString
 };

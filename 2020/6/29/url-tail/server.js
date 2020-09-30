@@ -1,13 +1,15 @@
 "use strict";
 
-module.exports = baseUrl => (req, res) => {
-  let text = req.url.slice(baseUrl.length);
-  if (text === "") {
-    text = "Try adding stuff to the end of the url";
-  }
+const P = require("../../../../parsers.js");
+
+const writeText = text => (req, res) => {
   res.writeHead(200, {
     "Content-Type": "text"
   });
   res.write(text);
   res.end();
 };
+
+module.exports = P.end("")
+  .map(_ => writeText("Try adding stuff to the end of the url"))
+  .or(P.any.map(writeText));
