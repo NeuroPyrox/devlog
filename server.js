@@ -90,7 +90,7 @@ const handlersParser = P.inParentheses(
   );
 
 const handlersPromise = fs.promises
-  .readFile("handlers.lisp", "utf8")
+  .readFile("server.lisp", "utf8")
   .then(string => handlersParser.parse(string, 0).unwrap()[0]);
 
 require("http")
