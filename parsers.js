@@ -35,13 +35,14 @@ const lazy = p => parser((string, index) => p().parse(string, index));
 
 const fail = parser(() => maybe(null));
 
-const end = parser((string, index) =>
-  maybe(index === string.length ? [null, index] : null)
+const any = parser((string, index) =>
+  maybe([string.slice(index), string.length])
 );
 
-// A temporary hack
-// TODO delete
-const head = parser((string, index) => maybe([string.slice(0, index), index]))
+const end = rest =>
+  parser((string, index) =>
+    maybe(string.slice(index) === rest ? [null, string.length] : null)
+  );
 
 const skipString = skipMe =>
   parser((string, start) => {
@@ -88,14 +89,14 @@ const simpleString = skipString('"')
   .skipRight(skipString('"'));
 
 module.exports = {
+  pure,
+  fail,
+  any,
+  end,
   skipString,
   inParentheses,
   many,
   stringOf,
   skipSpaces1,
-  simpleString,
-  end,
-  fail,
-  head,
-  pure
+  simpleString
 };

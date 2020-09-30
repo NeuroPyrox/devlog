@@ -1,5 +1,7 @@
 "use strict";
 
+const P = require("../../../parsers.js");
+
 // I prefer this promisifier because I've had past issues with util.promisify and bluebird
 const promisify = async executor => {
   const [err, result] = await new Promise((resolve, reject) => {
@@ -85,17 +87,19 @@ const paths = {
   },
   "/add": async (req, res) => {
     let body = "";
-    req.on("data", chunk => body += chunk.toString());
+    req.on("data", chunk => (body += chunk.toString()));
     req.on("end", async () => {
       // JSON.stringify prevents SQL injection
       await runSql(`INSERT INTO ${tableName} VALUES (${JSON.stringify(body)})`);
       res.end();
-    })
+    });
   }
 };
 
-module.exports = urlHead => async (req, res) => {
-  const urlTail = req.url.slice(urlHead.length);
-  const handler = paths[urlTail];
-  handler(req, res);
-};
+module.exports = Object.entries(paths).reduce(
+  (total, [key, value]) =>
+    P.end(key)
+      .map(_ => value)
+      .or(total),
+  P.fail
+);

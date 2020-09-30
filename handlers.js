@@ -6,7 +6,7 @@ const P = require("./parsers.js");
 // Each value maps a file path (resource) to a parser of url tails to handlers
 const handlerTypes = {
   html: resource =>
-    P.end.map(_ => async (req, res) => {
+    P.end("").map(_ => async (req, res) => {
       const stat = await fs.promises.stat(resource);
       res.writeHead(200, {
         "Content-Type": "text/html",
@@ -16,7 +16,7 @@ const handlerTypes = {
     }),
   htmlBuilder: resource => {
     const htmlBuilder = require(resource);
-    return P.end.map(_ => async (req, res) => {
+    return P.end("").map(_ => async (req, res) => {
       res.writeHead(200, {
         "Content-Type": "text/html"
       });
@@ -26,7 +26,7 @@ const handlerTypes = {
   },
   json: resource => {
     const jsonBuilder = require(resource);
-    return P.end.map(_ => async (req, res) => {
+    return P.end("").map(_ => async (req, res) => {
       res.writeHead(200, {
         "Content-Type": "application/json"
       });
@@ -37,19 +37,12 @@ const handlerTypes = {
   handlerMap: resource =>
     Object.entries(require(resource)).reduce(
       (total, [key, value]) =>
-        P.skipString(key)
-          .skipLeft(P.end)
+        P.end(key)
           .map(_ => value)
           .or(total),
       P.fail
     ),
-  // P.head is a temporary hack to maintain backward compatibility
-  // It possibly reloads the whole subdirectory every time you visit one of its urls
-  // TODO get rid of P.head by converting server files to parsers
-  server: resource => {
-    const server = require(resource);
-    return P.head.map(head => server(head));
-  }
+  server: require
 };
 
 const handle404error = (req, res) => {
@@ -85,7 +78,7 @@ const handlersParser = P.inParentheses(
     )
   )
 )
-  .skipRight(P.end)
+  .skipRight(P.end(""))
   .map(handlers =>
     handlers.reduce(
       (total, [key, value]) =>
