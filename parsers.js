@@ -1,6 +1,6 @@
 "use strict";
 
-const maybe = require("./maybe.js");
+const {just, nothing} = require("./maybe.js");
 
 // Parse returns a maybe monad of a parse result and the next index
 const parser = parse => ({
@@ -29,38 +29,34 @@ const parser = parse => ({
     )
 });
 
-const pure = x => parser((_, index) => maybe([x, index]));
+const pure = x => parser((_, index) => just([x, index]));
 
 const lazy = p => parser((string, index) => p().parse(string, index));
 
-const fail = parser(() => maybe(null));
+const fail = parser(() => nothing);
 
 const any = parser((string, index) =>
-  maybe([string.slice(index), string.length])
+  just([string.slice(index), string.length])
 );
 
 const end = rest =>
   parser((string, index) =>
-    maybe(string.slice(index) === rest ? [null, string.length] : null)
+    string.slice(index) === rest ? just([null, string.length]) : nothing
   );
 
 const skipString = skipMe =>
   parser((string, start) => {
     const end = start + skipMe.length;
-    return maybe(
-      end <= string.length && skipMe === string.slice(start, end)
-        ? [null, end]
-        : null
-    );
+    return end <= string.length && skipMe === string.slice(start, end)
+        ? just([null, end])
+        : nothing
   });
 
 const skipCharClass = predicate =>
   parser((string, index) =>
-    maybe(
       index < string.length && predicate(string[index])
-        ? [null, index + 1]
-        : null
-    )
+        ? just([null, index + 1])
+        : nothing
   );
 
 const inParentheses = p =>
@@ -77,8 +73,8 @@ const stringOf = predicate =>
   parser((string, start) =>
     many(skipCharClass(predicate))
       .parse(string, start)
-      .chain(([, end]) =>
-        maybe(start === end ? null : [string.slice(start, end), end])
+      .map(([, end]) =>
+        [string.slice(start, end), end]
       )
   );
 
