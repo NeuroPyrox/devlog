@@ -1,5 +1,6 @@
 [homepage
-  ("Range Slider" "2 Oct 2020" "/2020/10/2/range-slider")
+  ("Rate Adjuster" "3 Oct 2020" "/2020/10/3/rate-adjuster")
+  ("Range Slider"  "2 Oct 2020" "/2020/10/2/range-slider")
   ("Homepage v4"        "21 Sept 2020" "/2020/9/21/homepage-v4")
   ("Sql String List"    "20 Sept 2020" "/2020/9/20/sql-string-list")
   ("Sexpr Parser"       "18 Sept 2020" "/2020/9/18/sexpr-parser")
