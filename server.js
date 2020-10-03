@@ -3,19 +3,19 @@
 const fs = require("fs");
 const P = require("./parsers.js");
 
-// Each value maps a file path (resource) to a parser of url tails to handlers
+// Each value maps a file path to a parser of url tails to handlers
 const handlerTypes = {
-  html: resource =>
+  html: filePath =>
     P.end("").map(_ => async (req, res) => {
-      const stat = await fs.promises.stat(resource);
+      const stat = await fs.promises.stat(filePath);
       res.writeHead(200, {
         "Content-Type": "text/html",
         "Content-Length": stat.size
       });
-      fs.createReadStream(resource).pipe(res);
+      fs.createReadStream(filePath).pipe(res);
     }),
-  htmlBuilder: resource => {
-    const htmlBuilder = require(resource);
+  htmlBuilder: filePath => {
+    const htmlBuilder = require(filePath);
     return P.end("").map(_ => async (req, res) => {
       res.writeHead(200, {
         "Content-Type": "text/html"
@@ -24,8 +24,8 @@ const handlerTypes = {
       res.end();
     });
   },
-  json: resource => {
-    const jsonBuilder = require(resource);
+  json: filePath => {
+    const jsonBuilder = require(filePath);
     return P.end("").map(_ => async (req, res) => {
       res.writeHead(200, {
         "Content-Type": "application/json"
@@ -34,15 +34,15 @@ const handlerTypes = {
       res.end();
     });
   },
-  handlerMap: resource =>
-    Object.entries(require(resource)).reduce(
+  handlerMap: filePath =>
+    Object.entries(require(filePath)).reduce(
       (total, [key, value]) =>
         P.end(key)
           .map(_ => value)
           .or(total),
       P.fail
     ),
-  server: require
+  router: require
 };
 
 const handle404error = (req, res) => {
@@ -51,10 +51,10 @@ const handle404error = (req, res) => {
   res.end();
 };
 
-// A doubly nested parser: parser(server.lisp -> parser(url -> ((req, res) -> void)))
+// A doubly nested parser: parser(server.lisp -> parser(url -> ((req, res) -> unit)))
 // It's probably better to encode server.lisp as json, but I wanted to have fun
 const handlersParser = P.inParentheses(
-  P.skipString("handlers").skipLeft(
+  P.skipString("server").skipLeft(
     P.many(
       P.skipString("\n  ").skipLeft(
         P.inParentheses(
