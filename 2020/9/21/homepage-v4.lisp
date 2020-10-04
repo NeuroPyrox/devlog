@@ -1,4 +1,5 @@
 [homepage
+  ("Pausable Rate" "4 Oct 2020" "/2020/10/4/pausable-rate")
   ("Rate Adjuster" "3 Oct 2020" "/2020/10/3/rate-adjuster")
   ("Range Slider"  "2 Oct 2020" "/2020/10/2/range-slider")
   ("Homepage v4"        "21 Sept 2020" "/2020/9/21/homepage-v4")
