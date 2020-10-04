@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Pausable Rate</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Nova+Mono&display=swap");
+
+    body {
+      background-color: black;
+      font-family: "Nova Mono", monospace;
+      color: #0F0;
+    }
+  </style>
+  <body>
+    <input type="range" min="0" max="999" value="0" id="range" />
+    <p id="text">
+      0
+    </p>
+  </body>
+  <script>
+    const range = document.getElementById("range");
+    const text = document.getElementById("text");
+    let count = 0;
+    
+    let looper;
+    const loop = () => {
+      count += 1;
+      text.innerHTML = count;
+      looper = setTimeout(loop, 1000 - parseInt(range.value));
+    }
+    
+    let isPaused = true;
+    range.oninput = () => {
+      const willBePaused = parseInt(range.value) === 0;
+      if (isPaused && !willBePaused) {
+        loop();
+      } else if (!isPaused && willBePaused) {
+        clearTimeout(looper);
+      }
+      isPaused = willBePaused;
+    };
+  </script>
+</html>
