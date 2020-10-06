@@ -5,6 +5,7 @@ const {just, nothing} = require("./maybe.js");
 // Parse returns a maybe monad of a parse result and the next index
 const parser = parse => ({
   parse,
+  parseWhole: string => parse(string, 0).unwrap()[0],
   map: f =>
     parser((string, index) =>
       parse(string, index).map(([result, index]) => [f(result), index])

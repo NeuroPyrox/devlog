@@ -91,13 +91,12 @@ const handlersParser = P.inParentheses(
 
 const handlersPromise = fs.promises
   .readFile("server.lisp", "utf8")
-  .then(string => handlersParser.parse(string, 0).unwrap()[0]);
+  .then(string => handlersParser.parseWhole(string));
 
 require("http")
   .createServer(async (req, res) =>
     (await handlersPromise)
-      .parse(req.url, 0)
-      .unwrap()[0](req, res)
+      .parseWhole(req.url)(req, res)
   )
   .listen(process.env.PORT, () =>
     console.log(`Your app is listening on port ${process.env.PORT}`)
