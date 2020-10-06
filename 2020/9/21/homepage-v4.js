@@ -1,5 +1,6 @@
 "use strict";
 
+const P = require("../../../parsers.js");
 const fs = require("fs").promises;
 
 const templateList = listHtml => `
@@ -70,75 +71,38 @@ const templateList = listHtml => `
   </html>
 `;
 
-const assert = condition => {
-  if (!condition) {
-    throw "Assertion Error!";
-  }
-};
+const postParser = P.inParentheses(
+  P.pure(title => date => href => `
+      <a href="${href}">
+        <div class="post">
+          <h2>
+            ${title}
+          </h2>
+          <h3>
+            ${date}
+          </h3>
+        </div>
+      </a>`)
+    .apply(P.simpleString)
+    .skipRight(P.skipSpaces1)
+    .apply(P.simpleString)
+    .skipRight(P.skipSpaces1)
+    .apply(P.simpleString)
+);
 
-const parseString = (offset, string) => {
-  assert(string[offset++] === '"');
-  var end = offset;
-  while (string[end] !== '"') {
-    ++end;
-  }
-  const result = string.slice(offset, end);
-  offset = ++end;
-  return { offset, result };
-};
-
-const parseSpaces = (offset, spaces) => {
-  assert(spaces[offset++] === " ");
-  while (spaces[offset] === " ") {
-    ++offset;
-  }
-  return { offset };
-};
-
-const parsePost = (offset, post) => {
-  assert(post[offset++] === "(");
-  var { offset, result: title } = parseString(offset, post);
-  var { offset } = parseSpaces(offset, post);
-  var { offset, result: date } = parseString(offset, post);
-  var { offset } = parseSpaces(offset, post);
-  var { offset, result: href } = parseString(offset, post);
-  assert(post[offset++] === ")");
-  return {
-    offset,
-    result: `
-    <a href="${href}">
-      <div class="post">
-        <h2>
-          ${title}
-        </h2>
-        <h3>
-          ${date}
-        </h3>
-      </div>
-    </a>`
-  };
-};
-
-const parseHomepage = homepage => {
-  assert(homepage.slice(0, 12) === "[homepage\n  ");
-  var { offset, result: post } = parsePost(12, homepage);
-  const result = [post];
-  while (homepage[offset] !== "]") {
-    assert(homepage[offset++] === "\n");
-    assert(homepage[offset++] === " ");
-    assert(homepage[offset++] === " ");
-    var { offset, result: post } = parsePost(offset, homepage);
-    result.push(post);
-  }
-  assert(++offset === homepage.length);
-  return templateList(result.join(" "));
-};
+const homepageParser = P.inParentheses(
+  P.skipString("homepage").skipLeft(
+    P.many(P.skipString("\n  ").skipLeft(postParser))
+  )
+)
+  .skipRight(P.end(""))
+  .map(list => templateList(list.join(" ")));
 
 module.exports = (() => {
   let homepage;
   return async () => {
     if (homepage === undefined) {
-      homepage = parseHomepage(
+      homepage = homepageParser.parseWhole(
         await fs.readFile("./2020/9/21/homepage-v4.lisp", "utf8")
       );
     }
