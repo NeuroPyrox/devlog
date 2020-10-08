@@ -1,4 +1,5 @@
 (homepage
+  ("Random Sample" "7 Oct 2020" "/2020/10/7/random-ski")
   ("Pausable Rate" "4 Oct 2020" "/2020/10/4/pausable-rate")
   ("Rate Adjuster" "3 Oct 2020" "/2020/10/3/rate-adjuster")
   ("Range Slider"  "2 Oct 2020" "/2020/10/2/range-slider")
