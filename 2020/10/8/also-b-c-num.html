@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Random SBCKI, Num</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Nova+Mono&display=swap");
+
+    body {
+      background-color: black;
+      font-family: "Nova Mono", monospace;
+      color: #0F0;
+    }
+  </style>
+  <body>
+    If a type error occurs, the lambda defaults to behaving like id
+    <br>
+    <input type="range" min="0" max="999" value="0" id="range" />
+    <p id="text"></p>
+  </body>
+  <script>
+    const S = {
+      apply: x => ({
+        apply: y => ({
+          apply: z => x.apply(z).apply(y.apply(z)),
+          toString: () => `(S ${x} ${y})`
+        }),
+        toString: () => `(S ${x})`
+      }),
+      toString: () => "S"
+    };
+
+    const B = {
+      apply: x => ({
+        apply: y => ({
+          apply: z => x.apply(y.apply(z)),
+          toString: () => `(B ${x} ${y})`
+        }),
+        toString: () => `(B ${x})`
+      }),
+      toString: () => "B"
+    };
+
+    const C = {
+      apply: x => ({
+        apply: y => ({
+          apply: z => x.apply(z).apply(y),
+          toString: () => `(C ${x} ${y})`
+        }),
+        toString: () => `(C ${x})`
+      }),
+      toString: () => "C"
+    };
+
+    const K = {
+      apply: x => ({
+        apply: y => x,
+        toString: () => `(K ${x})`
+      }),
+      toString: () => "K"
+    };
+
+    const I = {
+      apply: x => x,
+      toString: () => "I"
+    };
+
+    const Num = x => ({
+      apply: operator =>
+        operator.applyOperator === undefined
+          ? operator
+          : {
+              apply: y =>
+                y.number === undefined ? y : Num(operator.applyOperator(x, y.number)),
+              toString: () => `${x} ${operator}`
+            },
+      toString: () => `${x}`,
+      number: x
+    });
+
+    const Ops = Object.fromEntries(Object.entries({
+      "+": (x, y) => x + y,
+      "-": (x, y) => x - y,
+      "*": (x, y) => x * y,
+      "/": (x, y) => x / y
+    }).map(([key, value]) => ([key, {
+      apply: invalid => invalid,
+      toString: () => key,
+      applyOperator: value
+    }])));
+
+    const samples = [S, B, C, K, I, Num(1), ...Object.values(Ops)];
+
+    const randomSample = () =>
+      samples[Math.floor(Math.random() * samples.length)];
+
+    const nextEquation = () => {
+      while (true) {
+        const x = randomSample();
+        const y = randomSample();
+        try {
+          const xy = x.apply(y);
+          samples.push(xy);
+          return `${xy} = ${x} @ ${y}`;
+        } catch (e) {
+          // Too much recursion; try again
+          if (!(e instanceof InternalError)) {
+            throw e;
+          }
+        }
+      }
+    };
+
+    const range = document.getElementById("range");
+    const text = document.getElementById("text");
+
+    let looper;
+    const loop = () => {
+      text.innerHTML = nextEquation();
+      looper = setTimeout(loop, 1000 - parseInt(range.value));
+    };
+
+    let isPaused = true;
+    range.oninput = () => {
+      const willBePaused = parseInt(range.value) === 0;
+      if (isPaused && !willBePaused) {
+        loop();
+      } else if (!isPaused && willBePaused) {
+        clearTimeout(looper);
+      }
+      isPaused = willBePaused;
+    };
+  </script>
+</html>
