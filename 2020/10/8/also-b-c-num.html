@@ -106,10 +106,10 @@
           samples.push(xy);
           return `${xy} = ${x} @ ${y}`;
         } catch (e) {
-          // Too much recursion; try again
           if (!(e instanceof InternalError)) {
             throw e;
           }
+          // Too much recursion; try again
         }
       }
     };
