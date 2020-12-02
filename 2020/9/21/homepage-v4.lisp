@@ -1,4 +1,5 @@
 (homepage
+  ("Login Button"         "2 Dec 2020"   "/2020/12/2/login-button")
   ("Also B, C, Numbers"   "8 Oct 2020"   "/2020/10/8/also-b-c-num")
   ("Random SKI"           "7 Oct 2020"   "/2020/10/7/random-ski")
   ("Pausable Rate"        "4 Oct 2020"   "/2020/10/4/pausable-rate")

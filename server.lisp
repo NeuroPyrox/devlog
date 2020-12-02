@@ -1,5 +1,6 @@
 (server
   (htmlBuilder "2020/9/21/homepage-v4.js" "/")
+  (html        "login-button.html"       "/2020/12/2/login-button")
   (html        "also-b-c-num.html"       "/2020/10/8/also-b-c-num")
   (html        "random-ski.html"         "/2020/10/7/random-ski")
   (html        "pausable-rate.html"      "/2020/10/4/pausable-rate")
