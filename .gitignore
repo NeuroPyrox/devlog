@@ -1,3 +1,4 @@
 .glitch-assets
 *.db
 shrinkwrap.yaml
+package-lock.json
