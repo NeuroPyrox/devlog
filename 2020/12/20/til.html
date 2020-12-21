@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>New Series: Today I Learned</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Nova+Mono&display=swap");
+
+    body {
+      background-color: black;
+      font-family: "Nova Mono", monospace;
+      color: #0F0;
+      line-height: 2.5;
+    }
+
+    a:link,
+    a:visited {
+      color: #FF0;
+    }
+  </style>
+  <body>
+    <h1>
+      New Series: Today I Learned
+    </h1>
+    <h2>
+      20 Dec 2020
+    </h2>
+    <p>
+      I'm going to start blogging about new programming concepts that I learn.
+      The reason is that I need to feel more productive when I read hours upon
+      hours of programming articles without writing any code. For instance,
+      today I've been learning about CORS and CSRF, but I feel an uneasiness
+      when I look at my GitHub page and don't see it resulting in any commits. I
+      realized that to feel more motivated, I need to be able to commit
+      something right after I learn something new. That's kind of difficult for
+      me because I want to understand every single little thing about a problem
+      before I write a single line of code, especially web security which I'm
+      learning right now. So I came up with a workaround which will make me feel
+      less guilty about my lack of GitHub activity while learning web security:
+      <br /><br />
+      I will blog about the things that I learn, and commit these posts to
+      GitHub.
+      <br /><br />
+      This way, I can feel like I'm making progress immediately instead of
+      waiting until the occasional day when I dump 1000 lines of code out of my
+      head. Since I'll see my progress immediately, it will motivate me to learn
+      even more. Also, it will help with my writing skills and possibly impress
+      future employers, but those are secondary goals.
+      <br /><br />
+      Anyways, here's a list of today's findings:
+    </p>
+    <ul>
+      <li>
+        SameSite=Lax allows cookies with GET and HEAD, but not POST, PATCH, PUT,
+        or DELETE
+      </li>
+      <li>Old browsers don't support SameSite cookies</li>
+      <li>Don't use the wrong HTTP verb for state-changing operations. It's more than a petty semantics issues; it's a security vulnerability.</li>
+      <li>Try to use PATCH, PUT, and DELETE instead of POST because POST is vulnerable to CSRF through forms</li>
+      <li>Don't use method-override headers because it renders the above security measure useless</li>
+      <li>Never create any kind of "/csrf" route where you can access the token. Idk why you'd ever do this, but apparently some people do.</li>
+      <li>APIs that use the request body instead of url parameters are secure against CSRF forms</li>
+      <li>It's useful to salt your CSRF tokens. Idk how this works, so I'll have to come back to it later</li>
+      <li>There are ways to make stateless CSRF tokens, which I also don't understand yet</li>
+    </ul>
+  </body>
+</html>
