@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Today I Learned</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Nova+Mono&display=swap");
+
+    body {
+      background-color: black;
+      font-family: "Nova Mono", monospace;
+      color: #0F0;
+      line-height: 2.5;
+    }
+
+    a:link,
+    a:visited {
+      color: #FF0;
+    }
+  </style>
+  <body>
+    <h1>
+      Today I Learned
+    </h1>
+    <h2>
+      22 Dec 2020
+    </h2>
+    <ul>
+      <li>
+        A session ID and timestamp signed by the server can serve as a stateless
+        CSRF token
+      </li>
+      <li>HMAC and encryption are two ways to sign stateless CSRF tokens</li>
+      <li>
+        HMAC is basically just Hash(key + padding1 + Hash(key + padding2 +
+        message))
+      </li>
+      <li>
+        The reason HMAC has 2 layers of hashing is to prevent length extension
+        attacks by making the content of the inner hash unknowable
+      </li>
+      <li>
+        The Merkle-Damgard construction - basically hashA =
+        messageBlocks.reduce(hashB) - is what makes many hashing algorithms
+        suceptible to length-extension attacks
+      </li>
+      <li>
+        If you reset the CSRF token once per reqest, it make the user unable to
+        have multiple tabs open
+      </li>
+      <li>
+        The double-submit cookie pattern can be strengthened by making the
+        cookie be a token signature
+      </li>
+      <li>
+        You should check the origin of every request, though most developers
+        skip this step wrongly thinking it's overkill
+      </li>
+      <li>
+        You must create a new session after login to prevent session fixation
+        attacks
+      </li>
+    </ul>
+    Don't fully understand yet:
+    <ul>
+      <li>
+        <a
+          href="https://stackoverflow.com/questions/24225682/double-submit-cookies-and-multiple-tabs"
+          >Stateless CSRF tokens are vulnerable to MITM attacks</a
+        >
+      </li>
+      <li>
+        When your browser warns you of an invalid digital certificate on a
+        website, it's a sign that a MITM attack might be taking place
+      </li>
+      <li>MITM attacks can happen without a digital certificate warning</li>
+      <li>
+        Cookie prefixes and "path=/" are additional ways to secure cookies
+      </li>
+      <li>Custom headers have a same-origin policy</li>
+      <li>
+        <a
+          href="https://github.com/pillarjs/understanding-csrf#the-salt-doesnt-have-to-be-cryptographically-secure"
+          >CSRF token salt</a
+        >
+      </li>
+      <li>
+        <a
+          href="https://security.stackexchange.com/questions/59411/how-to-protect-against-login-csrf/59529#59529"
+          >Most CSRF protection fails to protect login forms</a
+        >
+      </li>
+      <li>
+        Pre-sessions can protect against login CSRF but I still need to read
+        through the above link before feeling safe
+      </li>
+      <li>Subdomains make it difficult to mitigate login CSRF</li>
+    </ul>
+  </body>
+</html>
