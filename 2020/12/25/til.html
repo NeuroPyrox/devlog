@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Today I Learned</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Nova+Mono&display=swap");
+
+    body {
+      background-color: black;
+      font-family: "Nova Mono", monospace;
+      color: #0F0;
+      line-height: 2.5;
+    }
+
+    a:link,
+    a:visited {
+      color: #FF0;
+    }
+  </style>
+  <body>
+    <h1>
+      Today I Learned
+    </h1>
+    <h2>
+      25 Dec 2020
+    </h2>
+    <ul>
+      <li>
+        If you don't protect login forms against CSRF, then an attacker can
+        switch your session to a different account and steal sensitive
+        information that you submit
+      </li>
+      <li>
+        The synchronizer token pattern is more secure than double submit cookies
+        because cookies can be overwritten by subdomains, allowing CSRF
+      </li>
+      <li>
+        Server-side state for non-authenticated sessions makes you more
+        vulnerable to DOS attacks
+      </li>
+      <li>Helmet is a small JavaScript library for setting http headers</li>
+      <li>
+        The X-Frame-Options header can protect against clickjacking by
+        preventing your site from being contained in a frame
+      </li>
+      <li>The SameSite header can prevent Iframes from accessing cookies</li>
+      <li>
+        If you store session IDs in URLs, then an attacker can inject their own
+        session ID through a malicious link
+      </li>
+      <li>
+        Authentication and tamper detection are the 2 ways to detect MITM
+        attacks
+      </li>
+      <li>
+        TLS provides a way to authenticate public keys via a trusted 3rd party,
+        somewhat preventing MITM attacks
+      </li>
+      <li>
+        Latency examination can uncover MITM in some situations, especially with
+        long calculations that take several seconds like hash functions
+      </li>
+      <li>Punycode is a unicode representation only using ascii characters</li>
+      <li>
+        Punycode can be used to prevent url spoofing by protecting against
+        similar-looking unicode characters
+      </li>
+      <li>
+        SSL stripping is a MITM attack which downgrades a connection into an
+        unencrypted one
+      </li>
+      <li>
+        Not practical, but quantum computing can theoretically mitigate MITM
+        through the no-cloning theorem
+      </li>
+      <li>A MITM can write cookies via HTTP redirects</li>
+      <li>HSTS can be used to prevent a MITM from writing cookies</li>
+    </ul>
+    Still don't fully understand:
+    <ul>
+      <li>Subdomain attacks</li>
+      <li>IP and DNS spoofing</li>
+      <li>Certificate Transparency</li>
+    </ul>
+  </body>
+</html>
