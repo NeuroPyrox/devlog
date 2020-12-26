@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Today I Learned</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Nova+Mono&display=swap");
+
+    body {
+      background-color: black;
+      font-family: "Nova Mono", monospace;
+      color: #0F0;
+      line-height: 2.5;
+    }
+
+    a:link,
+    a:visited {
+      color: #FF0;
+    }
+  </style>
+  <body>
+    <h1>
+      Today I Learned
+    </h1>
+    <h2>
+      26 Dec 2020
+    </h2>
+    <ul>
+      <li>
+        Certificate Transparency (CT) solves the problem of Certificate
+        Authorities (CAs) being compromised or going rogue
+      </li>
+      <li>
+        CT makes it difficult for a CA to issue an SSL certificate without the
+        domain owner knowing
+      </li>
+      <li>
+        You can subscribe to or create a CT monitor, which watches the logs for
+        suspicious certificates
+      </li>
+      <li>CT uses append-only Merkle Trees just like blockchain</li>
+      <li>
+        Every certificate log on CT must include its url, public key, and
+        timestamp
+      </li>
+      <li>
+        Host-only cookies prevent subdomain.domain.com from reading the cookies
+        of domain.com
+      </li>
+      <li>Host-only is the default</li>
+      <li>
+        If the domain attribute is used on a cookie, host-only will be false
+      </li>
+      <li>
+        If bar.example.com sets a cookie with domain-attribute "example.com", it
+        can be overwritten by foo.example.com, potentially creating security
+        vulnerabilities
+      </li>
+      <li>
+        The canonicalized request host must domain-match the domain-attribute
+      </li>
+      <li>
+        <a href="https://tools.ietf.org/html/rfc6265#section-8.3"
+          >Servers should encrypt and sign the contents of cookies, but this
+          doesn't prevent an attacker from injecting a cookie from a different
+          session or replaying cookies</a
+        >
+      </li>
+      <li>
+        <a href="https://tools.ietf.org/html/rfc6265#section-8.6"
+          >An attacker might be able to force the user agent to delete cookies
+          by storing a large number of cookies</a
+        >
+      </li>
+      <li>Cookies rely on DNS for security</li>
+      <li>Parent domains can only access the cookies of subdomains via the domain attribute</li>
+      <li>Subdomains are vulnerable through csrf through siblings</li>
+    </ul>
+    Still don't fully understand:
+    <ul>
+      <li>
+        Cookie prefixes and "path=/" are additional ways to secure cookies
+      </li>
+      <li>Custom headers have a same-origin policy</li>
+      <li>
+        <a
+          href="https://github.com/pillarjs/understanding-csrf#the-salt-doesnt-have-to-be-cryptographically-secure"
+          >CSRF token salt</a
+        >
+      </li>
+    </ul>
+  </body>
+</html>
