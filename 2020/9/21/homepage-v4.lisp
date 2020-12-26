@@ -1,4 +1,5 @@
 (homepage
+  ("Today I Learned"             "26 Dec 2020" "/2020/12/26/today-i-learned")
   ("Today I Learned"             "25 Dec 2020" "/2020/12/25/today-i-learned")
   ("Today I Learned"             "22 Dec 2020" "/2020/12/22/today-i-learned")
   ("New Series: Today I Learned" "20 Dec 2020" "/2020/12/20/today-i-learned")
