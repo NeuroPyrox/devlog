@@ -76,14 +76,25 @@
         >
       </li>
       <li>Cookies rely on DNS for security</li>
-      <li>Parent domains can only access the cookies of subdomains via the domain attribute</li>
+      <li>
+        Parent domains can only access the cookies of subdomains via the domain
+        attribute
+      </li>
       <li>Subdomains are vulnerable through csrf through siblings</li>
+      <li>
+        The "__Secure-" prefix makes a cookie only accessible through HTTPS
+      </li>
+      <li>
+        The "__Host-" prefix is a stronger version of "__Secure-" that also
+        prevents subdomains from accessing the cookie
+      </li>
+      <li>
+        Cookie prefixes are stronger than cookie attributes because they limit
+        writing in addition to reading
+      </li>
     </ul>
     Still don't fully understand:
     <ul>
-      <li>
-        Cookie prefixes and "path=/" are additional ways to secure cookies
-      </li>
       <li>Custom headers have a same-origin policy</li>
       <li>
         <a
@@ -91,6 +102,9 @@
           >CSRF token salt</a
         >
       </li>
+      <li>Server Side Request Forgery</li>
+      <li>CORS</li>
+      <li>Strict transport security with includeSubdomains</li>
     </ul>
   </body>
 </html>
