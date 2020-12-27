@@ -92,6 +92,11 @@
         Cookie prefixes are stronger than cookie attributes because they limit
         writing in addition to reading
       </li>
+      <li>Cryptograhic salt is known to both the server and client</li>
+      <li>
+        If you reuse cryptographic salts, you become vulnerable to rainbow
+        tables again
+      </li>
     </ul>
     Still don't fully understand:
     <ul>
@@ -105,6 +110,7 @@
       <li>Server Side Request Forgery</li>
       <li>CORS</li>
       <li>Strict transport security with includeSubdomains</li>
+      <li>The BREACH attack necessitates CSRF salt</li>
     </ul>
   </body>
 </html>
