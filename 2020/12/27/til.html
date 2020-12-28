@@ -98,6 +98,31 @@
         SSRF can be mitigated by whitelists, blacklists, and input validation
       </li>
       <li>Blacklists are never as effective as whitelists</li>
+      <li>
+        Timing attacks use information gained from the time it takes an
+        application to do something
+      </li>
+      <li>
+        Timing attacks can learn secrets one character at a time just like
+        BREACH attacks
+      </li>
+      <li>
+        The double HMAC pattern prevents timing attacks by randomizing the
+        runtime of secret verification
+      </li>
+      <li>
+        It's not always straightforward to mitigiate timing attacks by writing
+        constant-time functions because your compiler may optimize it to no
+        longer be constant-time
+      </li>
+      <li>
+        The double HMAC pattern compares hmac(hmac(message)) with
+        hmac(signature)
+      </li>
+      <li>
+        You can use a random key for the outer HMAC in the double HMAC pattern
+      </li>
+      <li>Node's crypto library has a timingSafeEqual function</li>
     </ul>
     Still don't fully understand:
     <ul>
