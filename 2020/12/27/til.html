@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Today I Learned</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Nova+Mono&display=swap");
+
+    body {
+      background-color: black;
+      font-family: "Nova Mono", monospace;
+      color: #0F0;
+      line-height: 2.5;
+    }
+
+    a:link,
+    a:visited {
+      color: #FF0;
+    }
+  </style>
+  <body>
+    <h1>
+      Today I Learned
+    </h1>
+    <h2>
+      27 Dec 2020
+    </h2>
+    <ul>
+      <li>
+        A chosen-plaintext attack is when an attacker uses an encryption oracle
+        to gain information
+      </li>
+      <li>
+        The CRIME exploit uses a compression oracle to tell when the attacker's
+        chosen plaintext matches some secret plaintext
+      </li>
+      <li>
+        BREACH is an instance of the CRIME attack against HTTP compression
+      </li>
+      <li>
+        CSRF salt changes the client-side token without changing the server-side
+        secret, preventing a BREACH attack from revealing the client-side token
+      </li>
+      <li>BREACH attacks target the response body</li>
+      <li>
+        The CRIME exploit can be mitigated by disabling TLS compression and SPDY
+        header compression
+      </li>
+      <li>CSRF tokens can mitigate BREACH attacks</li>
+      <li>
+        BREACH attacks depend on the attacker being able to inject input into
+        http responses
+      </li>
+      <li>
+        JSON APIs are less vulnerable to CSRF because a simple &ltform&gt can't
+        send JSON
+      </li>
+      <li>IncludeSubdomains indicates that HSTS applies to subdomains too</li>
+      <li>Browsers restrict cross-origin requests initiated from scripts</li>
+      <li>CORS is basically a set of response headers</li>
+      <li>
+        CORS requests first make a preflight OPTIONS request to see the CORS
+        policy
+      </li>
+      <li>
+        Simple requests (AFAIK ones that you don't need JavaScript for) bypass
+        CORS
+      </li>
+      <li>
+        Access-control-allow-origin, access-control-allow-methods, and
+        access-control-allow-headers are CORS conditions that get ANDed together
+      </li>
+      <li>
+        Access-control-allow-origin can either specify "*", which allows all
+        origins, or it can specify one origin in credientialed requests
+      </li>
+      <li>
+        Access-control-expose-headers whitelists response headers that
+        JavaScript can access
+      </li>
+      <li>
+        Access-control-max-age tells the browser how long it can cache the
+        preflight for
+      </li>
+      <li>Same-origin policy is the default</li>
+      <li>
+        CSRF tokens aren't needed for strictly JSON APIs if you don't enable
+        CORS
+      </li>
+      <li>
+        Server-side request forgery (SSRF) is when an attacker tricks a server
+        into sending malicious requests
+      </li>
+      <li>
+        SSRF can be mitigated by whitelists, blacklists, and input validation
+      </li>
+      <li>Blacklists are never as effective as whitelists</li>
+    </ul>
+    Still don't fully understand:
+    <ul>
+      <li>CORS with credentials</li>
+    </ul>
+  </body>
+</html>
