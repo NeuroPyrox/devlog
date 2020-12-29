@@ -1,5 +1,6 @@
 (server
   (htmlBuilder "2020/9/21/homepage-v4.js" "/")
+  (html        "security-checklist.html" "/2020/12/28/cookie-checklist")
   (html        "til.html"                "/2020/12/27/today-i-learned")
   (html        "til.html"                "/2020/12/26/today-i-learned")
   (html        "til.html"                "/2020/12/25/today-i-learned")

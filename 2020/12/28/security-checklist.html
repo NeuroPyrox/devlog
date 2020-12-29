@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Cookie Checklist</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Nova+Mono&display=swap");
+
+    body {
+      background-color: black;
+      font-family: "Nova Mono", monospace;
+      color: #0F0;
+      line-height: 2.5;
+    }
+
+    a:link,
+    a:visited {
+      color: #FF0;
+    }
+  </style>
+  <body>
+    <h1>
+      Security Checklist
+    </h1>
+    <h2>
+      28 Dec 2020
+    </h2>
+    This isn't an exhaustive list. It's only a summary of my current knowledge.
+    <ul>
+      <li>Don't use SameSite=none on user-facing domains</li>
+      <li>Don't use GET, HEAD, or OPTIONS to perform authenticated state changes</li>
+      <li>Use secure cookies</li>
+      <li>Don't use method-override headers</li>
+      <li>Use PATCH, PUT, or DELETE instead of POST wherever it makes sense</li>
+      <li>Don't create any kind of "/csrf" route where you can access the CSRF token directly</li>
+      <li>Don't use url parameters for authenticated POST requests</li>
+      <li>Salt your CSRF tokens</li>
+      <li>Use a constant-time or random-time algorithm to verify tokens</li>
+      <li>Use CSRF tokens not only for authenticated state changes, but also for requests that return sensitive data</li>
+      <li>In the double-submit cookie pattern, make the cookie be a signature</li>
+      <li>Check the origin of your requests</li>
+      <li>Put CSRF protection on login pages</li>
+      <li>Start a new session after login</li>
+      <li>If attackers are able to overwrite cookies, use the synchronizer token pattern instead of double-submit cookies</li>
+      <li>Use x-frame-options to prevent clickjacking</li>
+      <li>Don't store session IDs in urls</li>
+      <li>Use rate-limiting</li>
+      <li>Use latency examination to detect MITM attacks</li>
+      <li>Use HSTS</li>
+      <li>Use a certificate transparency monitor</li>
+      <li>Prefer host-only cookies</li>
+      <li>Use the "__Secure-" or "__Host-" cookie prefixes</li>
+      <li>Disable TLS compression</li>
+      <li>Disable SPDY header compression</li>
+      <li>Use includeSubdomains for HSTS wherever it makes sense</li>
+      <li>Use input validation</li>
+      <li>Use blacklists or whitelists on user-controllable server requests</li>
+      <li>Prefer whitelists to blacklists</li>
+      <li>Use the Helmet library for Express.js, or equivalent protections</li>
+    </ul>
+  </body>
+</html>
