@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Today I Learned</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Nova+Mono&display=swap");
+
+    body {
+      background-color: black;
+      font-family: "Nova Mono", monospace;
+      color: #0F0;
+      line-height: 2.5;
+    }
+
+    a:link,
+    a:visited {
+      color: #FF0;
+    }
+  </style>
+  <body>
+    <h1>
+      Today I Learned
+    </h1>
+    <h2>
+      29 Dec 2020
+    </h2>
+    <ul>
+      <li>
+        The Content Security Policy (CSP) header is meant to mitigate and report
+        XSS attacks
+      </li>
+      <li>CSP lets you specify valid sources for different resources</li>
+      <li>
+        The CSP header contains a list of sub-policies for each type of resource
+      </li>
+      <li>
+        Default-src, img-src, media-src and script-src are the names of
+        different sub-policies
+      </li>
+      <li>Each sub-policy contains a list of urls with optional wildcards</li>
+      <li>
+        Default-src is the policy for resource types that aren't specified
+      </li>
+      <li>
+        Report-uri is a part of the CSP that specifies where to report policy
+        violations
+      </li>
+      <li>
+        The content-security-policy-report-only header is a weaker version of
+        content-security-policy that only reports content and doesn't block it
+      </li>
+      <li>
+        Expect-CT is an http header that tells the browser to enforce & report
+        CT violations
+      </li>
+      <li>
+        Expect-CT will probably become obselete in June 2021 because CT is now
+        the default
+      </li>
+      <li>Use a referrer policy when the url contains sensitive information</li>
+      <li>
+        You can set a referrer policy via the Referrer-Policy header, or the
+        "referrerpolicy" or "rel" html attributes
+      </li>
+      <li>
+        MIME sniffing is when a browser looks at the content of a resource to
+        figure out its correct MIME type instead of the Content-Type header
+      </li>
+      <li>MIME sniffing creates XSS vulnerabilities</li>
+      <li>
+        You can disable MIME sniffing with the X-Content-Type-Options header
+      </li>
+      <li>
+        DNS prefetching can boost performance, but at the cost of user privacy
+      </li>
+      <li>The preconnect hint can also boost performance</li>
+      <li>
+        Internet Explorer's noopen directive forces users to save downloads
+        before opening them
+      </li>
+      <li>
+        The X-XSS-Protection header is deprecated and should be set to 0 in
+        favor of Content-Security-Policy
+      </li>
+    </ul>
+    Still don't fully understand:
+    <ul>
+      <li>The crossorigin html attribute</li>
+      <li>The X-Permitted-Cross-Domain-Policies header</li>
+    </ul>
+  </body>
+</html>
