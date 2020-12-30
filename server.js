@@ -58,17 +58,20 @@ const handlersParser = P.inParentheses(
     P.many(
       P.skipString("\n  ").skipLeft(
         P.inParentheses(
-          P.stringOf(
-            char => ("a" <= char && char <= "z") || ("A" <= char && char <= "Z")
-          )
-            .map(type => source => path => [
-              path,
-              handlerTypes[type](
-                source[0] === "/"
-                  ? `.${path}${source}`
-                  : `.${path.slice(0, path.lastIndexOf("/"))}/${source}`
+          P.pure(type => source => path => [
+            path,
+            handlerTypes[type](
+              source[0] === "/"
+                ? `.${path}${source}`
+                : `.${path.slice(0, path.lastIndexOf("/"))}/${source}`
+            )
+          ])
+            .apply(
+              P.stringOf(
+                char =>
+                  ("a" <= char && char <= "z") || ("A" <= char && char <= "Z")
               )
-            ])
+            )
             .skipRight(P.skipSpaces1)
             .apply(P.simpleString)
             .skipRight(P.skipSpaces1)
@@ -95,8 +98,7 @@ const handlersPromise = fs.promises
 
 require("http")
   .createServer(async (req, res) =>
-    (await handlersPromise)
-      .parseWhole(req.url)(req, res)
+    (await handlersPromise).parseWhole(req.url)(req, res)
   )
   .listen(process.env.PORT, () =>
     console.log(`Your app is listening on port ${process.env.PORT}`)
