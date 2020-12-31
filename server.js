@@ -1,5 +1,11 @@
 "use strict";
 
+// TODO combine into single source of truth for urls:
+//  server.lisp
+//  2020/9/21/homepage.v4.lisp
+//  2020/8/25/homepageV3.lisp
+//  2020/6/27/homepage/server.js
+
 const fs = require("fs");
 const P = require("./parsers.js");
 
