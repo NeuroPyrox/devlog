@@ -58,14 +58,7 @@ const handlersParser = P.inParentheses(
     P.many(
       P.skipString("\n  ").skipLeft(
         P.inParentheses(
-          P.pure(type => source => path => [
-            path,
-            handlerTypes[type](
-              source[0] === "/"
-                ? `.${path}${source}`
-                : `.${path.slice(0, path.lastIndexOf("/"))}/${source}`
-            )
-          ])
+          P.pure(type => source => path => [path, handlerTypes[type](`./${source}`)])
             .apply(
               P.stringOf(
                 char =>
@@ -83,13 +76,13 @@ const handlersParser = P.inParentheses(
 )
   .skipRight(P.end(""))
   .map(handlers =>
-    handlers.reduce(
+    P.skipString("/").skipLeft(handlers.reduce(
       (total, [key, value]) =>
         P.skipString(key)
           .skipLeft(value)
           .or(total),
       P.pure(handle404error)
-    )
+    ))
   );
 
 const handlersPromise = fs.promises
