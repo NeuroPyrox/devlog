@@ -13,11 +13,13 @@ module.exports = P.end("")
     fs.createReadStream(`${__dirname}/index.html`).pipe(res);
   })
   .or(
-    P.any.map(echo => (req, res) => {
-      res.writeHead(200, {
-        "Content-Type": "text/plain"
-      });
-      res.write(echo);
-      res.end();
-    })
+    P.skipString("/").skipLeft(
+      P.any.map(echo => (req, res) => {
+        res.writeHead(200, {
+          "Content-Type": "text/plain"
+        });
+        res.write(echo);
+        res.end();
+      })
+    )
   );

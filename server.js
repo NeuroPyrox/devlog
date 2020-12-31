@@ -1,10 +1,13 @@
 "use strict";
 
+// TODO use specialized parsers for urls to prevent namespace collisions
+
 // TODO combine into single source of truth for urls:
 //  server.lisp
 //  2020/9/21/homepage.v4.lisp
 //  2020/8/25/homepageV3.lisp
-//  2020/6/27/homepage/server.js
+//  2020/6/27/get-posts/getPosts.js
+//  2020/6/27/get-june-posts/getJunePosts.js
 
 const fs = require("fs");
 const P = require("./parsers.js");
