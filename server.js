@@ -1,7 +1,9 @@
 "use strict";
 
+// TODO place files according to url hierarchy
+// TODO remove handlerMap
 // TODO use specialized parsers for urls to prevent namespace collisions
-
+// TODO add url collision errors during initialization
 // TODO combine into single source of truth for urls:
 //  server.lisp
 //  2020/9/21/homepage.v4.lisp

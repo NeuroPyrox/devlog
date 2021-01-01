@@ -1,5 +1,7 @@
 "use strict";
 
+// TODO single source of truth
+
 // HARDCODED
 const getNewPosts = () => [
   {

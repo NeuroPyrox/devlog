@@ -6,7 +6,7 @@ const templateHtml = listHtml => `
   <!DOCTYPE html>
   <html lang="en">
     <head>
-      <title>NeuroPyrox's Blog</title>
+      <title>NeuroPyrox's Devlog</title>
       <meta charset="utf-8" />
       <meta http-equiv="X-UA-Compatible" content="IE=edge" />
       <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -57,7 +57,7 @@ const templateHtml = listHtml => `
   </html>
 `;
 
-const makeItem = (day, title, href) => `
+const makeItem = ({ day, title, href }) => `
   <a href="${href}">
     <div class="post">
       <h2>
@@ -71,9 +71,7 @@ const makeItem = (day, title, href) => `
 `;
 
 const makeHtml = async () => {
-  const listHtml = (await getPostLocations())
-    .map(({ day, title, href }) => makeItem(day, title, `/2020/5/${href}`))
-    .join();
+  const listHtml = (await getPostLocations()).map(makeItem).join();
   return templateHtml(listHtml);
 };
 
