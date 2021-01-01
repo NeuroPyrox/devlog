@@ -23,7 +23,10 @@ module.exports = async () => {
   const posts = await Promise.all(
     mayDays.map(async day => {
       const nestedDirs = await getNestedDirs(`2020/5/${day}`);
-      return nestedDirs.map(title => ({day: day, title: title}));
+      // TODO The filter is an ugly hack to ignore a ghost folder that I can't seem to delete
+      return nestedDirs
+        .filter(title => title !== "file-structure")
+        .map(title => ({ day, title }));
     })
   );
   return [].concat(...posts);
