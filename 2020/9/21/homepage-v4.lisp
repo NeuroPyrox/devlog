@@ -41,7 +41,6 @@
   ("Progress Report"      "21 May 2020"  "/progress-report-0")
   ("Previous Blog"        "21 May 2020"  "/previous-blog")
   ("Graph"                "21 May 2020"  "/graph")
-  ("File Structure"       "21 May 2020"  "/file-structure")
   ("Echo"                 "21 May 2020"  "/echo")
   ("Post Finder"          "20 May 2020"  "/2020/5/20/post-finder")
   ("Interaction Sprites"  "20 May 2020"  "/2020/5/20/interaction-sprites")

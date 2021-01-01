@@ -42,7 +42,6 @@
   (html        "2020/5/21/progress-report-0/index.html"    "progress-report-0")
   (html        "2020/5/21/previous-blog/index.html"        "previous-blog")
   (html        "2020/5/21/graph/index.html"                "graph")
-  (json        "2020/5/21/file-structure/server.js"        "file-structure")
   (router      "2020/5/21/echo/server.js"                  "echo")
   (handlerMap  "2020/5/20/server.js"                       "2020/5/20/")
   (handlerMap  "2020/5/19/server.js"                       "2020/5/19/")

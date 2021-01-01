@@ -1,5 +1,7 @@
 "use strict";
 
+// TODO single source of truth for homepageV3.lisp
+
 const fs = require("fs").promises;
 
 const templateList = listHtml => `
