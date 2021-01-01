@@ -26,7 +26,5 @@ module.exports = async () => {
       return nestedDirs.map(title => ({day: day, title: title}));
     })
   );
-  const result = [].concat(...posts);
-  console.log(result)
-  return result;
+  return [].concat(...posts);
 };
