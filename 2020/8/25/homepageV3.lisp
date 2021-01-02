@@ -15,7 +15,7 @@
   ("Url Tail"         "29 June 2020" "/url-tail")
   ("Multi Page"       "29 June 2020" "/multi-page")
   ("Actor Rules"      "28 June 2020" "/actor-rules")
-  ("Homepage v2"      "27 June 2020" "/homepage")
+  ("Homepage v2"      "27 June 2020" "/homepage-v2")
   ("Get Posts"        "27 June 2020" "/get-posts")
   ("Get June Posts"   "27 June 2020" "/get-june-posts")
   ("Echo IP"          "27 June 2020" "/echo-ip")

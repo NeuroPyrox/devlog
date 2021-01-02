@@ -29,7 +29,7 @@
   (router      "2020/6/29/url-tail/server.js"             "url-tail")
   (router      "2020/6/29/multi-page/server.js"           "multi-page")
   (json        "2020/6/28/actor-rules/server.js"          "actor-rules")
-  (htmlBuilder "2020/6/27/homepage/server.js"             "homepage-v2")
+  (htmlBuilder "2020/6/27/homepage-v2/server.js"          "homepage-v2")
   (json        "2020/6/27/get-posts/getPosts.js"          "get-posts")
   (json        "2020/6/27/get-june-posts/getJunePosts.js" "get-june-posts")
   (router      "2020/6/27/echo-ip/server.js"              "echo-ip")
