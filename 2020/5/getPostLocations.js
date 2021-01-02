@@ -23,7 +23,7 @@ module.exports = async () => {
     .map(({ day, title }) => ({
       day,
       title,
-      href: `/${title}`
+      href: day <= 20 ? `/2020/5/${day}/${title}` : `/${title}`
     }))
     .reverse();
   return mayPosts.concat(oldPosts);
