@@ -40,8 +40,8 @@ module.exports = async () => {
   const mayPosts = (await require("../../../5/getPostLocations.js")()).map(
     ({ day, title, href }) => ({
       date: `${day} May 2020`,
-      title: title,
-      href: `/2020/5/${href}`
+      title,
+      href
     })
   );
   const posts = (await getJunePosts())

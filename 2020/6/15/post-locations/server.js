@@ -7,12 +7,12 @@ const getNewPosts = () => [
   {
     date: "15 June 2020",
     title: "Post Locations",
-    href: `/2020/6/15/post-locations`
+    href: `/post-locations`
   },
   {
     date: "14 June 2020",
     title: "Didn't Solve AGI",
-    href: `/2020/6/14/didnt-solve-agi`
+    href: `/didnt-solve-agi`
   }
 ];
 
@@ -51,11 +51,13 @@ const oldBlog = [
 ];
 
 module.exports = async () => {
-  const mayPosts = (await require("../../../5/getPostLocations.js")()).map(({ day, title, href }) => ({
-    date: `${day} May 2020`,
-    title: title,
-    href: `/2020/5/${href}`
-  }));
+  const mayPosts = (await require("../../../5/getPostLocations.js")()).map(
+    ({ day, title, href }) => ({
+      date: `${day} May 2020`,
+      title,
+      href
+    })
+  );
   const posts = getNewPosts()
     .concat(mayPosts)
     .concat(oldBlog);

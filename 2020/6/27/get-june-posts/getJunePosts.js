@@ -20,10 +20,10 @@ const getPostFoldersFromDay = async day => {
 
 const getPostsOnDay = async day => {
   const folders = await getPostFoldersFromDay(day);
-  return folders.map(name => ({
+  return folders.map(title => ({
     date: `${day} June 2020`,
-    title: name,
-    href: `/2020/6/${day}/${name}`
+    title,
+    href: `/${title}`
   }));
 };
 
