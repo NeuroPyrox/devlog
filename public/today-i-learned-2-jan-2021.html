@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Today I Learned</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Nova+Mono&display=swap");
+
+    body {
+      background-color: black;
+      font-family: "Nova Mono", monospace;
+      color: #0F0;
+      line-height: 2.5;
+    }
+
+    a:link,
+    a:visited {
+      color: #FF0;
+    }
+  </style>
+  <body>
+    <h1>
+      Today I Learned
+    </h1>
+    <h2>
+      2 Jan 2021
+    </h2>
+    <ul>
+      OPAQUE is a password authentication method that protects against data leaks
+    </ul>
+    <ul>
+      OPAQUE is a combination of an Oblivious Pseudorandom Function (OPRF) and an Authenticated Key Exchange (AKE)
+    </ul>
+    <ul>
+      An OPRF is a way for a client and server to jointly compute a Hash(password, salt) such that the client doesn't learn the salt and the server doesn't learn the password or its hash
+    </ul>
+    Still don't fully understand:
+    <ul>
+      <li>Implementation of OPRF</li>
+      <li>OPRF finalize function</li>
+      <li>All of OPAQUE aside from OPRF</li>
+    </ul>
+  </body>
+</html>
