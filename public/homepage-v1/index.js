@@ -1,6 +1,6 @@
 "use strict";
 
-const getPostLocations = require("../../getPostLocations.js");
+const getPostLocations = require("./get-post-locations.js");
 
 const templateHtml = listHtml => `
   <!DOCTYPE html>
@@ -57,14 +57,14 @@ const templateHtml = listHtml => `
   </html>
 `;
 
-const makeItem = ({ day, title, href }) => `
+const makeItem = ({ date, title, href }) => `
   <a href="${href}">
     <div class="post">
       <h2>
         ${title}
       </h2>
       <h3>
-        ${day}
+        ${date}
       </h3>
     </div>
   </a>
@@ -75,13 +75,8 @@ const makeHtml = async () => {
   return templateHtml(listHtml);
 };
 
+// TODO memoize
 module.exports = (() => {
   const html = makeHtml();
-  return async (req, res) => {
-    res.writeHead(200, {
-      "Content-Type": "text/html"
-    });
-    res.write(await html);
-    res.end();
-  };
+  return async () => await html;
 })();
