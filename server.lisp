@@ -27,7 +27,7 @@
   (htmlBuilder "public/homepage-v3/index.js"    "homepage-v3")
   (html        "public/ramblings.html"          "ramblings")
   (html        "public/plan.html"               "plan")
-  (html        "2020/7/5/ideas.html" "ideas")
+  (html        "public/ideas.html" "ideas")
   (router      "2020/6/29/url-tail/server.js"             "url-tail")
   (router      "2020/6/29/multi-page/server.js"           "multi-page")
   (json        "2020/6/28/actor-rules/server.js"          "actor-rules")
