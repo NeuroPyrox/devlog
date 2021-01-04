@@ -1,8 +1,8 @@
 "use strict";
 
 const path = require("path");
-const writeFile = require("../../../5/17/writeFile.js");
-const P = require("../../../../parsers.js");
+const writeFile = require("../../2020/5/17/writeFile.js");
+const P = require("../../parsers.js");
 
 const handleHome = res => writeFile(res, path.join(__dirname, "index.html"));
 
