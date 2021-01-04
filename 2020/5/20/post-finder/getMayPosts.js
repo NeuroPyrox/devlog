@@ -1,30 +1,18 @@
 "use strict";
 
-const fs = require("fs").promises;
-const path = require("path");
+// TODO single source of truth
 
-const isDir = async dir => {
-  const stat = await fs.stat(dir);
-  return stat.isDirectory();
-};
-
-const getNestedDirs = async dir => {
-  const items = await fs.readdir(dir);
-  const whichAreDirs = await Promise.all(
-    items.map(item => isDir(path.join(dir, item)))
-  );
-  const nestedDirs = items.filter((_, index) => whichAreDirs[index]);
-  return nestedDirs;
-};
-
-module.exports = async () => {
-  // HARDCODED: "2020/5"
-  const mayDays = await getNestedDirs("2020/5");
-  const posts = await Promise.all(
-    mayDays.map(async day => {
-      const nestedDirs = await getNestedDirs(`2020/5/${day}`);
-      return nestedDirs.map(title => ({ day, title }));
-    })
-  );
-  return [].concat(...posts);
-};
+module.exports = () => [
+  { day: "19", title: "postsUI" },
+  { day: "20", title: "dannys-page" },
+  { day: "20", title: "homepage" },
+  { day: "20", title: "interaction-sprites" },
+  { day: "20", title: "post-finder" },
+  { day: "21", title: "echo" },
+  { day: "21", title: "graph" },
+  { day: "21", title: "previous-blog" },
+  { day: "21", title: "progress-report-0" },
+  { day: "22", title: "nested-hover" },
+  { day: "22", title: "s-expression-sprites" },
+  { day: "27", title: "progress-report-1" }
+];

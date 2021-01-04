@@ -1,7 +1,7 @@
 "use strict";
 
 const fs = require("fs");
-const P = require("../../../../parsers.js");
+const P = require("../../parsers.js");
 
 module.exports = P.end("")
   .map(_ => async (req, res) => {

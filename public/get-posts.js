@@ -39,13 +39,7 @@ const oldBlog = [
 ];
 
 module.exports = async () => {
-  const mayPosts = (await require("../2020/5/getPostLocations.js")()).map(
-    ({ day, title, href }) => ({
-      date: `${day} May 2020`,
-      title,
-      href
-    })
-  );
+  const mayPosts = await require("../2020/5/getPostLocations.js")();
   return getJunePosts()
     .reverse()
     .concat(mayPosts)
