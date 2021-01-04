@@ -1,6 +1,6 @@
 "use strict";
 
-const getPosts = require("../get-posts/getPosts.js");
+const getPosts = require("./get-posts.js");
 
 const templateList = listHtml => `
   <!DOCTYPE html>

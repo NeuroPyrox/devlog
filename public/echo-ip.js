@@ -1,6 +1,6 @@
 "use strict";
 
-const P = require("../../../../parsers.js");
+const P = require("../parsers.js");
 
 module.exports = P.end("").map(_ => (req, res) => {
   const ip = req.headers["x-forwarded-for"].split(",")[0];

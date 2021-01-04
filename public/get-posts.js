@@ -2,19 +2,7 @@
 
 // TODO single source of truth
 
-// HARDCODED
-const getNewPosts = () => [
-  {
-    date: "15 June 2020",
-    title: "Post Locations",
-    href: `/post-locations`
-  },
-  {
-    date: "14 June 2020",
-    title: "Didn't Solve AGI",
-    href: `/didnt-solve-agi`
-  }
-];
+const getJunePosts = require("./get-june-posts.js");
 
 // HARDCODED
 const oldBlog = [
@@ -51,15 +39,15 @@ const oldBlog = [
 ];
 
 module.exports = async () => {
-  const mayPosts = (await require("../../../5/getPostLocations.js")()).map(
+  const mayPosts = (await require("../2020/5/getPostLocations.js")()).map(
     ({ day, title, href }) => ({
       date: `${day} May 2020`,
       title,
       href
     })
   );
-  const posts = getNewPosts()
+  return getJunePosts()
+    .reverse()
     .concat(mayPosts)
     .concat(oldBlog);
-  return posts;
 };
