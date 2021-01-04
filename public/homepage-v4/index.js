@@ -1,6 +1,6 @@
 "use strict";
 
-const P = require("../../../parsers.js");
+const P = require("../../parsers.js");
 const fs = require("fs").promises;
 
 const templateList = listHtml => `
@@ -103,7 +103,7 @@ module.exports = (() => {
   return async () => {
     if (homepage === undefined) {
       homepage = homepageParser.parseWhole(
-        await fs.readFile("./2020/9/21/homepage-v4.lisp", "utf8")
+        await fs.readFile("./public/homepage-v4/index.lisp", "utf8")
       );
     }
     return homepage;
