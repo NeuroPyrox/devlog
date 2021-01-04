@@ -1,6 +1,8 @@
 "use strict";
 
-const P = require("../../../parsers.js");
+// TODO remove SQL injection vulnerabilities
+
+const P = require("../../parsers.js");
 
 // I prefer this promisifier because I've had past issues with util.promisify and bluebird
 const promisify = async executor => {
@@ -28,7 +30,7 @@ const createDatabase = async filename => {
   return database;
 };
 
-const databasePromise = createDatabase(`${__dirname}/sql-string-list.db`);
+const databasePromise = createDatabase(`${__dirname}/.sql`);
 const tableName = "strings";
 
 const runSql = async command => {
@@ -60,12 +62,12 @@ const fs = require("fs");
 
 const paths = {
   "": async (req, res) => {
-    const stat = await fs.promises.stat(`${__dirname}/sql-string-list.html`);
+    const stat = await fs.promises.stat(`${__dirname}/index.html`);
     res.writeHead(200, {
       "Content-Type": "text/html",
       "Content-Length": stat.size
     });
-    fs.createReadStream(`${__dirname}/sql-string-list.html`).pipe(res);
+    fs.createReadStream(`${__dirname}/index.html`).pipe(res);
   },
   "/clear": async (req, res) => {
     if (await tableExists()) {
@@ -75,6 +77,7 @@ const paths = {
     res.end();
   },
   "/get-all": async (req, res) => {
+    // TODO ensure table exists
     const database = await databasePromise;
     const all = await promisify(callback =>
       database.all(`SELECT * FROM ${tableName}`, {}, callback)
@@ -86,10 +89,10 @@ const paths = {
     res.end();
   },
   "/add": async (req, res) => {
+    // TODO ensure table exists
     let body = "";
     req.on("data", chunk => (body += chunk.toString()));
     req.on("end", async () => {
-      // JSON.stringify prevents SQL injection
       await runSql(`INSERT INTO ${tableName} VALUES (${JSON.stringify(body)})`);
       res.end();
     });

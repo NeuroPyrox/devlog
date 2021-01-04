@@ -18,7 +18,7 @@
   ("Sql String List"      "20 Sept 2020" "/sql-string-list")
   ("Sexpr Parser"         "18 Sept 2020" "/sexpr-parser")
   ("Sql Counter"          "16 Sept 2020" "/sql-counter")
-  ("Genetic Songs v0"     "13 Sept 2020" "/genetic-songs")
+  ("Genetic Songs"        "13 Sept 2020" "/genetic-songs")
   ("Weighted Tree Push"   "4 Sept 2020"  "/weighted-tree-push")
   ("String List"          "3 Sept 2020"  "/string-list")
   ("Sexpr Mutations"      "29 Aug 2020"  "/sexpr-mutations")

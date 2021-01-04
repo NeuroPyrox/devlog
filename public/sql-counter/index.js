@@ -26,7 +26,7 @@ const createDatabase = async filename => {
   return database;
 };
 
-const databasePromise = createDatabase(`${__dirname}/sql-counter.db`);
+const databasePromise = createDatabase(`${__dirname}/.sql`);
 const tableName = "counter";
 
 const runSql = async command => {
