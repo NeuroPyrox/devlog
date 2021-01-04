@@ -103,7 +103,7 @@ module.exports = (() => {
   return async () => {
     if (homepage === undefined) {
       homepage = homepageParser.parseWhole(
-        await fs.readFile("./public/homepage-v4/index.lisp", "utf8")
+        await fs.readFile(`${__dirname}/index.lisp`, "utf8")
       );
     }
     return homepage;
