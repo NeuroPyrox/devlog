@@ -1,5 +1,5 @@
 (server
-  (htmlBuilder "2020/9/21/homepage-v4.js" "")
+  (htmlBuilder "public/homepage-v4/index.js" "")
   (html        "public/today-i-learned-3-jan-2021.html"  "today-i-learned-3-jan-2021")
   (html        "public/today-i-learned-2-jan-2021.html"  "today-i-learned-2-jan-2021")
   (html        "public/today-i-learned-29-dec-2020.html" "today-i-learned-29-dec-2020")
@@ -15,7 +15,7 @@
   (html        "2020/10/4/pausable-rate.html" "pausable-rate")
   (html        "2020/10/3/rate-adjuster.html" "rate-adjuster")
   (html        "2020/10/2/range-slider.html"  "range-slider")
-  (htmlBuilder "2020/9/21/homepage-v4.js"           "homepage-v4")
+  (htmlBuilder "public/homepage-v4/index.js"        "homepage-v4")
   (router      "2020/9/20/sql-string-list.js"       "sql-string-list")
   (html        "2020/9/18/sexpr-parser.html"        "sexpr-parser")
   (json        "2020/9/16/sql-counter.js"           "sql-counter")
