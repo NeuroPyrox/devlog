@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Today I Learned</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Nova+Mono&display=swap");
+
+    body {
+      background-color: black;
+      font-family: "Nova Mono", monospace;
+      color: #0F0;
+      line-height: 2.5;
+    }
+
+    a:link,
+    a:visited {
+      color: #FF0;
+    }
+  </style>
+  <body>
+    <h1>
+      Today I Learned
+    </h1>
+    <h2>
+      3 Jan 2021
+    </h2>
+    <ul>
+      <li>
+        In OPRF, the client blinds the input and unblinds the output via inverse
+        group elements
+      </li>
+      <li>
+        In OPRF, the server combines its secret with the client's blinded input
+        within a cryptographic group
+      </li>
+      <li>
+        Clients can send (t, HMAC(OPRF(t), message) to the server as a one-time
+        signed token for CAPTCHAS
+      </li>
+      <li>
+        In OPAQUE, the client uses the OPRF result as a key to store an
+        encrypted envelope on the server
+      </li>
+      <li>
+        In OPAQUE, the envelope contains keys that will be used in an
+        Authenticated Key Exchange (AKE)
+      </li>
+      <li>
+        In OPAQUE registration, the client stores a random public/private key
+        pair, as well as the server's public key in the envelope
+      </li>
+      <li>
+        In OPAQUE registration, the server sends its public key in the same
+        response as the OPRF
+      </li>
+      <li>
+        In OPAQUE, the server stores the client's plaintext public key, their
+        envelope, and the unique OPRF key for that user
+      </li>
+    </ul>
+    Still don't fully understand:
+    <ul>
+      <li>
+        In OPAQUE, what the client should do after retrieving the envelope's
+        contents
+      </li>
+    </ul>
+  </body>
+</html>
