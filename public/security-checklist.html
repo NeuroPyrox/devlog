@@ -31,20 +31,33 @@
     This isn't an exhaustive list. It's only a summary of my current knowledge.
     <ul>
       <li>Don't use SameSite=none on user-facing domains</li>
-      <li>Don't use GET, HEAD, or OPTIONS to perform authenticated state changes</li>
+      <li>
+        Don't use GET, HEAD, or OPTIONS to perform authenticated state changes
+      </li>
       <li>Use secure cookies</li>
       <li>Don't use method-override headers</li>
       <li>Use PATCH, PUT, or DELETE instead of POST wherever it makes sense</li>
-      <li>Don't create any kind of "/csrf" route where you can access the CSRF token directly</li>
+      <li>
+        Don't create any kind of "/csrf" route where you can access the CSRF
+        token directly
+      </li>
       <li>Don't use url parameters for authenticated POST requests</li>
       <li>Salt your CSRF tokens</li>
       <li>Use a constant-time or random-time algorithm to verify tokens</li>
-      <li>Use CSRF tokens not only for authenticated state changes, but also for requests that return sensitive data</li>
-      <li>In the double-submit cookie pattern, make the cookie be a signature</li>
+      <li>
+        Use CSRF tokens not only for authenticated state changes, but also for
+        requests that return sensitive data
+      </li>
+      <li>
+        In the double-submit cookie pattern, make the cookie be a signature
+      </li>
       <li>Check the origin of your requests</li>
       <li>Put CSRF protection on login pages</li>
       <li>Start a new session after login</li>
-      <li>If attackers are able to overwrite cookies, use the synchronizer token pattern instead of double-submit cookies</li>
+      <li>
+        If attackers are able to overwrite cookies, use the synchronizer token
+        pattern instead of double-submit cookies
+      </li>
       <li>Use x-frame-options to prevent clickjacking</li>
       <li>Don't store session IDs in urls</li>
       <li>Use rate-limiting</li>
