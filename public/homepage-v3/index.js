@@ -124,7 +124,7 @@ module.exports = (() => {
   let homepage;
   return async () => {
     if (homepage === undefined) {
-      homepage = parseHomepage(await fs.readFile("./2020/8/25/homepageV3.lisp", "utf8"));
+      homepage = parseHomepage(await fs.readFile(`${__dirname}/index.lisp`, "utf8"));
     }
     return homepage;
   }
