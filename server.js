@@ -45,14 +45,6 @@ const handlerTypes = {
       res.end();
     });
   },
-  handlerMap: filePath =>
-    Object.entries(require(filePath)).reduce(
-      (total, [key, value]) =>
-        P.end(key)
-          .map(_ => value)
-          .or(total),
-      P.fail
-    ),
   router: require
 };
 
