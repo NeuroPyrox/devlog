@@ -3,7 +3,13 @@
 // TODO single source of truth
 
 module.exports = () => [
-  { day: "19", title: "postsUI" },
+  { day: "17", title: "pills" },
+  { day: "17", title: "drag-n-drop" },
+  { day: "17", title: "mobile-drag-n-drop" },
+  { day: "17", title: "follow-mouse" },
+  { day: "17", title: "17-may-2020" },
+  { day: "19", title: "posts-ui" },
+  { day: "19", title: "19-may-2020" },
   { day: "20", title: "dannys-page" },
   { day: "20", title: "homepage-v1" },
   { day: "20", title: "post-finder" },

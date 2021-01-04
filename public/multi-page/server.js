@@ -1,10 +1,7 @@
 "use strict";
 
-const path = require("path");
-const writeFile = require("../../2020/5/17/writeFile.js");
 const P = require("../../parsers.js");
-
-const handleHome = res => writeFile(res, path.join(__dirname, "index.html"));
+const writeFile = require("../../lib/write-file.js");
 
 const writeText = text => (req, res) => {
   res.writeHead(200, {
@@ -15,7 +12,7 @@ const writeText = text => (req, res) => {
 };
 
 module.exports = P.end("")
-  .map(_ => (req, res) => handleHome(res))
+  .map(_ => writeFile(`${__dirname}/index.html`))
   .or(
     P.end("/").map(_ => (req, res) => {
       res.writeHead(302, { Location: req.url.slice(0, -1) });
