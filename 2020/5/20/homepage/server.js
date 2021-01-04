@@ -64,7 +64,7 @@ const makeItem = ({ day, title, href }) => `
         ${title}
       </h2>
       <h3>
-        ${day} May 2020
+        ${day}
       </h3>
     </div>
   </a>
