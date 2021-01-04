@@ -51,7 +51,7 @@ const oldBlog = [
 ];
 
 module.exports = async () => {
-  const mayPosts = await require("../2020/5/getPostLocations.js")();
+  const mayPosts = await require("./homepage-v1/get-post-locations.js")();
   const posts = getNewPosts()
     .concat(mayPosts)
     .concat(oldBlog);

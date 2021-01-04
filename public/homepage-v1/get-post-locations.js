@@ -2,11 +2,10 @@
 
 // We differentiate post locations from http handlers in May because some posts have more than one http handler
 
-const getMayPosts = require("./20/post-finder/getMayPosts.js");
+const postFinder = require("../post-finder.js");
 
 // TODO single source of truth
 const oldPosts = [
-  { day: "20 May 2020", title: "20th", href: "/2020/5/20/" },
   { day: "19 May 2020", title: "19th", href: "/2020/5/19/" },
   { day: "17 May 2020", title: "17th", href: "/2020/5/17/" },
   { day: "17 May 2020", title: "Pills", href: "/2020/5/17/pills" },
@@ -19,11 +18,11 @@ const oldPosts = [
 ];
 
 module.exports = async () => {
-  const mayPosts = (await getMayPosts())
+  const mayPosts = (await postFinder())
     .map(({ day, title }) => ({
-      day: `${day} May 2020`,
+      date: `${day} May 2020`,
       title,
-      href: day <= 20 ? `/2020/5/${day}/${title}` : `/${title}`
+      href: day <= 19 ? `/2020/5/${day}/${title}` : `/${title}`
     }))
     .reverse();
   return mayPosts.concat(oldPosts);
