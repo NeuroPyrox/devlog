@@ -2,7 +2,7 @@
 
 const P = require("../parsers.js");
 
-const writeText = text => (req, res) => {
+const textHandler = text => (req, res) => {
   res.writeHead(200, {
     "Content-Type": "text"
   });
@@ -12,5 +12,5 @@ const writeText = text => (req, res) => {
 
 // TODO add a required slash
 module.exports = P.end("")
-  .map(_ => writeText("Try adding stuff to the end of the url"))
-  .or(P.any.map(writeText));
+  .map(_ => textHandler("Try adding stuff to the end of the url"))
+  .or(P.any.map(textHandler));
