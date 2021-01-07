@@ -15,8 +15,7 @@ const htmlHandler = require("./lib/html-handler.js");
 
 // Each value maps a file path to a parser of url tails to handlers
 const handlerTypes = {
-  html: filePath =>
-    P.end("").map(_ => htmlHandler(filePath)),
+  html: filePath => P.end("").map(_ => htmlHandler(filePath)),
   htmlBuilder: filePath => {
     const htmlBuilder = require(filePath);
     return P.end("").map(_ => async (req, res) => {
@@ -89,10 +88,22 @@ const handlersPromise = fs.promises
   .readFile("server.lisp", "utf8")
   .then(string => handlersParser.parseWhole(string));
 
+const handleHttps = async (req, res) =>
+  (await handlersPromise).parseWhole(req.url)(req, res);
+
 require("http")
-  .createServer(async (req, res) =>
-    (await handlersPromise).parseWhole(req.url)(req, res)
-  )
+  .createServer(async (req, res) => {
+    const protocol = req.headers["x-forwarded-proto"].split(",")[0];
+    if (protocol === "https") {
+      await handleHttps(req, res);
+    } else {
+      // Redirect all http requests to https
+      // We're trusting glitch.com as a proxy and they can still view all of our internet trafic unencrypted
+      // TODO test if we can use the https module
+      res.writeHead(301, { Location: `https://${req.headers.host}${req.url}` });
+      res.end();
+    }
+  })
   .listen(process.env.PORT, () =>
     console.log(`Your app is listening on port ${process.env.PORT}`)
   );
