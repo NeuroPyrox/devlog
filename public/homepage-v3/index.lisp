@@ -1,4 +1,4 @@
-[homepage
+(homepage
   ("Homepage v4"          "21 Sept 2020" "/homepage-v4")
   ("Sql String List"      "20 Sept 2020" "/sql-string-list")
   ("Sexpr Parser"         "18 Sept 2020" "/sexpr-parser")
@@ -48,4 +48,4 @@
   ("500 lines of code per day - A Manifesto" "12 March 2020" "https://docs.google.com/document/d/1fY1Qb6-3uDXpn5w9f2YK3O-52xK25HN0XuU4kdB6TSo/edit?usp=sharing")
   ("The Best Motivational Songs EVER"        "12 March 2020" "https://docs.google.com/document/d/10o9TxDF_HAid-GMlOvuL0Lq0FKif6es6H7YIqdJ6two/edit?usp=sharing")
   ("Some AI ideas"                           "12 March 2020" "https://docs.google.com/document/d/1_2_eOD9mR8j5CWFoXLzawQonGcR3dn5yUuyQXCzRQ_Y/edit?usp=sharing")
-  ("First post - Why I'm making this blog"   "12 March 2020" "https://drive.google.com/open?id=15RJuP-t50Q3s3cZ_tl6Kl0DdHv2wN1nPL5dSc23DWH0")]
+  ("First post - Why I'm making this blog"   "12 March 2020" "https://drive.google.com/open?id=15RJuP-t50Q3s3cZ_tl6Kl0DdHv2wN1nPL5dSc23DWH0"))

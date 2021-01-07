@@ -75,7 +75,6 @@ const makeHtml = async () => {
   return templateHtml(listHtml);
 };
 
-// TODO memoize
 module.exports = (() => {
   const html = makeHtml();
   return async () => await html;
