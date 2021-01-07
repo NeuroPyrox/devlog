@@ -57,9 +57,9 @@ const handle404error = (req, res) => {
 // A doubly nested parser: parser(server.lisp -> parser(url -> ((req, res) -> unit)))
 // It's probably better to encode server.lisp as json, but I wanted to have fun
 const handlersParser = P.inParentheses(
-  P.skipString("server").skipLeft(
+  P.string("server").skipLeft(
     P.many(
-      P.skipString("\n  ").skipLeft(
+      P.string("\n  ").skipLeft(
         P.inParentheses(
           P.pure(type => source => path => [
             path,
@@ -71,9 +71,9 @@ const handlersParser = P.inParentheses(
                   ("a" <= char && char <= "z") || ("A" <= char && char <= "Z")
               )
             )
-            .skipRight(P.skipSpaces1)
+            .skipRight(P.spaces1)
             .apply(P.simpleString)
-            .skipRight(P.skipSpaces1)
+            .skipRight(P.spaces1)
             .apply(P.simpleString)
         )
       )
@@ -82,10 +82,10 @@ const handlersParser = P.inParentheses(
 )
   .skipRight(P.end(""))
   .map(handlers =>
-    P.skipString("/").skipLeft(
+    P.string("/").skipLeft(
       handlers.reduce(
         (total, [key, value]) =>
-          P.skipString(key)
+          P.string(key)
             .skipLeft(value)
             .or(total),
         P.pure(handle404error)

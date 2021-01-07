@@ -6,7 +6,7 @@
 const P = require("../parsers.js");
 
 // I could've used a library, but I'm doing things from scratch for educational purposes
-const cookieParser = P.skipString("__Secure-counter=")
+const cookieParser = P.string("__Secure-counter=")
   .skipLeft(P.any)
   .map(parseInt);
 

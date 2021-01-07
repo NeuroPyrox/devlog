@@ -84,16 +84,14 @@ const postParser = P.inParentheses(
         </div>
       </a>`)
     .apply(P.simpleString)
-    .skipRight(P.skipSpaces1)
+    .skipRight(P.spaces1)
     .apply(P.simpleString)
-    .skipRight(P.skipSpaces1)
+    .skipRight(P.spaces1)
     .apply(P.simpleString)
 );
 
 const homepageParser = P.inParentheses(
-  P.skipString("homepage").skipLeft(
-    P.many(P.skipString("\n  ").skipLeft(postParser))
-  )
+  P.string("homepage").skipLeft(P.many(P.string("\n  ").skipLeft(postParser)))
 )
   .skipRight(P.end(""))
   .map(list => templateList(list.join(" ")));

@@ -6,7 +6,7 @@ const writeFile = require("../../lib/write-file.js");
 module.exports = P.end("")
   .map(_ => writeFile(`${__dirname}/index.html`))
   .or(
-    P.skipString("/").skipLeft(
+    P.string("/").skipLeft(
       P.any.map(echo => (req, res) => {
         res.writeHead(200, {
           "Content-Type": "text/plain"
