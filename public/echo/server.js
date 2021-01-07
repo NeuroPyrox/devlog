@@ -1,10 +1,10 @@
 "use strict";
 
 const P = require("../../parsers.js");
-const writeFile = require("../../lib/write-file.js");
+const htmlHandler = require("../../lib/html-handler.js");
 
 module.exports = P.end("")
-  .map(_ => writeFile(`${__dirname}/index.html`))
+  .map(_ => htmlHandler(`${__dirname}/index.html`))
   .or(
     P.string("/").skipLeft(
       P.any.map(echo => (req, res) => {
