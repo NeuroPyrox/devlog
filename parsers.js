@@ -1,6 +1,6 @@
 "use strict";
 
-const {just, nothing} = require("./maybe.js");
+const { just, nothing } = require("./maybe.js");
 
 // Parse returns a maybe monad of a parse result and the next index
 const parser = parse => ({
@@ -45,25 +45,25 @@ const end = rest =>
     string.slice(index) === rest ? just([null, string.length]) : nothing
   );
 
-const skipString = skipMe =>
+const string = skipMe =>
   parser((string, start) => {
     const end = start + skipMe.length;
     return end <= string.length && skipMe === string.slice(start, end)
-        ? just([null, end])
-        : nothing
+      ? just([skipMe, end])
+      : nothing;
   });
 
-const skipCharClass = predicate =>
+const charClass = predicate =>
   parser((string, index) =>
-      index < string.length && predicate(string[index])
-        ? just([null, index + 1])
-        : nothing
+    index < string.length && predicate(string[index])
+      ? just([string[index], index + 1])
+      : nothing
   );
 
 const inParentheses = p =>
-  skipString("(")
+  string("(")
     .skipLeft(p)
-    .skipRight(skipString(")"));
+    .skipRight(string(")"));
 
 const many = p => many1(p).or(pure([]));
 
@@ -72,28 +72,26 @@ const many1 = p =>
 
 const stringOf = predicate =>
   parser((string, start) =>
-    many(skipCharClass(predicate))
+    many(charClass(predicate))
       .parse(string, start)
-      .map(([, end]) =>
-        [string.slice(start, end), end]
-      )
+      .map(([, end]) => [string.slice(start, end), end])
   );
 
-const skipSpaces1 = many1(skipCharClass(char => char === " "));
+const spaces1 = many1(charClass(char => char === " "));
 
-const simpleString = skipString('"')
+const simpleString = string('"')
   .skipLeft(stringOf(char => char !== '"'))
-  .skipRight(skipString('"'));
+  .skipRight(string('"'));
 
 module.exports = {
   pure,
   fail,
   any,
   end,
-  skipString,
+  string,
   inParentheses,
   many,
   stringOf,
-  skipSpaces1,
+  spaces1,
   simpleString
 };
