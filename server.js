@@ -1,7 +1,5 @@
 "use strict";
 
-// TODO place files according to url hierarchy
-// TODO remove handlerMap
 // TODO use specialized parsers for urls to prevent namespace collisions
 // TODO add url collision errors during initialization
 // TODO combine into single source of truth for urls:
@@ -13,18 +11,12 @@
 
 const fs = require("fs");
 const P = require("./parsers.js");
+const htmlHandler = require("./lib/html-handler.js");
 
 // Each value maps a file path to a parser of url tails to handlers
 const handlerTypes = {
   html: filePath =>
-    P.end("").map(_ => async (req, res) => {
-      const stat = await fs.promises.stat(filePath);
-      res.writeHead(200, {
-        "Content-Type": "text/html",
-        "Content-Length": stat.size
-      });
-      fs.createReadStream(filePath).pipe(res);
-    }),
+    P.end("").map(_ => htmlHandler(filePath)),
   htmlBuilder: filePath => {
     const htmlBuilder = require(filePath);
     return P.end("").map(_ => async (req, res) => {
