@@ -11,7 +11,6 @@ const cookieParser = P.string("__Secure-counter=")
   .map(parseInt);
 
 module.exports = P.end("").map(_ => (req, res) => {
-  console.log(req.headers)
   const counter =
     req.headers.cookie === undefined
       ? 0
