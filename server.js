@@ -1,5 +1,6 @@
 "use strict";
 
+// TODO check
 // TODO use specialized parsers for urls to prevent namespace collisions
 // TODO add url collision errors during initialization
 // TODO combine into single source of truth for urls:
@@ -88,8 +89,10 @@ const handlersPromise = fs.promises
   .readFile("server.lisp", "utf8")
   .then(string => handlersParser.parseWhole(string));
 
-const handleHttps = async (req, res) =>
+const handleHttps = async (req, res) => {
+  req.setHeader("x-frame-options", "deny")
   (await handlersPromise).parseWhole(req.url)(req, res);
+}
 
 require("http")
   .createServer(async (req, res) => {
