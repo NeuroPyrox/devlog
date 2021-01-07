@@ -90,9 +90,9 @@ const handlersPromise = fs.promises
   .then(string => handlersParser.parseWhole(string));
 
 const handleHttps = async (req, res) => {
-  req.setHeader("x-frame-options", "deny")
+  req.setHeader("x-frame-options", "deny");
   (await handlersPromise).parseWhole(req.url)(req, res);
-}
+};
 
 require("http")
   .createServer(async (req, res) => {
