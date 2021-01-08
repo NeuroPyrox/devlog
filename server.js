@@ -90,11 +90,12 @@ const handlersPromise = fs.promises
   .then(string => handlersParser.parseWhole(string));
 
 const handleHttps = async (req, res) => {
-  res.setHeader("x-frame-options", "deny");
-  res.setHeader("referrer-policy", "no-referrer");
+  res.setHeader("X-Frame-Options", "deny");
+  res.setHeader("Referrer-Policy", "no-referrer");
   // 31536000 seconds is one non-leap year
-  res.setHeader("strict-transport-security", "max-age=31536000");
-  res.setHeader("expect-ct", "max-age=31536000, enforce");
+  res.setHeader("Strict-Transport-Security", "max-age=31536000");
+  res.setHeader("Expect-CT", "max-age=31536000, enforce");
+  res.setHeader("X-Content-Type-Options", "nosniff")
   (await handlersPromise).parseWhole(req.url)(req, res);
 };
 
