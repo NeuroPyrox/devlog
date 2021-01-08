@@ -90,9 +90,13 @@ const handlersPromise = fs.promises
   .then(string => handlersParser.parseWhole(string));
 
 const handleHttps = async (req, res) => {
-  req.setHeader("x-frame-options", "deny");
+  res.setHeader("x-frame-options", "deny");
+  // 31536000 seconds is one non-leap year
+  res.setHeader('strict-transport-security', 'max-age=31536000');
   (await handlersPromise).parseWhole(req.url)(req, res);
 };
+
+// TODO server-side error middleware
 
 require("http")
   .createServer(async (req, res) => {
