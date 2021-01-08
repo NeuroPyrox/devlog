@@ -89,13 +89,18 @@ const handlersPromise = fs.promises
   .readFile("server.lisp", "utf8")
   .then(string => handlersParser.parseWhole(string));
 
+// TODO split into proper middlewares
 const handleHttps = async (req, res) => {
-  res.setHeader("X-Frame-Options", "deny");
+  // This can be done with helmet.js, but I wanted to minimize dependencies for the learning experience
+  res.setHeader("Content-Security-Policy", "default-src 'none'"); // TODO reporting
   res.setHeader("Referrer-Policy", "no-referrer");
+  res.setHeader("X-Frame-Options", "deny");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Permitted-Cross-Domain-Policies", "none"); // TODO I still don't understand what this does
+  res.setHeader("X-XSS-Protection", "0");
   // 31536000 seconds is one non-leap year
   res.setHeader("Strict-Transport-Security", "max-age=31536000");
-  res.setHeader("Expect-CT", "max-age=31536000, enforce");
-  res.setHeader("X-Content-Type-Options", "nosniff")
+  res.setHeader("Expect-CT", "max-age=31536000, enforce"); // TODO reporting
   (await handlersPromise).parseWhole(req.url)(req, res);
 };
 
