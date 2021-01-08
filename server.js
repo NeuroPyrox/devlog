@@ -89,10 +89,21 @@ const handlersPromise = fs.promises
   .readFile("server.lisp", "utf8")
   .then(string => handlersParser.parseWhole(string));
 
+// TODO look for better way to load fonts
+// TODO remove unsafe-inline
+// TODO reporting
+const contentSecurityPolicy =
+  "default-src 'self'" +
+  "; style-src 'unsafe-inline' https://fonts.googleapis.com" +
+  "; font-src https://fonts.gstatic.com" +
+  "; script-src 'unsafe-inline'" +
+  "; img-src https://external-content.duckduckgo.com" +
+  "; media-src https://drive.google.com https://doc-14-cc-docs.googleusercontent.com";
+
 // TODO split into proper middlewares
 const handleHttps = async (req, res) => {
   // This can be done with helmet.js, but I wanted to minimize dependencies for the learning experience
-  res.setHeader("Content-Security-Policy", "default-src 'none'"); // TODO reporting
+  res.setHeader("Content-Security-Policy", contentSecurityPolicy);
   res.setHeader("Referrer-Policy", "no-referrer");
   res.setHeader("X-Frame-Options", "deny");
   res.setHeader("X-Content-Type-Options", "nosniff");
