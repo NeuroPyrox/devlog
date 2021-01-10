@@ -61,7 +61,7 @@ const templateList = listHtml => `
 `;
 
 const postParser = P.inParentheses(
-  P.pure(title => date => href => `
+  P.constant(title => date => href => `
       <a href="${href}">
         <div class="post">
           <h2>

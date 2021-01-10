@@ -30,7 +30,7 @@ const parser = parse => ({
     )
 });
 
-const pure = x => parser((_, index) => just([x, index]));
+const constant = x => parser((_, index) => just([x, index]));
 
 const lazy = p => parser((string, index) => p().parse(string, index));
 
@@ -65,7 +65,7 @@ const inParentheses = p =>
     .skipLeft(p)
     .skipRight(string(")"));
 
-const many = p => many1(p).or(pure([]));
+const many = p => many1(p).or(constant([]));
 
 const many1 = p =>
   p.map(head => tail => [head, ...tail]).apply(lazy(() => many(p)));
@@ -84,7 +84,7 @@ const simpleString = string('"')
   .skipRight(string('"'));
 
 module.exports = {
-  pure,
+  constant,
   fail,
   any,
   end,
