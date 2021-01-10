@@ -53,7 +53,7 @@ const handlersParser = P.inParentheses(
     P.many(
       P.string("\n  ").skipLeft(
         P.inParentheses(
-          P.pure(type => source => path => [
+          P.constant(type => source => path => [
             path,
             handlerTypes[type](`./${source}`)
           ])
@@ -80,7 +80,7 @@ const handlersParser = P.inParentheses(
           P.string(key)
             .skipLeft(value)
             .or(total),
-        P.pure(handle404error)
+        P.constant(handle404error)
       )
     )
   );
