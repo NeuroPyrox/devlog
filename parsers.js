@@ -2,18 +2,20 @@
 
 const { just, nothing } = require("./maybe.js");
 
+// In this module, "str" refers to a string and "string" refers to the parser conbinator
+
 // Parse returns a maybe monad of a parse result and the next index
 const parser = parse => ({
   parse,
-  parseWhole: string => parse(string, 0).unwrap()[0],
+  parseWhole: str => parse(str, 0).unwrap()[0],
   map: f =>
-    parser((string, index) =>
-      parse(string, index).map(([result, index]) => [f(result), index])
+    parser((str, index) =>
+      parse(str, index).map(([result, index]) => [f(result), index])
     ),
   apply: other =>
-    parser((string, index) =>
-      parse(string, index).chain(([f, indexF]) =>
-        other.parse(string, indexF).map(([x, indexX]) => [f(x), indexX])
+    parser((str, index) =>
+      parse(str, index).chain(([f, indexF]) =>
+        other.parse(str, indexF).map(([x, indexX]) => [f(x), indexX])
       )
     ),
   skipLeft: other =>
@@ -25,38 +27,38 @@ const parser = parse => ({
       .map(a => b => a)
       .apply(other),
   or: other =>
-    parser((string, index) =>
-      parse(string, index).or(() => other.parse(string, index))
+    parser((str, index) =>
+      parse(str, index).or(() => other.parse(str, index))
     )
 });
 
 const constant = x => parser((_, index) => just([x, index]));
 
-const lazy = p => parser((string, index) => p().parse(string, index));
+const lazy = p => parser((str, index) => p().parse(str, index));
 
 const fail = parser(() => nothing);
 
-const any = parser((string, index) =>
-  just([string.slice(index), string.length])
+const any = parser((str, index) =>
+  just([str.slice(index), str.length])
 );
 
 const end = rest =>
-  parser((string, index) =>
-    string.slice(index) === rest ? just([null, string.length]) : nothing
+  parser((str, index) =>
+    str.slice(index) === rest ? just([null, str.length]) : nothing
   );
 
-const string = skipMe =>
-  parser((string, start) => {
-    const end = start + skipMe.length;
-    return end <= string.length && skipMe === string.slice(start, end)
-      ? just([skipMe, end])
+const string = expected =>
+  parser((str, start) => {
+    const end = start + expected.length;
+    return end <= str.length && expected === str.slice(start, end)
+      ? just([expected, end])
       : nothing;
   });
 
 const charClass = predicate =>
-  parser((string, index) =>
-    index < string.length && predicate(string[index])
-      ? just([string[index], index + 1])
+  parser((str, index) =>
+    index < str.length && predicate(str[index])
+      ? just([str[index], index + 1])
       : nothing
   );
 
@@ -71,10 +73,10 @@ const many1 = p =>
   p.map(head => tail => [head, ...tail]).apply(lazy(() => many(p)));
 
 const stringOf = predicate =>
-  parser((string, start) =>
+  parser((str, start) =>
     many(charClass(predicate))
-      .parse(string, start)
-      .map(([, end]) => [string.slice(start, end), end])
+      .parse(str, start)
+      .map(([, end]) => [str.slice(start, end), end])
   );
 
 const spaces1 = many1(charClass(char => char === " "));
