@@ -89,11 +89,11 @@ module.exports = {
   constant,
   fail,
   any,
-  end,
+  end, // TODO simplify
   string,
   inParentheses,
   many,
-  stringOf,
+  stringOf, // TODO convert to unparameterized combinators
   spaces1,
   simpleString
 };
