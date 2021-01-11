@@ -83,7 +83,7 @@ const homepageParser = P.inParentheses(
   P.string("homepage").skipLeft(P.many(P.string("\n  ").skipLeft(postParser)))
 )
   .skipRight(P.end(""))
-  .map(list => templateList(list.join()));
+  .map(list => templateList(list.join("")));
 
 module.exports = (() => {
   let homepage;
