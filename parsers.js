@@ -42,7 +42,11 @@ const any = parser((str, index) =>
   just([str.slice(index), str.length])
 );
 
-const end = rest =>
+const end = parser((str, index) =>
+    str.length === index ? just([null, index]) : nothing
+  );
+
+const endIn = rest =>
   parser((str, index) =>
     str.slice(index) === rest ? just([null, str.length]) : nothing
   );
@@ -89,7 +93,8 @@ module.exports = {
   constant,
   fail,
   any,
-  end, // TODO simplify
+  end,
+  endIn,
   string,
   inParentheses,
   many,

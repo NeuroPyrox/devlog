@@ -19,8 +19,8 @@ const homeHtml = `
 <a href="pills">Pills</a><br>
 `;
 
-module.exports = P.end("")
+module.exports = P.end
   .map(_ => homeHtml)
-  .or(P.end("/page1").map(_ => "This is page 1"))
-  .or(P.end("/page2").map(_ => "This is page 2"))
+  .or(P.endIn("/page1").map(_ => "This is page 1"))
+  .or(P.endIn("/page2").map(_ => "This is page 2"))
   .map(writeString);

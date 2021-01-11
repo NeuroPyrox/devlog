@@ -93,7 +93,7 @@ const postParser = P.inParentheses(
 const homepageParser = P.inParentheses(
   P.string("homepage").skipLeft(P.many(P.string("\n  ").skipLeft(postParser)))
 )
-  .skipRight(P.end(""))
+  .skipRight(P.end)
   .map(list => templateList(list.join("")));
 
 module.exports = (() => {
