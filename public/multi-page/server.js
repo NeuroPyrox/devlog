@@ -11,13 +11,13 @@ const textHandler = text => (req, res) => {
   res.end();
 };
 
-module.exports = P.end("")
+module.exports = P.end
   .map(_ => htmlHandler(`${__dirname}/index.html`))
   .or(
-    P.end("/").map(_ => (req, res) => {
+    P.endIn("/").map(_ => (req, res) => {
       res.writeHead(302, { Location: req.url.slice(0, -1) });
       res.end();
     })
   )
-  .or(P.end("/123").map(_ => textHandler("123 page")))
-  .or(P.end("/abc").map(_ => textHandler("abc page")));
+  .or(P.endIn("/123").map(_ => textHandler("123 page")))
+  .or(P.endIn("/abc").map(_ => textHandler("abc page")));

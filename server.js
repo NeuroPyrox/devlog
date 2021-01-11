@@ -16,10 +16,10 @@ const htmlHandler = require("./lib/html-handler.js");
 
 // Each value maps a file path to a parser of url tails to handlers
 const handlerTypes = {
-  html: filePath => P.end("").map(_ => htmlHandler(filePath)),
+  html: filePath => P.end.map(_ => htmlHandler(filePath)),
   htmlBuilder: filePath => {
     const htmlBuilder = require(filePath);
-    return P.end("").map(_ => async (req, res) => {
+    return P.end.map(_ => async (req, res) => {
       res.writeHead(200, {
         "Content-Type": "text/html"
       });
@@ -29,7 +29,7 @@ const handlerTypes = {
   },
   json: filePath => {
     const jsonBuilder = require(filePath);
-    return P.end("").map(_ => async (req, res) => {
+    return P.end.map(_ => async (req, res) => {
       res.writeHead(200, {
         "Content-Type": "application/json"
       });
@@ -72,7 +72,7 @@ const handlersParser = P.inParentheses(
     )
   )
 )
-  .skipRight(P.end(""))
+  .skipRight(P.end)
   .map(handlers =>
     P.string("/").skipLeft(
       handlers.reduce(
