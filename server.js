@@ -46,31 +46,27 @@ const handle404error = (req, res) => {
   res.end();
 };
 
+const typeParser = P.string("htmlBuilder")
+  .or(P.string("html"))
+  .or(P.string("json"))
+  .or(P.string("router"));
+
+const handlerParser = P.inParentheses(
+  P.constant(type => source => path => [
+    path,
+    handlerTypes[type](`./${source}`)
+  ])
+    .apply(typeParser)
+    .skipRight(P.spaces1)
+    .apply(P.simpleString)
+    .skipRight(P.spaces1)
+    .apply(P.simpleString)
+);
+
 // A doubly nested parser: parser(server.lisp -> parser(url -> ((req, res) -> unit)))
 // It's probably better to encode server.lisp as json, but I wanted to have fun
 const handlersParser = P.inParentheses(
-  P.string("server").skipLeft(
-    P.many(
-      P.string("\n  ").skipLeft(
-        P.inParentheses(
-          P.constant(type => source => path => [
-            path,
-            handlerTypes[type](`./${source}`)
-          ])
-            .apply(
-              P.stringOf(
-                char =>
-                  ("a" <= char && char <= "z") || ("A" <= char && char <= "Z")
-              )
-            )
-            .skipRight(P.spaces1)
-            .apply(P.simpleString)
-            .skipRight(P.spaces1)
-            .apply(P.simpleString)
-        )
-      )
-    )
-  )
+  P.string("server").skipLeft(P.many(P.string("\n  ").skipLeft(handlerParser)))
 )
   .skipRight(P.end)
   .map(handlers =>
