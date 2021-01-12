@@ -27,9 +27,7 @@ const parser = parse => ({
       .map(a => b => a)
       .apply(other),
   or: other =>
-    parser((str, index) =>
-      parse(str, index).or(() => other.parse(str, index))
-    )
+    parser((str, index) => parse(str, index).or(() => other.parse(str, index)))
 });
 
 const constant = x => parser((_, index) => just([x, index]));
@@ -38,13 +36,11 @@ const lazy = p => parser((str, index) => p().parse(str, index));
 
 const fail = parser(() => nothing);
 
-const any = parser((str, index) =>
-  just([str.slice(index), str.length])
-);
+const any = parser((str, index) => just([str.slice(index), str.length]));
 
 const end = parser((str, index) =>
-    str.length === index ? just([null, index]) : nothing
-  );
+  str.length === index ? just([null, index]) : nothing
+);
 
 const endIn = rest =>
   parser((str, index) =>
@@ -75,13 +71,6 @@ const many = p => many1(p).or(constant([]));
 
 const many1 = p =>
   p.map(head => tail => [head, ...tail]).apply(lazy(() => many(p)));
-
-const stringOf = predicate =>
-  parser((str, start) =>
-    many(charClass(predicate))
-      .parse(str, start)
-      .map(([, end]) => [str.slice(start, end), end])
-  );
 
 const spaces1 = many1(charClass(char => char === " "));
 
