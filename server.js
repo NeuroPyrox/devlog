@@ -52,11 +52,20 @@ const typeParser = P.string("htmlBuilder")
   .or(P.string("router"));
 
 const handlerParser = P.inParentheses(
-  P.constant(type => source => path => [
-    path,
-    handlerTypes[type](`./${source}`)
-  ])
-    .apply(typeParser)
+  typeParser
+    .map(type => source => path => [path, handlerTypes[type](`./${source}`)])
+    .or(
+      P.string("redirect").map(_ => from => to => [
+        from,
+        P.end.map(_ => (req, res) => {
+          console.log(from);
+          res.writeHead(301, {
+            Location: to
+          });
+          res.end();
+        })
+      ])
+    )
     .skipRight(P.spaces1)
     .apply(P.simpleString)
     .skipRight(P.spaces1)
