@@ -86,7 +86,7 @@ const stringOf = predicate =>
 const spaces1 = many1(charClass(char => char === " "));
 
 const simpleString = string('"')
-  .skipLeft(stringOf(char => char !== '"'))
+  .skipLeft(many(charClass(char => char !== '"')).map(chars => chars.join("")))
   .skipRight(string('"'));
 
 module.exports = {
@@ -98,7 +98,6 @@ module.exports = {
   string,
   inParentheses,
   many,
-  stringOf, // TODO convert to unparameterized combinators
   spaces1,
   simpleString
 };
