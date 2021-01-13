@@ -78,6 +78,9 @@ const simpleString = string('"')
   .skipLeft(many(charClass(char => char !== '"')).map(chars => chars.join("")))
   .skipRight(string('"'));
 
+const untilChar = endChar =>
+  many(charClass(char => char !== endChar)).map(chars => chars.join(""));
+
 module.exports = {
   constant,
   fail,
@@ -88,5 +91,6 @@ module.exports = {
   inParentheses,
   many,
   spaces1,
-  simpleString
+  simpleString,
+  untilChar
 };

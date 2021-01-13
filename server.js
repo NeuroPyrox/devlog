@@ -70,9 +70,9 @@ const handlerParser = P.inParentheses(
       ])
     )
     .skipRight(P.spaces1)
-    .apply(P.simpleString)
+    .apply(P.untilChar(" "))
     .skipRight(P.spaces1)
-    .apply(P.simpleString)
+    .apply(P.untilChar(")"))
 );
 
 // A doubly nested parser: parser(server.lisp -> parser(url -> ((req, res) -> unit)))
@@ -82,14 +82,12 @@ const handlersParser = P.inParentheses(
 )
   .skipRight(P.end)
   .map(handlers =>
-    P.string("/").skipLeft(
-      handlers.reduce(
-        (total, [key, value]) =>
-          P.string(key)
-            .skipLeft(value)
-            .or(total),
-        P.constant(handle404error)
-      )
+    handlers.reduce(
+      (total, [key, value]) =>
+        P.string(key)
+          .skipLeft(value)
+          .or(total),
+      P.constant(handle404error)
     )
   );
 
