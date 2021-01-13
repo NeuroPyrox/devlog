@@ -53,9 +53,9 @@ const typeParser = P.string("htmlBuilder")
 
 const handlerParser = P.inParentheses(
   typeParser
-    .map(type => path => source => [
+    .map(type => path => suffix => [
       path,
-      handlerTypes[type](`./public/${source}`)
+      handlerTypes[type](`./public/${path}${suffix}`)
     ])
     .or(
       P.string("redirect").map(_ => from => to => [
