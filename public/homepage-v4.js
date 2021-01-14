@@ -2,7 +2,7 @@
 
 const homepage = require("../homepage.js");
 
-const renderList = listHtml => `
+const renderHtml = listHtml => `
   <!DOCTYPE html>
   <html lang="en">
     <head>
@@ -79,23 +79,11 @@ const renderList = listHtml => `
   </html>
 `;
 
-const renderPost = ({ title, date, href }) => `
-  <a href="${href}">
-    <div class="post">
-      <h2>
-        ${title}
-      </h2>
-      <h3>
-        ${date}
-      </h3>
-    </div>
-  </a>`;
-
 let html;
 
 module.exports = async () => {
   if (html === undefined) {
-    html = renderList((await homepage()).map(renderPost).join(""));
+    html = renderHtml(await homepage());
   }
   return html;
 };

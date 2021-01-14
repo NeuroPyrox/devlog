@@ -7,12 +7,12 @@ const getNewPosts = () => [
   {
     date: "15 June 2020",
     title: "Post Locations",
-    href: `/post-locations`
+    href: "/post-locations"
   },
   {
     date: "14 June 2020",
     title: "Didn't Solve AGI",
-    href: `/didnt-solve-agi`
+    href: "/didnt-solve-agi"
   }
 ];
 

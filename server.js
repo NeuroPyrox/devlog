@@ -3,11 +3,12 @@
 // TODO use specialized parsers for urls to prevent namespace collisions
 // TODO add url collision errors during initialization
 // TODO combine into single source of truth for urls:
-//  server.lisp
-//  2020/9/21/homepage.v4.lisp
-//  2020/8/25/homepageV3.lisp
-//  2020/6/27/get-posts/getPosts.js
-//  2020/6/27/get-june-posts/getJunePosts.js
+//  get-june-days
+//  get-june-posts
+//  get-may-days
+//  get-may-posts
+//  post-finder
+//  post-locations
 
 const fs = require("fs");
 const P = require("./parsers.js");
