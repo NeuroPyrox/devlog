@@ -1,6 +1,5 @@
 "use strict";
 
-// TODO check
 // TODO use specialized parsers for urls to prevent namespace collisions
 // TODO add url collision errors during initialization
 // TODO combine into single source of truth for urls:
@@ -61,7 +60,6 @@ const handlerParser = P.inParentheses(
       P.string("redirect").map(_ => from => to => [
         from,
         P.end.map(_ => (req, res) => {
-          console.log(from);
           res.writeHead(301, {
             Location: to
           });
@@ -95,8 +93,7 @@ const handlersPromise = fs.promises
   .readFile("server.lisp", "utf8")
   .then(string => handlersParser.parseWhole(string));
 
-// TODO split into proper middlewares
-const handleHttps = async (req, res) => {
+const secureHeaders = (req, res, next) => {
   // This can be done with helmet.js, but I wanted to minimize dependencies for the learning experience
   res.setHeader("Referrer-Policy", "no-referrer");
   res.setHeader("X-Frame-Options", "deny");
@@ -106,23 +103,34 @@ const handleHttps = async (req, res) => {
   // 31536000 seconds is one non-leap year
   res.setHeader("Strict-Transport-Security", "max-age=31536000");
   res.setHeader("Expect-CT", "max-age=31536000, enforce"); // TODO reporting
-  (await handlersPromise).parseWhole(req.url)(req, res);
+  return next(req, res);
 };
+
+const redirectHttpToHttps = (req, res, next) => {
+  const protocol = req.headers["x-forwarded-proto"].split(",")[0];
+  if (protocol === "https") {
+    return next(req, res);
+  } else {
+    // Redirect all http requests to https
+    // We're trusting glitch.com as a proxy and they can still view all of our internet trafic unencrypted
+    // TODO test if we can use the https module
+    res.writeHead(301, { Location: `https://${req.headers.host}${req.url}` });
+    res.end();
+  }
+};
+
+const composeMiddleware = (a, b) => (reqA, resA, next) =>
+  a(reqA, resA, (reqB, resB) => b(reqB, resB, next));
 
 // TODO server-side error middleware
 
 require("http")
   .createServer(async (req, res) => {
-    const protocol = req.headers["x-forwarded-proto"].split(",")[0];
-    if (protocol === "https") {
-      await handleHttps(req, res);
-    } else {
-      // Redirect all http requests to https
-      // We're trusting glitch.com as a proxy and they can still view all of our internet trafic unencrypted
-      // TODO test if we can use the https module
-      res.writeHead(301, { Location: `https://${req.headers.host}${req.url}` });
-      res.end();
-    }
+    composeMiddleware(redirectHttpToHttps, secureHeaders)(
+      req,
+      res,
+      async (req, res) => (await handlersPromise).parseWhole(req.url)(req, res)
+    );
   })
   .listen(process.env.PORT, () =>
     console.log(`Your app is listening on port ${process.env.PORT}`)
