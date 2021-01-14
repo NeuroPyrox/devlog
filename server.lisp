@@ -59,7 +59,7 @@
   (html        /20-may-2020                 .html)
   (html        /interaction-sprites         .html)
   (json        /post-finder                 .js)
-  (htmlBuilder /homepage-v1                 /index.js)
+  (htmlBuilder /homepage-v1                 .js)
   (html        /dannys-page                 .html)
   (html        /19-may-2020                 .html)
   (html        /posts-ui                    .html)

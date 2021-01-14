@@ -1,9 +1,8 @@
 "use strict";
 
-const P = require("../parsers.js");
-const fs = require("fs").promises;
+const homepage = require("../homepage.js");
 
-const templateList = listHtml => `
+const renderHtml = listHtml => `
   <!DOCTYPE html>
   <html lang="en">
     <head>
@@ -80,39 +79,11 @@ const templateList = listHtml => `
   </html>
 `;
 
-const postParser = P.inParentheses(
-  P.constant(title => date => href => `
-      <a href="${href}">
-        <div class="post">
-          <h2>
-            ${title}
-          </h2>
-          <h3>
-            ${date}
-          </h3>
-        </div>
-      </a>`)
-    .apply(P.simpleString)
-    .skipRight(P.spaces1)
-    .apply(P.simpleString)
-    .skipRight(P.spaces1)
-    .apply(P.simpleString)
-);
+let html;
 
-const homepageParser = P.inParentheses(
-  P.string("homepage").skipLeft(P.many(P.string("\n  ").skipLeft(postParser)))
-)
-  .skipRight(P.end)
-  .map(list => templateList(list.join("")));
-
-module.exports = (() => {
-  let homepage;
-  return async () => {
-    if (homepage === undefined) {
-      homepage = homepageParser.parseWhole(
-        await fs.readFile("./homepage.lisp", "utf8")
-      );
-    }
-    return homepage;
-  };
-})();
+module.exports = async () => {
+  if (html === undefined) {
+    html = renderHtml(await homepage());
+  }
+  return html;
+};

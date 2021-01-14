@@ -1,8 +1,8 @@
 "use strict";
 
-const getPosts = require("./get-posts.js");
+const homepage = require("../homepage.js");
 
-const templateList = listHtml => `
+const renderHtml = listHtml => `
   <!DOCTYPE html>
   <html lang="en">
     <head>
@@ -57,29 +57,11 @@ const templateList = listHtml => `
   </html>
 `;
 
-const templatePost = ({date, title, href}) => `
-  <a href="${href}">
-    <div class="post">
-      <h2>
-        ${title}
-      </h2>
-      <h3>
-        ${date}
-      </h3>
-    </div>
-  </a>
-`;
+let html;
 
-const templateHtml = posts => templateList(posts.map(templatePost).join());
-
-const makeHtml = async () => templateHtml(await getPosts());
-
-module.exports = (() => {
-  let html;
-  return async () => {
-    if (html === undefined) {
-      html = makeHtml();
-    }
-    return await html;
+module.exports = async () => {
+  if (html === undefined) {
+    html = renderHtml(await homepage());
   }
-})();
+  return html;
+};
