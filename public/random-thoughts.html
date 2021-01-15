@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>NeuroPyrox's Devlog</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#164113" />
+    <meta name="msapplication-TileColor" content="#006600" />
+    <meta name="theme-color" content="#006600" />
+
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Nova+Mono&display=swap");
+
+      body {
+        background-color: black;
+        font-family: "Nova Mono", monospace;
+        max-width: 700px;
+        margin: 0 auto;
+        color: #0D0;
+      }
+
+      div {
+        cursor: pointer;
+        border-radius: 20px;
+        padding: 1px 20px;
+        box-sizing: border-box;
+      }
+
+      div:hover {
+        background-color: #020;
+      }
+    </style>
+  </head>
+  <body>
+    <div>
+      <p>
+        Random thought:
+      </p>
+      <p id="thought"></p>
+    </div>
+  </body>
+  <script>
+    const thoughts = [
+      "If you can't combine instances of a class, the abstraction is probably ad-hoc and might change a lot",
+      "An abstraction should aim not for generality but for correctness",
+      "Better to clean up a mess than work around it",
+      "Tech holy wars are coordination problems",
+      "Pure functions are just compressed data containers"
+    ];
+
+    const thoughtElement = document.getElementById("thought");
+    const showRandomThought = () => {
+      const randomThought =
+        thoughts[Math.floor(Math.random() * thoughts.length)];
+      thoughtElement.innerHTML = randomThought;
+    };
+
+    document.getElementsByTagName("body")[0].onclick = showRandomThought;
+    showRandomThought();
+  </script>
+</html>

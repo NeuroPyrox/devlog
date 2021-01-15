@@ -30,6 +30,7 @@
   (json        /post-locations              .js)
   (json        /post-finder                 .js)
   (json        /get-may-days                .js)
+  (html        /random-thoughts             .html)
   (html        /today-i-learned-3-jan-2021  .html)
   (html        /today-i-learned-2-jan-2021  .html)
   (html        /today-i-learned-29-dec-2020 .html)

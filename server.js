@@ -1,5 +1,6 @@
 "use strict";
 
+// TODO add icon headers to more pages
 // TODO use specialized parsers for urls to prevent namespace collisions
 // TODO add url collision errors during initialization
 // TODO combine into single source of truth for urls:
