@@ -1,7 +1,8 @@
 (homepage
-  ("Cookie Counter"  "5 Jan 2021" "/cookie-counter")
-  ("Today I Learned" "3 Jan 2021" "/today-i-learned-3-jan-2021")
-  ("Today I Learned" "2 Jan 2021" "/today-i-learned-2-jan-2021")
+  ("Random Thoughts" "14 Jan 2021" "/random-thoughts")
+  ("Cookie Counter"  "5 Jan 2021"  "/cookie-counter")
+  ("Today I Learned" "3 Jan 2021"  "/today-i-learned-3-jan-2021")
+  ("Today I Learned" "2 Jan 2021"  "/today-i-learned-2-jan-2021")
   ("Today I Learned"             "29 Dec 2020" "/today-i-learned-29-dec-2020")
   ("Security Checklist"          "28 Dec 2020" "/security-checklist")
   ("Today I Learned"             "27 Dec 2020" "/today-i-learned-27-dec-2020")
