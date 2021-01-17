@@ -121,17 +121,26 @@ const redirectHttpToHttps = (req, res, next) => {
   }
 };
 
+const errorMiddleware = async (req, res, next) => {
+  try {
+    next(req, res);
+  } catch (e) {
+    res.writeHead(500, { "Content-Type": "text/html" });
+    res.write("Internal server error");
+    res.end();
+  }
+};
+
 const composeMiddleware = (a, b) => (reqA, resA, next) =>
   a(reqA, resA, (reqB, resB) => b(reqB, resB, next));
 
-// TODO server-side error middleware
-
 require("http")
   .createServer(async (req, res) => {
-    composeMiddleware(redirectHttpToHttps, secureHeaders)(
-      req,
-      res,
-      async (req, res) => (await handlersPromise).parseWhole(req.url)(req, res)
+    composeMiddleware(
+      errorMiddleware,
+      composeMiddleware(redirectHttpToHttps, secureHeaders)
+    )(req, res, async (req, res) =>
+      (await handlersPromise).parseWhole(req.url)(req, res)
     );
   })
   .listen(process.env.PORT, () =>
