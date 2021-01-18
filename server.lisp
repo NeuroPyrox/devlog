@@ -30,6 +30,7 @@
   (json        /post-locations              .js)
   (json        /post-finder                 .js)
   (json        /get-may-days                .js)
+  (html        /auto-resize-textarea        .html)
   (html        /random-thoughts             .html)
   (html        /today-i-learned-3-jan-2021  .html)
   (html        /today-i-learned-2-jan-2021  .html)
