@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Auto-Resize Textarea</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#164113" />
+    <meta name="msapplication-TileColor" content="#006600" />
+    <meta name="theme-color" content="#006600" />
+
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Nova+Mono&display=swap");
+
+      body {
+        background-color: black;
+        font-family: "Nova Mono", monospace;
+        max-width: 700px;
+        margin: auto;
+      }
+
+      textarea {
+        background-color: #020;
+        color: #0D0;
+        border: 0;
+        overflow-y: hidden;
+        resize: none;
+        width: 100%;
+        padding: 10px 10px 0 10px;
+        border-radius: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <textarea placeholder="Enter text"></textarea>
+  </body>
+  <script>
+    const textarea = document.getElementsByTagName("textarea")[0];
+    const resize = _ => {
+      textarea.style.height = "0";
+      textarea.style.height = textarea.scrollHeight + "px";
+    };
+    resize();
+    textarea.addEventListener("input", resize);
+  </script>
+</html>
