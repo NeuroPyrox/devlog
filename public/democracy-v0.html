@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Democracy V0: Add Rules</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#164113" />
+    <meta name="msapplication-TileColor" content="#006600" />
+    <meta name="theme-color" content="#006600" />
+
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Nova+Mono&display=swap");
+
+      body {
+        background-color: black;
+        font-family: "Nova Mono", monospace;
+        max-width: 700px;
+        margin: auto;
+        text-align: center;
+      }
+
+      textarea {
+        background-color: #020;
+        color: #0D0;
+        border: 0;
+        overflow-y: hidden;
+        resize: none;
+        width: 100%;
+        padding: 10px;
+        border-radius: 20px;
+        box-sizing: border-box;
+        font-family: "Nova Mono", monospace;
+      }
+
+      button {
+        background-color: #000;
+        color: #0D0;
+        padding: 7px;
+        margin: 10px;
+        border-radius: 20px;
+        border: 3px solid #000;
+        font-family: "Nova Mono", monospace;
+      }
+
+      .active {
+        cursor: pointer;
+        border-color: #020;
+      }
+
+      .active:hover {
+        background-color: #020;
+      }
+
+      p {
+        color: #0D0;
+        text-align: left;
+        white-space: pre-wrap;
+        border-radius: 20px;
+        padding: 10px;
+      }
+      
+      p:hover {
+        background-color: #020;
+      }
+
+      h1 {
+        color: #0D0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>
+      Rules
+    </h1>
+    <div id="rules"></div>
+    <textarea placeholder="Enter a new rule"></textarea>
+    <button>
+      Add rule
+    </button>
+  </body>
+  <script>
+    const textarea = document.getElementsByTagName("textarea")[0];
+    const resizeTextarea = _ => {
+      textarea.style.height = "0";
+      textarea.style.height = textarea.scrollHeight + "px";
+    };
+    resizeTextarea();
+
+    const button = document.getElementsByTagName("button")[0];
+    const renderButton = _ => {
+      button.className = textarea.value.length === 0 ? "" : "active";
+    };
+    renderButton();
+
+    const rules = document.getElementById("rules");
+    const addRule = _ => {
+      const rule = document.createElement("p");
+      rule.appendChild(document.createTextNode(textarea.value));
+      rules.appendChild(rule);
+      textarea.value = "";
+      resizeTextarea();
+    };
+
+    textarea.oninput = _ => {
+      resizeTextarea();
+      renderButton();
+    };
+
+    button.onclick = _ => (textarea.value.length !== 0 && addRule());
+  </script>
+</html>
