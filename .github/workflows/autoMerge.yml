@@ -1,0 +1,11 @@
+name: Automatically merge from Glitch.com
+on:
+  push:
+    branches:
+      - glitch
+jobs:
+  greet:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Test
+      run: echo "Glitch branch was just pushed"
