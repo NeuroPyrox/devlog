@@ -30,6 +30,7 @@
   (json        /post-locations              .js)
   (json        /post-finder                 .js)
   (json        /get-may-days                .js)
+  (html        /democracy-v1                .html)
   (html        /democracy-v0                .html)
   (html        /auto-resize-textarea        .html)
   (html        /random-thoughts             .html)

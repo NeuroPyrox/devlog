@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <title>Democracy V0: Add Rules</title>
+    <title>Democracy V1: Delete Rules</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
@@ -24,9 +24,47 @@
         text-align: center;
       }
 
+      h1 {
+        color: #0D0;
+      }
+
+      .rule {
+        color: #0d0;
+        text-align: left;
+        white-space: pre-wrap;
+        border-radius: 20px;
+        padding: 10px;
+        word-wrap: break-word;
+        line-height: normal;
+        line-height: 10px;
+      }
+
+      .rule:hover {
+        background-color: #020;
+      }
+
+      .x {
+        color: #000;
+        font-size: 35px;
+        font-family: arial;
+        cursor: pointer;
+        float: right;
+        position: relative;
+        top: -9px;
+        height: 20px;
+      }
+
+      .x::before {
+        content: "\d7";
+      }
+
+      .x:hover {
+        color: #d00;
+      }
+
       textarea {
         background-color: #020;
-        color: #0D0;
+        color: #0d0;
         border: 0;
         overflow-y: hidden;
         resize: none;
@@ -35,13 +73,13 @@
         border-radius: 20px;
         box-sizing: border-box;
         font-family: "Nova Mono", monospace;
+        margin: 10px 0;
       }
 
       button {
         background-color: #000;
-        color: #0D0;
+        color: #0d0;
         padding: 7px;
-        margin: 10px;
         border-radius: 20px;
         border: 3px solid #000;
         font-family: "Nova Mono", monospace;
@@ -54,23 +92,6 @@
 
       .active:hover {
         background-color: #020;
-      }
-
-      p {
-        color: #0D0;
-        text-align: left;
-        white-space: pre-wrap;
-        border-radius: 20px;
-        padding: 10px;
-        word-wrap: break-word;
-      }
-
-      p:hover {
-        background-color: #020;
-      }
-
-      h1 {
-        color: #0D0;
       }
     </style>
   </head>
@@ -100,9 +121,18 @@
 
     const rules = document.getElementById("rules");
     const addRule = _ => {
-      const rule = document.createElement("p");
+      const rule = document.createElement("div");
+      rule.className = "rule";
+
+      const x = document.createElement("div");
+      x.className = "x";
+      rule.appendChild(x);
+      x.onclick = _ => rule.remove();
+      
       rule.appendChild(document.createTextNode(textarea.value));
+      
       rules.appendChild(rule);
+
       textarea.value = "";
       resizeTextarea();
     };
