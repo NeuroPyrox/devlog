@@ -105,13 +105,13 @@ const secureHeaders = (req, res, next) => {
   // 31536000 seconds is one non-leap year
   res.setHeader("Strict-Transport-Security", "max-age=31536000");
   res.setHeader("Expect-CT", "max-age=31536000, enforce"); // TODO reporting
-  return next(req, res);
+  next();
 };
 
 const redirectHttpToHttps = (req, res, next) => {
   const protocol = req.headers["x-forwarded-proto"].split(",")[0];
   if (protocol === "https") {
-    return next(req, res);
+    next();
   } else {
     // Redirect all http requests to https
     // We're trusting glitch.com as a proxy and they can still view all of our internet trafic unencrypted
@@ -123,7 +123,7 @@ const redirectHttpToHttps = (req, res, next) => {
 
 const errorMiddleware = async (req, res, next) => {
   try {
-    next(req, res);
+    next();
   } catch (e) {
     res.writeHead(500, { "Content-Type": "text/html" });
     res.write("Internal server error");
@@ -131,18 +131,21 @@ const errorMiddleware = async (req, res, next) => {
   }
 };
 
-const composeMiddleware = (a, b) => (reqA, resA, next) =>
-  a(reqA, resA, (reqB, resB) => b(reqB, resB, next));
+const composeMiddleware = (a, b) => (req, res, next) =>
+  a(req, res, _ => b(req, res, next));
 
 require("http")
-  .createServer(async (req, res) => {
+  .createServer(
     composeMiddleware(
       errorMiddleware,
-      composeMiddleware(redirectHttpToHttps, secureHeaders)
-    )(req, res, async (req, res) =>
-      (await handlersPromise).parseWhole(req.url)(req, res)
-    );
-  })
+      composeMiddleware(
+        redirectHttpToHttps,
+        composeMiddleware(secureHeaders, async (req, res) =>
+          (await handlersPromise).parseWhole(req.url)(req, res)
+        )
+      )
+    )
+  )
   .listen(process.env.PORT, () =>
     console.log(`Your app is listening on port ${process.env.PORT}`)
   );
