@@ -15,8 +15,10 @@
 
     <style>
       @import url("https://fonts.googleapis.com/css2?family=Nova+Mono&display=swap");
-      
-      .check, .xProposal, .xRule {
+
+      .check,
+      .xProposal,
+      .xRule {
         background-color: #000;
         border: 0;
         cursor: pointer;
@@ -26,8 +28,10 @@
         padding: 0;
         margin: 10px;
       }
-      
-      .check::before, .xProposal::before, .xRule::before {
+
+      .check::before,
+      .xProposal::before,
+      .xRule::before {
         font-family: "arial";
         position: absolute;
         pointer-events: none;
@@ -52,7 +56,7 @@
         padding: 10px;
         word-wrap: break-word;
       }
-      
+
       .xRule {
         margin: 0;
         position: relative;
@@ -73,8 +77,9 @@
         font-family: "Nova Mono", monospace;
         margin: 10px 0;
       }
-      
-      .proposeCant, .propose {
+
+      .proposeCant,
+      .propose {
         background-color: #000;
         color: #0d0;
         padding: 7px;
@@ -99,11 +104,11 @@
         padding: 10px;
         word-wrap: break-word;
       }
-      
+
       p {
         margin: 0;
       }
-      
+
       .check::before {
         content: "✔";
         color: #0d0;
@@ -111,16 +116,15 @@
         top: -5px;
         left: 2px;
       }
-      
-      .xProposal::before, .xRule::before {
+
+      .xProposal::before,
+      .xRule::before {
         content: "×";
         color: #d00;
         font-size: 40px;
         top: -12px;
         left: -1px;
       }
-      
-      
     </style>
   </head>
   <body>
@@ -135,9 +139,7 @@
     <h1>
       Proposals
     </h1>
-    <div id="proposals">
-      
-    </div>
+    <div id="proposals"></div>
   </body>
   <script>
     const textarea = document.getElementsByTagName("textarea")[0];
@@ -148,16 +150,17 @@
     const clearTextarea = _ => {
       textarea.value = "";
       resizeTextarea();
-    }
+    };
     resizeTextarea();
 
     const proposeButton = document.getElementsByTagName("button")[0];
     const renderProposeButton = _ => {
-      proposeButton.className = textarea.value.length === 0 ? "proposeCant" : "propose";
+      proposeButton.className =
+        textarea.value.length === 0 ? "proposeCant" : "propose";
     };
     const deactivateProposeButton = _ => {
       proposeButton.className = "proposeCant";
-    }
+    };
     renderProposeButton();
 
     const rules = document.getElementById("rules");
@@ -169,21 +172,21 @@
       xButton.className = "xRule";
       ruleNode.appendChild(xButton);
       xButton.onclick = _ => ruleNode.remove();
-      
+
       ruleNode.appendChild(document.createTextNode(rule));
-      
+
       rules.appendChild(ruleNode);
     };
-    
+
     const proposalsNode = document.getElementById("proposals");
     const addProposal = proposal => {
       const proposalNode = document.createElement("div");
       proposalNode.className = "proposal";
-      
+
       const textNode = document.createElement("p");
       textNode.appendChild(document.createTextNode(proposal));
       proposalNode.appendChild(textNode);
-      
+
       const checkButton = document.createElement("button");
       checkButton.className = "check";
       proposalNode.appendChild(checkButton);
@@ -191,15 +194,15 @@
         // nodeValue === proposal, but we use nodeValue to save memory
         addRule(textNode.firstChild.nodeValue);
         proposalNode.remove();
-      }
-      
+      };
+
       const xButton = document.createElement("button");
       xButton.className = "xProposal";
       proposalNode.appendChild(xButton);
       xButton.onclick = _ => proposalNode.remove();
-      
+
       proposalsNode.appendChild(proposalNode);
-    }
+    };
 
     textarea.oninput = _ => {
       resizeTextarea();
@@ -212,6 +215,6 @@
         clearTextarea();
         deactivateProposeButton();
       }
-    }
+    };
   </script>
 </html>
