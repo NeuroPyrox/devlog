@@ -6,6 +6,6 @@
     "node": "12.x"
   },
   "dependencies": {
-    "sqlite3": "^5.0.0"
+    "sqlite3": "^5.0.1"
   }
 }
