@@ -1,0 +1,111 @@
+@import url("https://fonts.googleapis.com/css2?family=Nova+Mono&display=swap");
+
+.check,
+.xProposal,
+.xRule {
+  background-color: #000;
+  border: 0;
+  cursor: pointer;
+  position: relative;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  margin: 10px;
+}
+
+.check::before,
+.xProposal::before,
+.xRule::before {
+  font-family: "arial";
+  position: absolute;
+  pointer-events: none;
+}
+
+body {
+  background-color: black;
+  font-family: "Nova Mono", monospace;
+  max-width: 700px;
+  margin: auto;
+  text-align: center;
+}
+
+h1 {
+  color: #0D0;
+}
+
+.rule {
+  color: #0d0;
+  text-align: left;
+  white-space: pre-wrap;
+  padding: 10px;
+  word-wrap: break-word;
+}
+
+.xRule {
+  margin: 0;
+  position: relative;
+  float: right;
+  top: 1px;
+}
+
+textarea {
+  background-color: #020;
+  color: #0d0;
+  border: 0;
+  overflow-y: hidden;
+  resize: none;
+  width: 100%;
+  padding: 10px;
+  border-radius: 20px;
+  box-sizing: border-box;
+  font-family: "Nova Mono", monospace;
+  margin: 10px 0;
+}
+
+.proposeCant,
+.propose {
+  background-color: #000;
+  color: #0d0;
+  padding: 7px;
+  border-radius: 20px;
+  border: 3px solid #000;
+  font-family: "Nova Mono", monospace;
+}
+
+.propose {
+  cursor: pointer;
+  border-color: #020;
+}
+
+.propose:hover {
+  background-color: #020;
+}
+
+.proposal {
+  color: #0d0;
+  text-align: left;
+  white-space: pre-wrap;
+  padding: 10px;
+  word-wrap: break-word;
+}
+
+p {
+  margin: 0;
+}
+
+.check::before {
+  content: "✔";
+  color: #0d0;
+  font-size: 20px;
+  top: -5px;
+  left: 2px;
+}
+
+.xProposal::before,
+.xRule::before {
+  content: "×";
+  color: #d00;
+  font-size: 40px;
+  top: -12px;
+  left: -1px;
+}
