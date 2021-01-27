@@ -1,4 +1,5 @@
 (homepage
+  ("Democracy V3: Proposals"     "26 Jan 2021" "/democracy-v3")
   ("Democracy V2: Proposals"     "20 Jan 2021" "/democracy-v2")
   ("Democracy V1: Delete Rules"  "18 Jan 2021" "/democracy-v1")
   ("Democracy V0: Add Rules"     "18 Jan 2021" "/democracy-v0")
