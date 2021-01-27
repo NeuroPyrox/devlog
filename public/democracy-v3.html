@@ -77,20 +77,22 @@
         font-family: "Nova Mono", monospace;
         margin: 10px 0;
       }
-
-      .proposeCant,
-      .propose {
+      
+      .proposeCant, .propose {
+        border-radius: 20px;
+        border: 3px solid #020;
+        padding: 7px;
         background-color: #000;
         color: #0d0;
-        padding: 7px;
-        border-radius: 20px;
-        border: 3px solid #000;
         font-family: "Nova Mono", monospace;
+      }
+
+      .proposeCant {
+        visibility: hidden;
       }
 
       .propose {
         cursor: pointer;
-        border-color: #020;
       }
 
       .propose:hover {
