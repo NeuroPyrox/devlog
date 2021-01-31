@@ -61,16 +61,8 @@ const renderHtml = listHtml => `
     </head>
     <body>
       <div class="list">
-        <p>
-          If you start with too big a problem,
-          you may never quite be able to encompass it.
-          So if you need to write a big, complex program,
-          the best way to begin may not be to write a spec for it,
-          but to write a prototype that solves a subset of the problem.
-          Whatever the advantages of planning,
-          they're often outweighed by the advantages of being able to keep a program in your head. 
-        </p>
-        <p>- Paul Graham</p>
+        <p>Elegance is not optional.</p>
+        <p>- Richard O’Keefe, The Craft of Prolog</p>
         <br><br>
         ${listHtml}
       </div>
