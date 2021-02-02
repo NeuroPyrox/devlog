@@ -60,6 +60,7 @@ textarea {
   box-sizing: border-box;
   font-family: "Nova Mono", monospace;
   margin: 10px 0;
+  outline: none;
 }
 
 .proposeCant,
