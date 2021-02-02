@@ -7,6 +7,7 @@
   (redirect    /favicon.ico                 https://cdn.glitch.com/ef6d7e3d-88ee-4914-a43c-ca8be9bdf01f%2Ffavicon.ico?v=1610405131185)
   (redirect    /mstile-150x150.png          https://cdn.glitch.com/ef6d7e3d-88ee-4914-a43c-ca8be9bdf01f%2Fmstile-150x150.png?v=1610405096696)
   (redirect    /safari-pinned-tab.svg       https://cdn.glitch.com/ef6d7e3d-88ee-4914-a43c-ca8be9bdf01f%2Fsafari-pinned-tab.svg?v=1610405105109)
+  (redirect    /dont-click-me               https://www.youtube.com/watch?v=dQw4w9WgXcQ)
   (htmlBuilder /                            homepage-v4.js)
   (htmlBuilder /democracy-v2                /index.js)
   (htmlBuilder /homepage-v4                 .js)
