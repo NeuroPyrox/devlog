@@ -1,4 +1,5 @@
 (homepage
+  ("Expandable List" "20 May 2021" "/expandable-list")
   ("Don't Click Me"              "2 Feb 2021"  "/dont-click-me")
   ("Democracy V3: Proposals"     "26 Jan 2021" "/democracy-v3")
   ("Democracy V2: Proposals"     "20 Jan 2021" "/democracy-v2")
