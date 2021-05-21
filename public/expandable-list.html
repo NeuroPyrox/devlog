@@ -12,12 +12,30 @@
     <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#164113" />
     <meta name="msapplication-TileColor" content="#006600" />
     <meta name="theme-color" content="#006600" />
+    
+    <style>
+      body {
+        background: black;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      input {
+        background: black;
+        color: white;
+        border: none;
+        border-bottom: 1px solid darkgray;
+        outline: none;
+        margin: 10px;
+      }
+      
+    </style>
   </head>
   <body>
-    <input/>
+    <input type="text" value="" autocomplete="off"/>
   </body>
   <script>
-    // TODO style
     const body = document.getElementsByTagName("body")[0];
     let freshInput = document.getElementsByTagName("input")[0];
     
