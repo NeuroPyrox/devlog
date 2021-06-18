@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Clear Delete Insert List</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#164113" />
+    <meta name="msapplication-TileColor" content="#006600" />
+    <meta name="theme-color" content="#006600" />
+
+    <style></style>
+  </head>
+  <body>
+    <button>
+      Clear
+    </button>
+    <input type="text" value="" autocomplete="off" />
+    <button>
+      Insert
+    </button>
+    <div>
+      
+    </div>
+  </body>
+  <script>
+    const makeEvent = button => ({
+      map: f => button.addEventListener("click", f),
+      tag: behavior => ({
+        map: f => button.addEventListener("click", _ => f(behavior.getValue()))
+      })
+    });
+    const getTextBehavior = domNode => ({
+      getValue: _ => domNode.value
+    });
+
+    const [clearButton, insertInput, insertButton, listDiv] = document.body.children;
+    const clearEvent = makeEvent(clearButton);
+    const insertEvent = makeEvent(insertButton);
+    const textToInsert = getTextBehavior(insertInput);
+    
+    clearEvent.map(_ => listDiv.innerHTML = "")
+    insertEvent.tag(textToInsert).map(text => {
+      const newNode = document.createElement("div");
+      newNode.appendChild(document.createTextNode(text));
+      const xButton = document.createElement("button");
+      xButton.appendChild(document.createTextNode("X"));
+      newNode.appendChild(xButton);
+      
+      makeEvent(xButton).map(_ => newNode.remove());
+      
+      listDiv.appendChild(newNode);
+    });
+    insertEvent.map(_ => insertInput.value = "");
+    
+  </script>
+</html>

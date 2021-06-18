@@ -1,4 +1,5 @@
 (homepage
+  ("Clear Delete Insert List" "16 June 2021" "/clear-delete-insert-list")
   ("Expandable List" "20 May 2021" "/expandable-list")
   ("Don't Click Me"              "2 Feb 2021"  "/dont-click-me")
   ("Democracy V3: Proposals"     "26 Jan 2021" "/democracy-v3")
