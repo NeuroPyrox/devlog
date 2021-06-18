@@ -32,6 +32,7 @@
   (json        /post-locations              .js)
   (json        /post-finder                 .js)
   (json        /get-may-days                .js)
+  (html        /clear-delete-insert-list    .html)
   (html        /expandable-list             .html)
   (html        /democracy-v3                .html)
   (html        /democracy-v1                .html)
