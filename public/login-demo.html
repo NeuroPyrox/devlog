@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Login Demo</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#164113" />
+    <meta name="msapplication-TileColor" content="#006600" />
+    <meta name="theme-color" content="#006600" />
+
+    <style></style>
+  </head>
+  <body>
+    <button>
+      Clear
+    </button>
+    <input type="text" value="" autocomplete="off" />
+    <button>
+      Insert
+    </button>
+    <div></div>
+  </body>
+  <script>
+    const Y = f => {
+      const p = h => (...x) => f(h(h))(...x);
+      return p(p);
+    };
+
+    const sortedStringArray = (stringsToInsert, indicesToRemove, clears) => {
+      const internal = [];
+
+      const protoFind = Y(self => (start, end, string) => {
+        if (start === end) {
+          return start;
+        }
+        const middle = Math.floor((start + end) / 2);
+        if (string <= internal[middle]) {
+          return self(start, middle, string);
+        } else {
+          return self(middle + 1, end, string);
+        }
+      });
+      const find = string => protoFind(0, string.length, string);
+
+      insertions = stringsToInsert
+        .filter(string => string !== "")
+        .map(string => {
+          const index = find(string);
+          if (internal[index] === string) {
+            return null;
+          } else {
+            internal.splice(index, 0, string);
+            return [index, string];
+          }
+        })
+        .filter(x => x !== null);
+      removedIndices = indicesToRemove.map(index => {
+        internal.splice(index, 1);
+        return index;
+      });
+      clears = clears.filter(_ => internal.length !== 0);
+      clears.map(_ => (internal = []));
+      const has = stream =>
+        stream.map(string => {
+          const index = find(string);
+          return internal[index] === string;
+        });
+      return [insertions, removedIndices, clears, has];
+    };
+
+    const [
+      clearButton,
+      insertInput,
+      insertButton,
+      listDiv
+    ] = document.body.children;
+
+    // TODO
+    const getClicks = undefined;
+    const getInputValues = undefined;
+    const indicesToRemove = undefined;
+
+    const [insertions, removedModelIndices, clears, has] = sortedStringArray(
+      getClicks(insertButton).tag(getInputValues(insertInput)),
+      indicesToRemove,
+      getClicks(clearButton)
+    );
+
+    const createRowElement = string => {
+      const rowElement = document.createElement("div");
+      rowElement.appendChild(document.createTextNode(string));
+      const xButton = document.createElement("button");
+      xButton.appendChild(document.createTextNode("X"));
+      rowElement.appendChild(xButton);
+      return rowElement;
+    };
+
+    insertions.map(([index, string]) => {
+      const rowElement = createRowElement(string);
+      if (index === listDiv.children.length) {
+        listDiv.appendChild(rowElement);
+      } else {
+        listDiv.insertBefore(rowElement, listDiv.children[index]);
+      }
+      rowElement.children[1].onclick = _ =>
+        indicesToRemove.pub(
+          Array.prototype.indexOf.call(listDiv.children, rowElement)
+        );
+    });
+
+    removedModelIndices.map(index => listDiv.children[index].remove());
+
+    clears.map(_ => (listDiv.innerHTML = ""));
+  </script>
+</html>
