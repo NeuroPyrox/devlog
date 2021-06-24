@@ -23,9 +23,7 @@
     <button>
       Insert
     </button>
-    <div>
-      
-    </div>
+    <div></div>
   </body>
   <script>
     const makeEvent = button => ({
@@ -38,24 +36,28 @@
       getValue: _ => domNode.value
     });
 
-    const [clearButton, insertInput, insertButton, listDiv] = document.body.children;
+    const [
+      clearButton,
+      insertInput,
+      insertButton,
+      listDiv
+    ] = document.body.children;
     const clearEvent = makeEvent(clearButton);
     const insertEvent = makeEvent(insertButton);
     const textToInsert = getTextBehavior(insertInput);
-    
-    clearEvent.map(_ => listDiv.innerHTML = "")
+
+    clearEvent.map(_ => (listDiv.innerHTML = ""));
     insertEvent.tag(textToInsert).map(text => {
       const newNode = document.createElement("div");
       newNode.appendChild(document.createTextNode(text));
       const xButton = document.createElement("button");
       xButton.appendChild(document.createTextNode("X"));
       newNode.appendChild(xButton);
-      
+
       makeEvent(xButton).map(_ => newNode.remove());
-      
+
       listDiv.appendChild(newNode);
     });
-    insertEvent.map(_ => insertInput.value = "");
-    
+    insertEvent.map(_ => (insertInput.value = ""));
   </script>
 </html>
