@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <title>Login Demo</title>
+    <title>Login v0</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
@@ -12,8 +12,6 @@
     <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#164113" />
     <meta name="msapplication-TileColor" content="#006600" />
     <meta name="theme-color" content="#006600" />
-
-    <style></style>
   </head>
   <body>
     <button>
@@ -24,30 +22,37 @@
       Insert
     </button>
     <div></div>
+    Username:
+    <input type="text" value="" autocomplete="off" />
+    <button>
+      Login
+    </button>
+    <p></p>
   </body>
   <script>
+    // Fixed point combinator
     const Y = f => {
       const p = h => (...x) => f(h(h))(...x);
       return p(p);
     };
 
     const sortedStringArray = (stringsToInsert, indicesToRemove, clears) => {
-      const internal = [];
+      let internal = [];
 
       const protoFind = Y(self => (start, end, string) => {
         if (start === end) {
           return start;
         }
         const middle = Math.floor((start + end) / 2);
-        if (string <= internal[middle]) {
-          return self(start, middle, string);
-        } else {
+        if (internal[middle] < string) {
           return self(middle + 1, end, string);
+        } else {
+          return self(start, middle, string);
         }
       });
-      const find = string => protoFind(0, string.length, string);
+      const find = string => protoFind(0, internal.length, string);
 
-      insertions = stringsToInsert
+      const insertions = stringsToInsert
         .filter(string => string !== "")
         .map(string => {
           const index = find(string);
@@ -59,7 +64,7 @@
           }
         })
         .filter(x => x !== null);
-      removedIndices = indicesToRemove.map(index => {
+      const removedIndices = indicesToRemove.map(index => {
         internal.splice(index, 1);
         return index;
       });
@@ -73,17 +78,46 @@
       return [insertions, removedIndices, clears, has];
     };
 
+    const startEvents = subscribe => {
+      const handlers = [];
+      subscribe(x => {
+        for (const handle of handlers) {
+          handle(x);
+        }
+      });
+      return {
+        map: f => startEvents(publish => handlers.push(x => publish(f(x)))),
+        filter: predicate =>
+          startEvents(publish =>
+            handlers.push(x => {
+              if (predicate(x)) {
+                publish(x);
+              }
+            })
+          ),
+        tag: get => startEvents(publish => handlers.push(_ => publish(get())))
+      };
+    };
+
+    // Use addEventListener because using onclick could cancel other handlers
+    const getClicks = button =>
+      startEvents(publish =>
+        button.addEventListener("click", _ => publish(null))
+      );
+    const getInputValues = inputElement => _ => inputElement.value;
+
     const [
       clearButton,
       insertInput,
       insertButton,
-      listDiv
+      listDiv,
+      usernameInput,
+      loginButton,
+      statusText
     ] = document.body.children;
 
-    // TODO
-    const getClicks = undefined;
-    const getInputValues = undefined;
-    const indicesToRemove = undefined;
+    let removeIndex;
+    const indicesToRemove = startEvents(publish => (removeIndex = publish));
 
     const [insertions, removedModelIndices, clears, has] = sortedStringArray(
       getClicks(insertButton).tag(getInputValues(insertInput)),
@@ -107,14 +141,30 @@
       } else {
         listDiv.insertBefore(rowElement, listDiv.children[index]);
       }
-      rowElement.children[1].onclick = _ =>
-        indicesToRemove.pub(
-          Array.prototype.indexOf.call(listDiv.children, rowElement)
-        );
+      rowElement.children[0].onclick = _ =>
+        removeIndex(Array.prototype.indexOf.call(listDiv.children, rowElement));
     });
 
     removedModelIndices.map(index => listDiv.children[index].remove());
 
     clears.map(_ => (listDiv.innerHTML = ""));
+
+    getClicks(insertButton).map(_ => (insertInput.value = ""));
+
+    const loginAttempts = has(
+      getClicks(loginButton)
+        .tag(getInputValues(usernameInput))
+        .filter(username => username !== "")
+    );
+    loginAttempts
+      .filter(success => success)
+      .tag(getInputValues(usernameInput))
+      .map(username => {
+        statusText.textContent = `Hello ${username}`;
+        usernameInput.value = "";
+      });
+    loginAttempts
+      .filter(success => !success)
+      .map(_ => (statusText.textContent = `Invalid username!`));
   </script>
 </html>
