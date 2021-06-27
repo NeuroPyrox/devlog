@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Login v1</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#164113" />
+    <meta name="msapplication-TileColor" content="#006600" />
+    <meta name="theme-color" content="#006600" />
+  </head>
+  <body>
+    <button>
+      Clear
+    </button>
+    Username:
+    <input type="text" value="" autocomplete="off" />
+    Password:
+    <input type="text" value="" autocomplete="off" />
+    <button>
+      Insert
+    </button>
+    <div></div>
+    Username:
+    <input type="text" value="" autocomplete="off" />
+    Password:
+    <input type="text" value="" autocomplete="off" />
+    <button>
+      Login
+    </button>
+    <p></p>
+  </body>
+  <script>
+    const userDatabase = (usersToSplice, indicesToRemove, clears) => {
+      let table = [];
+
+      const protoFindUsername = (start, end, username) => {
+        if (start === end) {
+          return start;
+        }
+        const middle = Math.floor((start + end) / 2);
+        if (table[middle].username < username) {
+          return protoFindUsername(middle + 1, end, username);
+        } else {
+          return protoFindUsername(start, middle, username);
+        }
+      };
+      const findUsername = username =>
+        protoFindUsername(0, table.length, username);
+
+      const splices = usersToSplice
+        .filter(({ username, password }) => username !== "" && password !== "")
+        .map(({ username, password }) => {
+          const index = findUsername(username);
+          const foundUser = table[index];
+          if (foundUser === undefined || foundUser.username !== username) {
+            return ["insert", index, { username, password }];
+          }
+          if (foundUser.password !== password) {
+            return ["update", index, { username, password }];
+          }
+          return null;
+        })
+        .filter(x => x !== null);
+      const insertions = splices
+        .filter(x => x[0] === "insert")
+        .map(([, index, user]) => {
+          table.splice(index, 0, user);
+          return [index, user];
+        });
+      const updates = splices
+        .filter(x => x[0] === "update")
+        .map(([, index, user]) => {
+          table.splice(index, 1, user);
+          return [index, user];
+        });
+      const removedIndices = indicesToRemove.map(index => {
+        table.splice(index, 1);
+        return index;
+      });
+      clears = clears.filter(_ => table.length !== 0);
+      clears.map(_ => (table = []));
+      const has = stream =>
+        stream.map(({ username, password }) => {
+          const foundUser = table[findUsername(username)];
+          return (
+            foundUser !== undefined &&
+            foundUser.username === username &&
+            foundUser.password === password
+          );
+        });
+      return [insertions, updates, removedIndices, clears, has];
+    };
+
+    const startEvents = subscribe => {
+      const handlers = [];
+      // Only call subscribe once so we don't have to keep recomputing x, such as in map
+      subscribe(x => {
+        for (const handle of handlers) {
+          handle(x);
+        }
+      });
+      const startHandler = f =>
+        startEvents(publish => handlers.push(f(publish)));
+      return {
+        map: f => startHandler(publish => x => publish(f(x))),
+        filter: predicate =>
+          startHandler(publish => x => {
+            if (predicate(x)) {
+              publish(x);
+            }
+          }),
+        tag: get => startHandler(publish => _ => publish(get())),
+        mapTag: (get, f) => startHandler(publish => x => publish(f(x, get())))
+      };
+    };
+
+    // Use addEventListener because using onclick could cancel other handlers
+    const getClicks = button =>
+      startEvents(publish =>
+        button.addEventListener("click", _ => publish(null))
+      );
+    const getInputValues = inputElement => _ => inputElement.value;
+
+    const [
+      clearButton,
+      usernameInsertInput,
+      passwordInsertInput,
+      insertButton,
+      listDiv,
+      usernameInput,
+      passwordInput,
+      loginButton,
+      statusText
+    ] = document.body.children;
+
+    let removeIndex;
+    const indicesToRemove = startEvents(publish => (removeIndex = publish));
+
+    const [
+      insertions,
+      updates,
+      removedModelIndices,
+      clears,
+      has
+    ] = userDatabase(
+      getClicks(insertButton)
+        .tag(getInputValues(usernameInsertInput))
+        .mapTag(getInputValues(passwordInsertInput), (username, password) => ({
+          username,
+          password
+        })),
+      indicesToRemove,
+      getClicks(clearButton)
+    );
+
+    const createRowElement = user => {
+      const rowElement = document.createElement("div");
+      const pElement = document.createElement("p");
+      pElement.appendChild(document.createTextNode(JSON.stringify(user)));
+      rowElement.appendChild(pElement);
+      const xButton = document.createElement("button");
+      xButton.appendChild(document.createTextNode("X"));
+      rowElement.appendChild(xButton);
+      return rowElement;
+    };
+
+    insertions.map(([index, user]) => {
+      const rowElement = createRowElement(user);
+      if (index === listDiv.children.length) {
+        listDiv.appendChild(rowElement);
+      } else {
+        listDiv.insertBefore(rowElement, listDiv.children[index]);
+      }
+      rowElement.children[1].onclick = _ =>
+        removeIndex(Array.prototype.indexOf.call(listDiv.children, rowElement));
+    });
+
+    updates.map(([index, user]) => {
+      const rowElement = listDiv.children[index];
+      rowElement.children[0].textContent = JSON.stringify(user);
+    });
+
+    removedModelIndices.map(index => listDiv.children[index].remove());
+
+    clears.map(_ => (listDiv.innerHTML = ""));
+
+    getClicks(insertButton).map(_ => {
+      usernameInsertInput.value = "";
+      passwordInsertInput.value = "";
+    });
+
+    const loginAttempts = has(
+      getClicks(loginButton)
+        .tag(getInputValues(usernameInput))
+        .mapTag(getInputValues(passwordInput), (username, password) => ({
+          username,
+          password
+        }))
+    );
+    loginAttempts
+      .filter(success => success)
+      .tag(getInputValues(usernameInput))
+      .map(username => {
+        statusText.textContent = `Hello ${username}`;
+        usernameInput.value = "";
+        passwordInput.value = "";
+      });
+    loginAttempts
+      .filter(success => !success)
+      .map(_ => (statusText.textContent = `Invalid login!`));
+  </script>
+</html>
