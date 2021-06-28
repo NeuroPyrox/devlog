@@ -1,4 +1,6 @@
 (homepage
+  ("Login v2"                 "27 June 2021" "/login-v2")
+  ("Login v1"                 "26 June 2021" "/login-v1")
   ("Login v0"                 "25 June 2021" "/login-v0")
   ("Clear Delete Insert List" "16 June 2021" "/clear-delete-insert-list")
   ("Expandable List" "20 May 2021" "/expandable-list")
