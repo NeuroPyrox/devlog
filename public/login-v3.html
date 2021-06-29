@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Login v3</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#164113" />
+    <meta name="msapplication-TileColor" content="#006600" />
+    <meta name="theme-color" content="#006600" />
+  </head>
+  <body>
+    <button>
+      Clear
+    </button>
+    <table>
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Password</th>
+        </tr>
+        <tr>
+          <td><input type="text" value="" autocomplete="off" /></td>
+          <td><input type="text" value="" autocomplete="off" /></td>
+          <td>
+            <button>
+              Insert
+            </button>
+          </td>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </body>
+  <script>
+    const [clearButton, userTable] = document.body.children;
+    const [userTableHead, userTableBody] = userTable.children;
+    const [, insertionRow] = userTableHead.children;
+    const [usernameInsertInput, passwordInsertInput, insertButton] = Array.from(
+      insertionRow.children
+    ).map(td => td.firstElementChild);
+
+    const userDatabase = (insertions, indicesToRemove, clears) => {
+      let internalTable = [];
+
+      const protoFindUsername = (start, end, username) => {
+        if (start === end) {
+          return start;
+        }
+        const middle = Math.floor((start + end) / 2);
+        if (internalTable[middle].username < username) {
+          return protoFindUsername(middle + 1, end, username);
+        } else {
+          return protoFindUsername(start, middle, username);
+        }
+      };
+      const findUsername = username =>
+        protoFindUsername(0, internalTable.length, username);
+
+      insertions = insertions.map(({ username, password }) => {
+        const index = findUsername(username);
+        const foundUser = internalTable[index];
+        if (foundUser === undefined || foundUser.username !== username) {
+          return ["createUser", index, { username, password }];
+        }
+        if (foundUser.password !== password) {
+          return ["changePassword", index, password];
+        }
+        return [];
+      });
+      const createdUsers = insertions
+        .filter(x => x[0] === "createUser")
+        .map(([, index, user]) => {
+          internalTable.splice(index, 0, user);
+          return [index, user];
+        });
+      const passwordChanges = insertions
+        .filter(x => x[0] === "changePassword")
+        .map(([, index, password]) => {
+          const user = internalTable[index];
+          user.password = password;
+          const { username } = user;
+          return { index, username, password };
+        });
+      const removedUsers = indicesToRemove.map(index => {
+        const { username } = internalTable[index];
+        internalTable.splice(index, 1);
+        return { index, username };
+      });
+      clears = clears.filter(_ => internalTable.length !== 0);
+      clears.map(_ => (internalTable = []));
+      const tryLogins = stream =>
+        stream.map(({ username, password }) => {
+          const foundUser = internalTable[findUsername(username)];
+          return (
+            foundUser !== undefined &&
+            foundUser.username === username &&
+            foundUser.password === password
+          );
+        });
+      return [createdUsers, passwordChanges, removedUsers, clears, tryLogins];
+    };
+
+    const startEvents = subscribe => {
+      const handlers = [];
+      // Only call subscribe once so we don't have to keep recomputing x, such as in map
+      subscribe(x => {
+        for (const handle of handlers) {
+          handle(x);
+        }
+      });
+      const startHandler = f =>
+        startEvents(publish => handlers.push(f(publish)));
+      return {
+        map: f => startHandler(publish => x => publish(f(x))),
+        filter: predicate =>
+          startHandler(publish => x => {
+            if (predicate(x)) {
+              publish(x);
+            }
+          }),
+        tag: get => startHandler(publish => _ => publish(get())),
+        mapTag: (get, f) => startHandler(publish => x => publish(f(x, get()))),
+        merge: other =>
+          startHandler(publish => {
+            other.map(publish);
+            return publish;
+          })
+      };
+    };
+    const once = events =>
+      startEvents(publish => {
+        let done = false;
+        events
+          .filter(_ => !done)
+          .map(x => {
+            publish(x);
+            done = true;
+          });
+      });
+    // Use addEventListener because using onclick could cancel other handlers
+    const getClicks = button =>
+      startEvents(publish =>
+        button.addEventListener("click", _ => publish(null))
+      );
+    const getInputValues = inputElement => _ => inputElement.value;
+
+    let removeIndex;
+    const indicesToRemove = startEvents(publish => (removeIndex = publish));
+
+    const insertions = getClicks(insertButton)
+      .tag(getInputValues(usernameInsertInput))
+      .mapTag(getInputValues(passwordInsertInput), (username, password) => ({
+        username,
+        password
+      }))
+      .filter(({ username, password }) => username !== "" && password !== "");
+
+    const [
+      createdUsers,
+      passwordChanges,
+      removedUsers,
+      clears,
+      tryLogins
+    ] = userDatabase(insertions, indicesToRemove, getClicks(clearButton));
+
+    const createRowElement = user => {
+      const rowElement = document.createElement("tr");
+
+      const usernameElement = document.createElement("td");
+      usernameElement.textContent = user.username;
+      rowElement.appendChild(usernameElement);
+
+      const passwordElement = document.createElement("td");
+      passwordElement.textContent = user.password;
+      rowElement.appendChild(passwordElement);
+
+      const xRow = document.createElement("td");
+      const xButton = document.createElement("button");
+      xButton.textContent = "X";
+      xRow.appendChild(xButton);
+      rowElement.appendChild(xRow);
+
+      return rowElement;
+    };
+
+    createdUsers.map(([index, user]) => {
+      const rowElement = createRowElement(user);
+      rowElement.children[2].children[0].onclick = _ =>
+        removeIndex(
+          Array.prototype.indexOf.call(userTableBody.children, rowElement)
+        );
+      if (index === userTableBody.children.length) {
+        userTableBody.appendChild(rowElement);
+      } else {
+        userTableBody.insertBefore(rowElement, userTableBody.children[index]);
+      }
+    });
+
+    passwordChanges.map(({ index, password }) => {
+      const rowElement = userTableBody.children[index];
+      rowElement.children[1].textContent = password;
+    });
+
+    removedUsers.map(({ index }) => userTableBody.children[index].remove());
+
+    clears.map(_ => (userTableBody.innerHTML = ""));
+
+    insertions.map(_ => {
+      usernameInsertInput.value = "";
+      passwordInsertInput.value = "";
+    });
+
+    const createLoginDiv = () => {
+      const loginDiv = document.createElement("div");
+
+      loginDiv.appendChild(document.createTextNode("Username:"));
+      const usernameInput = document.createElement("input");
+      usernameInput.type = "text";
+      usernameInput.autocomplete = "off";
+      loginDiv.appendChild(usernameInput);
+
+      loginDiv.appendChild(document.createTextNode("Password:"));
+      const passwordInput = document.createElement("input");
+      passwordInput.type = "text";
+      passwordInput.autocomplete = "off";
+      loginDiv.appendChild(passwordInput);
+
+      const loginButton = document.createElement("button");
+      loginButton.textContent = "Login";
+      loginDiv.appendChild(loginButton);
+
+      const statusText = document.createElement("p");
+      loginDiv.appendChild(statusText);
+
+      let loginAttempts = getClicks(loginButton)
+        .tag(getInputValues(usernameInput))
+        .mapTag(getInputValues(passwordInput), (username, password) => ({
+          username,
+          password
+        }));
+      loginAttempts
+        .filter(({ username }) => username === "")
+        .map(_ => (statusText.textContent = "Username required!"));
+      loginAttempts
+        .filter(({ username, password }) => username !== "" && password === "")
+        .map(_ => (statusText.textContent = "Password required!"));
+      loginAttempts = tryLogins(
+        loginAttempts.filter(
+          ({ username, password }) => username !== "" && password !== ""
+        )
+      );
+      loginAttempts
+        .filter(success => !success)
+        .map(_ => (statusText.textContent = `Invalid login!`));
+
+      return [
+        loginDiv,
+        loginAttempts
+          .filter(success => success)
+          .tag(getInputValues(usernameInput))
+          .map(createLoggedInDiv)
+      ];
+    };
+
+    const createLoggedInDiv = username => {
+      const loggedInDiv = document.createElement("div");
+      loggedInDiv.textContent = `Hello ${username}`;
+
+      const logoutButton = document.createElement("button");
+      logoutButton.textContent = "Logout";
+      loggedInDiv.appendChild(logoutButton);
+
+      return [
+        loggedInDiv,
+        getClicks(logoutButton)
+          .merge(
+            passwordChanges
+              .merge(removedUsers)
+              .filter(x => x.username === username)
+          )
+          .merge(clears)
+          .map(createLoginDiv)
+      ];
+    };
+
+    const appendAppDiv = ([loginDiv, nextAppPage]) => {
+      document.body.appendChild(loginDiv);
+      once(nextAppPage).map(([loggedInDiv, nextAppPage]) => {
+        loginDiv.remove();
+        document.body.appendChild(loggedInDiv);
+        once(nextAppPage).map(([loginDiv, nextAppPage]) => {
+          loggedInDiv.remove();
+          appendAppDiv([loginDiv, nextAppPage]);
+        });
+      });
+    };
+    appendAppDiv(createLoginDiv());
+  </script>
+</html>
