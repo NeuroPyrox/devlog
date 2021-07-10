@@ -180,7 +180,7 @@
       return result;
     };
 
-    const div = (_ => {
+    const nodeBuilder = (constructor, modifiers) => {
       const fromImpureBuilder = impureBuild => {
         const result = (...children) =>
           fromImpureBuilder(varsOut => {
@@ -189,6 +189,14 @@
             node.append(...children.map(child => child.impureBuild(varsOut)));
             return node;
           });
+        for (const [key, modifier] of Object.entries(modifiers)) {
+          result[key] = (...args) =>
+            fromImpureBuilder(varsOut => {
+              const node = impureBuild(varsOut);
+              modifier(...args)(node);
+              return node;
+            });
+        }
         result.impureBuild = impureBuild;
         result.build = _ => {
           const varsOut = {};
@@ -203,40 +211,20 @@
           });
         return result;
       };
-      return fromImpureBuilder(_ => document.createElement("div"));
-    })();
-    const button = (_ => {
-      const fromImpureBuilder = impureBuild => {
-        const result = (...children) =>
-          fromImpureBuilder(varsOut => {
-            const node = impureBuild(varsOut);
-            // Use append instead of appendChild because we need to handle text nodes
-            node.append(...children.map(child => child.impureBuild(varsOut)));
-            return node;
-          });
-        result.impureBuild = impureBuild;
-        result.build = _ => {
-          const varsOut = {};
-          varsOut.root = impureBuild(varsOut);
-          return varsOut;
-        };
-        result.var = name =>
-          fromImpureBuilder(varsOut => {
-            const node = impureBuild(varsOut);
-            varsOut[name] = node;
-            return node;
-          });
-        result.textContent = string =>
-          fromImpureBuilder(varsOut => {
-            const node = impureBuild(varsOut);
-            node.textContent = string;
-            return node;
-          });
-        return result;
-      };
-      return fromImpureBuilder(_ => document.createElement("button"));
-    })();
-    const input = undefined;
+      return fromImpureBuilder(constructor);
+    };
+    const div = nodeBuilder(_ => document.createElement("div"), {});
+    const button = nodeBuilder(_ => document.createElement("button"), {
+      textContent: textContent => node => (node.textContent = textContent)
+    });
+    const textInput = nodeBuilder(
+      _ => {
+        const node = document.createElement("input");
+        node.type = "text";
+        return node;
+      },
+      { autocompleteOff: _ => node => (node.autocomplete = "off") }
+    );
     const p = undefined;
     const text = undefined;
 
@@ -257,19 +245,11 @@
               tr(th.textContent("Username"), th.textContent("Password")),
               tr(
                 td(
-                  input
+                  textInput // TODO test if we really need autocomplete off
                     .var("usernameInsertInput")
-                    .type("text")
-                    .value("")
-                    .autocomplete("off")
+                    .autocompleteOff()
                 ),
-                td(
-                  input
-                    .var("passwordInsertInput")
-                    .type("text")
-                    .value("")
-                    .autocomplete("off")
-                ),
+                td(textInput.var("passwordInsertInput").autocompleteOff()),
                 td(button.var("insertButton").textContent("Insert"))
               )
             ),
@@ -333,15 +313,9 @@
           signupButton
         } = div(
           text("Username:"),
-          input
-            .var("usernameInput")
-            .type("text")
-            .autocomplete("off"),
+          textInput.var("usernameInput").autocompleteOff(),
           text("Password:"),
-          input
-            .var("passwordInput")
-            .type("text")
-            .autocomplete("off"),
+          textInput.var("passwordInput").autocompleteOff(),
           button.var("loginButton").textContent("Login"),
           p.var("statusText"),
           text("Don't have an account yet?"),
