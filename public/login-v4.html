@@ -136,7 +136,6 @@
         const result = (...children) =>
           fromImpureBuilder(varsOut => {
             const node = impureBuild(varsOut);
-            console.log(children);
             // Use append instead of appendChild because we need to handle text nodes
             node.append(...children.map(child => child.impureBuild(varsOut)));
             return node;
@@ -169,14 +168,11 @@
     const button = nodeBuilder(_ => document.createElement("button"), {
       textContent: textContent => node => (node.textContent = textContent)
     });
-    const textInput = nodeBuilder(
-      _ => {
-        const node = document.createElement("input");
-        node.type = "text";
-        return node;
-      },
-      { autocompleteOff: _ => node => (node.autocomplete = "off") }
-    );
+    const textInput = nodeBuilder(_ => {
+      const node = document.createElement("input");
+      node.type = "text";
+      return node;
+    }, {});
     const p = nodeBuilder(_ => document.createElement("p"), {});
     const table = nodeBuilder(_ => document.createElement("table"), {});
     const thead = nodeBuilder(_ => document.createElement("thead"), {});
@@ -210,8 +206,8 @@
             thead(
               tr(th.textContent("Username"), th.textContent("Password")),
               tr(
-                td(textInput.var("usernameInsertInput").autocompleteOff()),
-                td(textInput.var("passwordInsertInput").autocompleteOff()),
+                td(textInput.var("usernameInsertInput")),
+                td(textInput.var("passwordInsertInput")),
                 td(button.var("insertButton").textContent("Insert"))
               )
             ),
@@ -296,9 +292,9 @@
         signupButton
       } = div(
         text("Username:"),
-        textInput.var("usernameInput").autocompleteOff(),
+        textInput.var("usernameInput"),
         text("Password:"),
-        textInput.var("passwordInput").autocompleteOff(),
+        textInput.var("passwordInput"),
         button.var("loginButton").textContent("Login"),
         p.var("statusText"),
         text("Don't have an account yet?"),
