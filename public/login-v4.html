@@ -180,6 +180,24 @@
       return result;
     };
 
+    const div = (_ => {
+      const fromBuilder = build => {
+        const result = (...children) => fromBuilder(_ => {
+          const node = build();
+          // Use append instead of appendChild because we need to handle text nodes
+          node.append(...children.map(child => child.build()))
+          return node;
+        });
+        result.build = build;
+        return result;
+      }
+      return fromBuilder(_ => document.createElement("div"));
+    })();
+    const input = undefined;
+    const button = undefined;
+    const p = undefined;
+    const text = undefined;
+
     const userTableBuilder = signups =>
       recurseEvents(usernamesToRemove => {
         const {
@@ -262,16 +280,6 @@
         usernameInsertInput.value = "";
         passwordInsertInput.value = "";
       });
-
-      const div = (_ => {
-        const result = (...children) => undefined;
-        result.build = _ => undefined;
-        return result;
-      })();
-      const input = undefined;
-      const button = undefined;
-      const p = undefined;
-      const text = undefined;
 
       const createLoginDiv = _ => {
         const {
