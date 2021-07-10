@@ -181,17 +181,27 @@
     };
 
     const div = (_ => {
-      const fromBuilder = build => {
-        const result = (...children) => fromBuilder(_ => {
-          const node = build();
+      const fromImpureBuilder = impureBuild => {
+        const result = (...children) => fromImpureBuilder(varsOut => {
+          const node = impureBuild(varsOut);
           // Use append instead of appendChild because we need to handle text nodes
-          node.append(...children.map(child => child.build()))
+          node.append(...children.map(child => child.impureBuild(varsOut)))
           return node;
         });
-        result.build = build;
+        result.impureBuild = impureBuild;
+        result.build = _ => {
+          const varsOut = {};
+          varsOut.root = impureBuild(varsOut);
+          return varsOut;
+        };
+        result.var = name => fromImpureBuilder(varsOut => {
+          const node = impureBuilder(varsOut);
+          varsOut[name] = node;
+          return node;
+        })
         return result;
       }
-      return fromBuilder(_ => document.createElement("div"));
+      return fromImpureBuilder(_ => document.createElement("div"));
     })();
     const input = undefined;
     const button = undefined;
