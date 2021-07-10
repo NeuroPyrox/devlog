@@ -13,57 +13,8 @@
     <meta name="msapplication-TileColor" content="#006600" />
     <meta name="theme-color" content="#006600" />
   </head>
-  <body>
-    <button>
-      Clear
-    </button>
-    <table>
-      <thead>
-        <tr>
-          <th>Username</th>
-          <th>Password</th>
-        </tr>
-        <tr>
-          <td><input type="text" value="" autocomplete="off" /></td>
-          <td><input type="text" value="" autocomplete="off" /></td>
-          <td>
-            <button>
-              Insert
-            </button>
-          </td>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </body>
+  <body></body>
   <script>
-    const [clearButton, userTable] = document.body.children;
-    const [userTableHead, userTableBody] = userTable.children;
-    const [, insertionRow] = userTableHead.children;
-    const [usernameInsertInput, passwordInsertInput, insertButton] = Array.from(
-      insertionRow.children
-    ).map(td => td.firstElementChild);
-
-    const createRowElement = user => {
-      const rowElement = document.createElement("tr");
-
-      const usernameElement = document.createElement("td");
-      usernameElement.textContent = user.username;
-      rowElement.appendChild(usernameElement);
-
-      const passwordElement = document.createElement("td");
-      passwordElement.textContent = user.password;
-      rowElement.appendChild(passwordElement);
-
-      const xRow = document.createElement("td");
-      const xButton = document.createElement("button");
-      xButton.textContent = "X";
-      xRow.appendChild(xButton);
-      rowElement.appendChild(xRow);
-
-      return rowElement;
-    };
-
     const userDatabase = (insertions, usernamesToRemove, clears) => {
       let internalTable = [];
 
@@ -185,6 +136,7 @@
         const result = (...children) =>
           fromImpureBuilder(varsOut => {
             const node = impureBuild(varsOut);
+            console.log(children);
             // Use append instead of appendChild because we need to handle text nodes
             node.append(...children.map(child => child.impureBuild(varsOut)));
             return node;
@@ -233,9 +185,15 @@
     const th = nodeBuilder(_ => document.createElement("th"), {
       textContent: textContent => node => (node.textContent = textContent)
     });
-    const td = nodeBuilder(_ => document.createElement("td"), {});
-    const text = string => {impureBuild: _ => string};
+    const td = nodeBuilder(_ => document.createElement("td"), {
+      textContent: textContent => node => (node.textContent = textContent)
+    });
+    const text = string => ({
+      impureBuild: _ => string
+    });
 
+    // TODO use signups var
+    // TODO remove "builder" from name once the other userTable var gets removed
     const userTableBuilder = signups =>
       recurseEvents(usernamesToRemove => {
         const {
@@ -252,11 +210,7 @@
             thead(
               tr(th.textContent("Username"), th.textContent("Password")),
               tr(
-                td(
-                  textInput
-                    .var("usernameInsertInput")
-                    .autocompleteOff()
-                ),
+                td(textInput.var("usernameInsertInput").autocompleteOff()),
                 td(textInput.var("passwordInsertInput").autocompleteOff()),
                 td(button.var("insertButton").textContent("Insert"))
               )
@@ -264,168 +218,154 @@
             tbody.var("userTableBody")
           )
         ).build();
-        const tryLogins = undefined;
-        return [usernamesToRemove, [userTableDiv, tryLogins]];
+
+        const insertions = getClicks(insertButton)
+          .tag(getInputValues(usernameInsertInput))
+          .mapTag(
+            getInputValues(passwordInsertInput),
+            (username, password) => ({
+              username,
+              password
+            })
+          )
+          .filter(
+            ({ username, password }) => username !== "" && password !== ""
+          );
+
+        const [
+          createdUsers,
+          passwordChanges,
+          removedUsers,
+          clears,
+          tryLogins
+        ] = userDatabase(insertions, usernamesToRemove, getClicks(clearButton));
+
+        insertions.map(_ => {
+          usernameInsertInput.value = "";
+          passwordInsertInput.value = "";
+        });
+
+        usernamesToRemove = createdUsers.mergeBind(([index, user]) => {
+          const { root: rowElement, xButton } = tr(
+            td.textContent(user.username),
+            td.textContent(user.password),
+            td(button.var("xButton").textContent("X"))
+          ).build();
+          if (index === userTableBody.children.length) {
+            userTableBody.appendChild(rowElement);
+          } else {
+            userTableBody.insertBefore(
+              rowElement,
+              userTableBody.children[index]
+            );
+          }
+          return getClicks(xButton).map(_ => user.username);
+        });
+
+        passwordChanges.map(({ index, password }) => {
+          const rowElement = userTableBody.children[index];
+          rowElement.children[1].textContent = password;
+        });
+
+        removedUsers.map(({ index }) => userTableBody.children[index].remove());
+
+        clears.map(_ => (userTableBody.innerHTML = ""));
+
+        return [
+          usernamesToRemove,
+          { userTableDiv, passwordChanges, removedUsers, clears, tryLogins }
+        ];
       });
 
-    recurseEvents(usernamesToRemove => {
-      const insertions = getClicks(insertButton)
-        .tag(getInputValues(usernameInsertInput))
-        .mapTag(getInputValues(passwordInsertInput), (username, password) => ({
+    const {
+      userTableDiv,
+      passwordChanges,
+      removedUsers,
+      clears,
+      tryLogins
+    } = userTableBuilder(undefined);
+    document.body.appendChild(userTableDiv);
+
+    const createLoginDiv = _ => {
+      const {
+        root: loginDiv,
+        usernameInput,
+        passwordInput,
+        loginButton,
+        statusText,
+        signupButton
+      } = div(
+        text("Username:"),
+        textInput.var("usernameInput").autocompleteOff(),
+        text("Password:"),
+        textInput.var("passwordInput").autocompleteOff(),
+        button.var("loginButton").textContent("Login"),
+        p.var("statusText"),
+        text("Don't have an account yet?"),
+        button.var("signupButton").textContent("Signup")
+      ).build();
+
+      let loginAttempts = getClicks(loginButton)
+        .tag(getInputValues(usernameInput))
+        .mapTag(getInputValues(passwordInput), (username, password) => ({
           username,
           password
-        }))
-        .filter(({ username, password }) => username !== "" && password !== "");
+        }));
+      loginAttempts
+        .filter(({ username }) => username === "")
+        .map(_ => (statusText.textContent = "Username required!"));
+      loginAttempts
+        .filter(({ username, password }) => username !== "" && password === "")
+        .map(_ => (statusText.textContent = "Password required!"));
+      loginAttempts = tryLogins(
+        loginAttempts.filter(
+          ({ username, password }) => username !== "" && password !== ""
+        )
+      );
+      loginAttempts
+        .filter(success => !success)
+        .map(_ => (statusText.textContent = `Invalid login!`));
 
-      const [
-        createdUsers,
-        passwordChanges,
-        removedUsers,
-        clears,
-        tryLogins
-      ] = userDatabase(insertions, usernamesToRemove, getClicks(clearButton));
-
-      usernamesToRemove = createdUsers.mergeBind(([index, user]) => {
-        const rowElement = createRowElement(user);
-        if (index === userTableBody.children.length) {
-          userTableBody.appendChild(rowElement);
-        } else {
-          userTableBody.insertBefore(rowElement, userTableBody.children[index]);
-        }
-        return getClicks(rowElement.children[2].children[0]).map(
-          _ => user.username
-        );
-      });
-
-      passwordChanges.map(({ index, password }) => {
-        const rowElement = userTableBody.children[index];
-        rowElement.children[1].textContent = password;
-      });
-
-      removedUsers.map(({ index }) => userTableBody.children[index].remove());
-
-      clears.map(_ => (userTableBody.innerHTML = ""));
-
-      insertions.map(_ => {
-        usernameInsertInput.value = "";
-        passwordInsertInput.value = "";
-      });
-
-      const createLoginDiv = _ => {
-        const {
-          root: loginDiv,
-          usernameInput,
-          passwordInput,
-          loginButton,
-          statusText,
-          signupButton
-        } = div(
-          text("Username:"),
-          textInput.var("usernameInput").autocompleteOff(),
-          text("Password:"),
-          textInput.var("passwordInput").autocompleteOff(),
-          button.var("loginButton").textContent("Login"),
-          p.var("statusText"),
-          text("Don't have an account yet?"),
-          button.var("signupButton").textContent("Signup")
-        ).build();
-
-        const loginDiv = document.createElement("div");
-
-        loginDiv.appendChild(document.createTextNode("Username:"));
-        const usernameInput = document.createElement("input");
-        usernameInput.type = "text";
-        usernameInput.autocomplete = "off";
-        loginDiv.appendChild(usernameInput);
-
-        loginDiv.appendChild(document.createTextNode("Password:"));
-        const passwordInput = document.createElement("input");
-        passwordInput.type = "text";
-        passwordInput.autocomplete = "off";
-        loginDiv.appendChild(passwordInput);
-
-        const loginButton = document.createElement("button");
-        loginButton.textContent = "Login";
-        loginDiv.appendChild(loginButton);
-
-        const statusText = document.createElement("p");
-        loginDiv.appendChild(statusText);
-
-        loginDiv.appendChild(
-          document.createTextNode("Don't have an account yet?")
-        );
-        const signupButton = document.createElement("button");
-        signupButton.textContent = "Signup";
-        loginDiv.appendChild(signupButton);
-
-        let loginAttempts = getClicks(loginButton)
+      return [
+        loginDiv,
+        loginAttempts
+          .filter(success => success)
           .tag(getInputValues(usernameInput))
-          .mapTag(getInputValues(passwordInput), (username, password) => ({
-            username,
-            password
-          }));
-        loginAttempts
-          .filter(({ username }) => username === "")
-          .map(_ => (statusText.textContent = "Username required!"));
-        loginAttempts
-          .filter(
-            ({ username, password }) => username !== "" && password === ""
+          .map(createLoggedInDiv)
+          .merge(getClicks(signupButton).map(createSignupDiv))
+      ];
+    };
+
+    const createLoggedInDiv = username => {
+      const { root: loggedInDiv, logoutButton } = div(
+        text(`Hello ${username}`),
+        button.var("logoutButton").textContent("Logout")
+      ).build();
+
+      return [
+        loggedInDiv,
+        getClicks(logoutButton)
+          .merge(
+            passwordChanges
+              .merge(removedUsers)
+              .filter(x => x.username === username)
           )
-          .map(_ => (statusText.textContent = "Password required!"));
-        loginAttempts = tryLogins(
-          loginAttempts.filter(
-            ({ username, password }) => username !== "" && password !== ""
-          )
-        );
-        loginAttempts
-          .filter(success => !success)
-          .map(_ => (statusText.textContent = `Invalid login!`));
+          .merge(clears)
+          .map(createLoginDiv)
+      ];
+    };
 
-        return [
-          loginDiv,
-          loginAttempts
-            .filter(success => success)
-            .tag(getInputValues(usernameInput))
-            .map(createLoggedInDiv)
-            .merge(getClicks(signupButton).map(createSignupDiv))
-        ];
-      };
+    const createSignupDiv = _ => {
+      return undefined;
+    };
 
-      const createLoggedInDiv = username => {
-        const loggedInDiv = document.createElement("div");
-        loggedInDiv.textContent = `Hello ${username}`;
-
-        const logoutButton = document.createElement("button");
-        logoutButton.textContent = "Logout";
-        loggedInDiv.appendChild(logoutButton);
-
-        return [
-          loggedInDiv,
-          getClicks(logoutButton)
-            .merge(
-              passwordChanges
-                .merge(removedUsers)
-                .filter(x => x.username === username)
-            )
-            .merge(clears)
-            .map(createLoginDiv)
-        ];
-      };
-
-      const createSignupDiv = _ => {
-        return undefined;
-      };
-
-      const appendAppDiv = ([appDiv, nextAppPage]) => {
-        document.body.appendChild(appDiv);
-        once(nextAppPage).map(next => {
-          appDiv.remove();
-          appendAppDiv(next);
-        });
-      };
-      appendAppDiv(createLoginDiv());
-
-      return [usernamesToRemove, null];
-    });
+    const appendAppDiv = ([appDiv, nextAppPage]) => {
+      document.body.appendChild(appDiv);
+      once(nextAppPage).map(next => {
+        appDiv.remove();
+        appendAppDiv(next);
+      });
+    };
+    appendAppDiv(createLoginDiv());
   </script>
 </html>
