@@ -225,8 +225,16 @@
       },
       { autocompleteOff: _ => node => (node.autocomplete = "off") }
     );
-    const p = undefined;
-    const text = undefined;
+    const p = nodeBuilder(_ => document.createElement("p"), {});
+    const table = nodeBuilder(_ => document.createElement("table"), {});
+    const thead = nodeBuilder(_ => document.createElement("thead"), {});
+    const tbody = nodeBuilder(_ => document.createElement("tbody"), {});
+    const tr = nodeBuilder(_ => document.createElement("tr"), {});
+    const th = nodeBuilder(_ => document.createElement("th"), {
+      textContent: textContent => node => (node.textContent = textContent)
+    });
+    const td = nodeBuilder(_ => document.createElement("td"), {});
+    const text = string => {impureBuild: _ => string};
 
     const userTableBuilder = signups =>
       recurseEvents(usernamesToRemove => {
@@ -245,7 +253,7 @@
               tr(th.textContent("Username"), th.textContent("Password")),
               tr(
                 td(
-                  textInput // TODO test if we really need autocomplete off
+                  textInput
                     .var("usernameInsertInput")
                     .autocompleteOff()
                 ),
