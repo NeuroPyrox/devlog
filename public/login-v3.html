@@ -105,6 +105,8 @@
       return [createdUsers, passwordChanges, removedUsers, clears, tryLogins];
     };
 
+    // This implementation creates memory leaks.
+    // I'm not fixing it yet because the interface is unstable and it's still not even a performance bottleneck.
     const startEvents = subscribe => {
       const handlers = [];
       // Only call subscribe once so we don't have to keep recomputing x, such as in map
