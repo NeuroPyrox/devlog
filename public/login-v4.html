@@ -182,29 +182,61 @@
 
     const div = (_ => {
       const fromImpureBuilder = impureBuild => {
-        const result = (...children) => fromImpureBuilder(varsOut => {
-          const node = impureBuild(varsOut);
-          // Use append instead of appendChild because we need to handle text nodes
-          node.append(...children.map(child => child.impureBuild(varsOut)))
-          return node;
-        });
+        const result = (...children) =>
+          fromImpureBuilder(varsOut => {
+            const node = impureBuild(varsOut);
+            // Use append instead of appendChild because we need to handle text nodes
+            node.append(...children.map(child => child.impureBuild(varsOut)));
+            return node;
+          });
         result.impureBuild = impureBuild;
         result.build = _ => {
           const varsOut = {};
           varsOut.root = impureBuild(varsOut);
           return varsOut;
         };
-        result.var = name => fromImpureBuilder(varsOut => {
-          const node = impureBuilder(varsOut);
-          varsOut[name] = node;
-          return node;
-        })
+        result.var = name =>
+          fromImpureBuilder(varsOut => {
+            const node = impureBuild(varsOut);
+            varsOut[name] = node;
+            return node;
+          });
         return result;
-      }
+      };
       return fromImpureBuilder(_ => document.createElement("div"));
     })();
+    const button = (_ => {
+      const fromImpureBuilder = impureBuild => {
+        const result = (...children) =>
+          fromImpureBuilder(varsOut => {
+            const node = impureBuild(varsOut);
+            // Use append instead of appendChild because we need to handle text nodes
+            node.append(...children.map(child => child.impureBuild(varsOut)));
+            return node;
+          });
+        result.impureBuild = impureBuild;
+        result.build = _ => {
+          const varsOut = {};
+          varsOut.root = impureBuild(varsOut);
+          return varsOut;
+        };
+        result.var = name =>
+          fromImpureBuilder(varsOut => {
+            const node = impureBuild(varsOut);
+            varsOut[name] = node;
+            return node;
+          });
+        result.textContent = string =>
+          fromImpureBuilder(varsOut => {
+            const node = impureBuild(varsOut);
+            node.textContent = string;
+            return node;
+          });
+        return result;
+      };
+      return fromImpureBuilder(_ => document.createElement("button"));
+    })();
     const input = undefined;
-    const button = undefined;
     const p = undefined;
     const text = undefined;
 
