@@ -189,8 +189,7 @@
     });
 
     // TODO use signups var
-    // TODO remove "builder" from name once the other userTable var gets removed
-    const userTableBuilder = signups =>
+    const userTable = signups =>
       recurseEvents(usernamesToRemove => {
         const {
           root: userTableDiv,
@@ -279,12 +278,12 @@
       removedUsers,
       clears,
       tryLogins
-    } = userTableBuilder(undefined);
+    } = userTable(undefined);
     document.body.appendChild(userTableDiv);
 
     const createLoginDiv = _ => {
       const {
-        root: loginDiv,
+        root,
         usernameInput,
         passwordInput,
         loginButton,
@@ -323,13 +322,48 @@
         .map(_ => (statusText.textContent = `Invalid login!`));
 
       return [
-        loginDiv,
+        root,
         loginAttempts
           .filter(success => success)
           .tag(getInputValues(usernameInput))
           .map(createLoggedInDiv)
           .merge(getClicks(signupButton).map(createSignupDiv))
       ];
+    };
+
+    const createSignupDiv = _ => {
+      const {
+        root,
+        usernameInput,
+        passwordInput,
+        signupButton,
+        statusText,
+        loginButton
+      } = div(
+        text("Username:"),
+        textInput.var("usernameInput"),
+        text("Password:"),
+        textInput.var("passwordInput"),
+        button.var("signupButton").textContent("Signup"),
+        p.var("statusText"),
+        text("Already have an account?"),
+        button.var("loginButton").textContent("Login")
+      ).build();
+
+      let signupAttempts = getClicks(signupButton)
+        .tag(getInputValues(usernameInput))
+        .mapTag(getInputValues(passwordInput), (username, password) => ({
+          username,
+          password
+        }));
+      signupAttempts
+        .filter(({ username }) => username === "")
+        .map(_ => (statusText.textContent = "Username required!"));
+      signupAttempts
+        .filter(({ username, password }) => username !== "" && password === "")
+        .map(_ => (statusText.textContent = "Password required!"));
+
+      return [root, getClicks(loginButton).map(createLoginDiv)];
     };
 
     const createLoggedInDiv = username => {
@@ -349,10 +383,6 @@
           .merge(clears)
           .map(createLoginDiv)
       ];
-    };
-
-    const createSignupDiv = _ => {
-      return undefined;
     };
 
     const appendAppDiv = ([appDiv, nextAppPage]) => {
