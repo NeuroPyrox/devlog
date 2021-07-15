@@ -15,7 +15,13 @@
   </head>
   <body></body>
   <script>
-    const userDatabase = (insertions, usernamesToRemove, clears) => {
+    // TODO separate layers of abstraction
+    const userDatabase = ({
+      insertions,
+      usernamesToRemove,
+      clears,
+      signupAttempts
+    }) => {
       let internalTable = [];
 
       const protoFindUsername = (start, end, username) => {
@@ -31,6 +37,18 @@
       };
       const findUsername = username =>
         protoFindUsername(0, internalTable.length, username);
+
+      let signups = signupAttempts
+        .map(user => {
+          const index = findUsername(user.username);
+          const foundUser = internalTable[index];
+          if (foundUser === undefined || foundUser.username !== user.username) {
+            internalTable.splice(index, 0, user);
+            return [index, user];
+          }
+          return null;
+        })
+        .filter(x => x !== null);
 
       insertions = insertions.map(({ username, password }) => {
         const index = findUsername(username);
@@ -48,7 +66,8 @@
         .map(([, index, user]) => {
           internalTable.splice(index, 0, user);
           return [index, user];
-        });
+        })
+        .merge(signups);
       const passwordChanges = insertions
         .filter(x => x[0] === "changePassword")
         .map(([, index, password]) => {
@@ -57,6 +76,7 @@
           const { username } = user;
           return { index, username, password };
         });
+
       const removedUsers = usernamesToRemove.map(username => {
         const index = findUsername(username);
         internalTable.splice(index, 1);
@@ -64,6 +84,9 @@
       });
       clears = clears.filter(_ => internalTable.length !== 0);
       clears.map(_ => (internalTable = []));
+
+      signups = signups.map(([, { username }]) => username);
+
       const tryLogins = stream =>
         stream.map(({ username, password }) => {
           const foundUser = internalTable[findUsername(username)];
@@ -73,7 +96,14 @@
             foundUser.password === password
           );
         });
-      return [createdUsers, passwordChanges, removedUsers, clears, tryLogins];
+      return {
+        createdUsers,
+        passwordChanges,
+        removedUsers,
+        clears,
+        tryLogins,
+        signups
+      };
     };
 
     // This implementation creates memory leaks.
@@ -103,7 +133,19 @@
             other.map(publish);
             return publish;
           }),
-        mergeBind: f => startHandler(publish => x => f(x).map(publish))
+        mergeBind: f => startHandler(publish => x => f(x).map(publish)),
+        bind: f =>
+          startHandler(publish => {
+            let finish = _ => {};
+            return x => {
+              finish();
+              let done = false;
+              f(x)
+                .filter(_ => !done)
+                .map(publish);
+              finish = _ => (done = true);
+            };
+          })
       };
     };
     const once = events =>
@@ -116,6 +158,7 @@
             done = true;
           });
       });
+    const never = startEvents(_ => {});
     // Use addEventListener because using onclick could cancel other handlers
     const getClicks = button =>
       startEvents(publish =>
@@ -131,36 +174,47 @@
       return result;
     };
 
+    const recurse2Events = f => {
+      let publishA;
+      let publishB;
+      const preEventsA = startEvents(p => (publishA = p));
+      const preEventsB = startEvents(p => (publishB = p));
+      const [postEventsA, postEventsB, result] = f(preEventsA, preEventsB);
+      postEventsA.map(publishA);
+      postEventsB.map(publishB);
+      return result;
+    };
+
     const nodeBuilder = (constructor, modifiers) => {
       const fromImpureBuilder = impureBuild => {
-        const result = (...children) =>
+        const builder = (...children) =>
           fromImpureBuilder(varsOut => {
             const node = impureBuild(varsOut);
             // Use append instead of appendChild because we need to handle text nodes
-            node.append(...children.map(child => child.impureBuild(varsOut)));
+            node.append(...children.map(child => child._impureBuild(varsOut)));
             return node;
           });
         for (const [key, modifier] of Object.entries(modifiers)) {
-          result[key] = (...args) =>
+          builder[key] = (...args) =>
             fromImpureBuilder(varsOut => {
               const node = impureBuild(varsOut);
               modifier(...args)(node);
               return node;
             });
         }
-        result.impureBuild = impureBuild;
-        result.build = _ => {
+        builder._impureBuild = impureBuild;
+        builder.build = _ => {
           const varsOut = {};
           varsOut.root = impureBuild(varsOut);
           return varsOut;
         };
-        result.var = name =>
+        builder.var = name =>
           fromImpureBuilder(varsOut => {
             const node = impureBuild(varsOut);
             varsOut[name] = node;
             return node;
           });
-        return result;
+        return builder;
       };
       return fromImpureBuilder(constructor);
     };
@@ -185,11 +239,10 @@
       textContent: textContent => node => (node.textContent = textContent)
     });
     const text = string => ({
-      impureBuild: _ => string
+      _impureBuild: _ => string
     });
 
-    // TODO use signups var
-    const userTable = signups =>
+    const userTable = signupAttempts =>
       recurseEvents(usernamesToRemove => {
         const {
           root: userTableDiv,
@@ -227,13 +280,18 @@
             ({ username, password }) => username !== "" && password !== ""
           );
 
-        const [
+        const {
           createdUsers,
           passwordChanges,
           removedUsers,
           clears,
           tryLogins
-        ] = userDatabase(insertions, usernamesToRemove, getClicks(clearButton));
+        } = userDatabase({
+          insertions,
+          usernamesToRemove,
+          clears: getClicks(clearButton),
+          signupAttempts
+        });
 
         insertions.map(_ => {
           usernameInsertInput.value = "";
@@ -272,126 +330,151 @@
         ];
       });
 
-    const {
-      userTableDiv,
-      passwordChanges,
-      removedUsers,
-      clears,
-      tryLogins
-    } = userTable(undefined);
-    document.body.appendChild(userTableDiv);
-
-    const createLoginDiv = _ => {
+    const start = recurse2Events((signupAttempts, authPages) => {
       const {
-        root,
-        usernameInput,
-        passwordInput,
-        loginButton,
-        statusText,
-        signupButton
-      } = div(
-        text("Username:"),
-        textInput.var("usernameInput"),
-        text("Password:"),
-        textInput.var("passwordInput"),
-        button.var("loginButton").textContent("Login"),
-        p.var("statusText"),
-        text("Don't have an account yet?"),
-        button.var("signupButton").textContent("Signup")
-      ).build();
+        userTableDiv,
+        passwordChanges,
+        removedUsers,
+        clears,
+        tryLogins
+      } = userTable(signupAttempts);
+      document.body.appendChild(userTableDiv);
+      document.body.appendChild(document.createElement("p"));
 
-      let loginAttempts = getClicks(loginButton)
-        .tag(getInputValues(usernameInput))
-        .mapTag(getInputValues(passwordInput), (username, password) => ({
-          username,
-          password
-        }));
-      loginAttempts
-        .filter(({ username }) => username === "")
-        .map(_ => (statusText.textContent = "Username required!"));
-      loginAttempts
-        .filter(({ username, password }) => username !== "" && password === "")
-        .map(_ => (statusText.textContent = "Password required!"));
-      loginAttempts = tryLogins(
-        loginAttempts.filter(
-          ({ username, password }) => username !== "" && password !== ""
-        )
-      );
-      loginAttempts
-        .filter(success => !success)
-        .map(_ => (statusText.textContent = `Invalid login!`));
+      const createLoginDiv = _ => {
+        const {
+          root,
+          usernameInput,
+          passwordInput,
+          loginButton,
+          statusText,
+          signupButton
+        } = div(
+          text("Username:"),
+          textInput.var("usernameInput"),
+          text("Password:"),
+          textInput.var("passwordInput"),
+          button.var("loginButton").textContent("Login"),
+          p.var("statusText"),
+          text("Don't have an account yet?"),
+          button.var("signupButton").textContent("Signup")
+        ).build();
 
-      return [
-        root,
-        loginAttempts
-          .filter(success => success)
+        let loginAttempts = getClicks(loginButton)
           .tag(getInputValues(usernameInput))
-          .map(createLoggedInDiv)
-          .merge(getClicks(signupButton).map(createSignupDiv))
-      ];
-    };
+          .mapTag(getInputValues(passwordInput), (username, password) => ({
+            username,
+            password
+          }));
+        loginAttempts
+          .filter(({ username }) => username === "")
+          .map(_ => (statusText.textContent = "Username required!"));
+        loginAttempts
+          .filter(
+            ({ username, password }) => username !== "" && password === ""
+          )
+          .map(_ => (statusText.textContent = "Password required!"));
+        loginAttempts = tryLogins(
+          loginAttempts.filter(
+            ({ username, password }) => username !== "" && password !== ""
+          )
+        );
+        loginAttempts
+          .filter(success => !success)
+          .map(_ => (statusText.textContent = `Invalid login!`));
 
-    const createSignupDiv = _ => {
-      const {
-        root,
-        usernameInput,
-        passwordInput,
-        signupButton,
-        statusText,
-        loginButton
-      } = div(
-        text("Username:"),
-        textInput.var("usernameInput"),
-        text("Password:"),
-        textInput.var("passwordInput"),
-        button.var("signupButton").textContent("Signup"),
-        p.var("statusText"),
-        text("Already have an account?"),
-        button.var("loginButton").textContent("Login")
-      ).build();
+        return [
+          root,
+          loginAttempts
+            .filter(success => success)
+            .tag(getInputValues(usernameInput))
+            .map(createLoggedInDiv)
+            .merge(getClicks(signupButton).map(createSignupDiv)),
+          never
+        ];
+      };
 
-      let signupAttempts = getClicks(signupButton)
-        .tag(getInputValues(usernameInput))
-        .mapTag(getInputValues(passwordInput), (username, password) => ({
-          username,
-          password
-        }));
-      signupAttempts
-        .filter(({ username }) => username === "")
-        .map(_ => (statusText.textContent = "Username required!"));
-      signupAttempts
-        .filter(({ username, password }) => username !== "" && password === "")
-        .map(_ => (statusText.textContent = "Password required!"));
+      const createSignupDiv = _ => {
+        const {
+          root,
+          usernameInput,
+          passwordInput,
+          signupButton,
+          statusText,
+          loginButton
+        } = div(
+          text("Username:"),
+          textInput.var("usernameInput"),
+          text("Password:"),
+          textInput.var("passwordInput"),
+          button.var("signupButton").textContent("Signup"),
+          p.var("statusText"),
+          text("Already have an account?"),
+          button.var("loginButton").textContent("Login")
+        ).build();
 
-      return [root, getClicks(loginButton).map(createLoginDiv)];
-    };
+        const signupAttempts = getClicks(signupButton)
+          .tag(getInputValues(usernameInput))
+          .mapTag(getInputValues(passwordInput), (username, password) => ({
+            username,
+            password
+          }));
+        signupAttempts
+          .filter(({ username }) => username === "")
+          .map(_ => (statusText.textContent = "Username required!"));
+        signupAttempts
+          .filter(
+            ({ username, password }) => username !== "" && password === ""
+          )
+          .map(_ => (statusText.textContent = "Password required!"));
 
-    const createLoggedInDiv = username => {
-      const { root: loggedInDiv, logoutButton } = div(
-        text(`Hello ${username}`),
-        button.var("logoutButton").textContent("Logout")
-      ).build();
+        return [
+          root,
+          getClicks(loginButton).map(createLoginDiv),
+          signupAttempts.filter(
+            ({ username, password }) => username !== "" && password !== ""
+          )
+        ];
+      };
+
+      const createLoggedInDiv = username => {
+        const { root: loggedInDiv, logoutButton } = div(
+          text(`Hello ${username}`),
+          button.var("logoutButton").textContent("Logout")
+        ).build();
+
+        return [
+          loggedInDiv,
+          getClicks(logoutButton)
+            .merge(
+              passwordChanges
+                .merge(removedUsers)
+                .filter(x => x.username === username)
+            )
+            .merge(clears)
+            .map(createLoginDiv),
+          never
+        ];
+      };
+      
+      let publishStartPage;
+      const startPage = startEvents(p => publishStartPage = p);
+      const start = _ => publishStartPage(createLoginDiv());
+
+      const appPages = authPages.merge(startPage);
+
+      appPages.map(([appDiv, ,]) => {
+        document.body.lastElementChild.remove();
+        document.body.appendChild(appDiv);
+      });
 
       return [
-        loggedInDiv,
-        getClicks(logoutButton)
-          .merge(
-            passwordChanges
-              .merge(removedUsers)
-              .filter(x => x.username === username)
-          )
-          .merge(clears)
-          .map(createLoginDiv)
+        appPages.bind(([, , signupAttempts]) => signupAttempts),
+        appPages.bind(([, nextAuthPage]) => nextAuthPage),
+        start
       ];
-    };
-
-    const appendAppDiv = ([appDiv, nextAppPage]) => {
-      document.body.appendChild(appDiv);
-      once(nextAppPage).map(next => {
-        appDiv.remove();
-        appendAppDiv(next);
-      });
-    };
-    appendAppDiv(createLoginDiv());
+    });
+    
+    start();
   </script>
 </html>
