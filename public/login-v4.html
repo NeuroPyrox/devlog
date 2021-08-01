@@ -106,6 +106,98 @@
       };
     };
 
+    // This class is mostly cleanup code
+    class _InnerEvent {
+      #handlers = []; // The only non-cleanup var
+      #wrapper;
+
+      // Triggers to call #finalize:
+      // - unsubscribe a handler then #isDead()
+      // - publish a value when #isDead() (redundant, but may be earlier than the wrapper trigger)
+      // - wrapper gets finalized when #isDead()
+      // How all of these triggers cut off the other ones:
+      // - #isDead() implies the unsubscribe trigger is cut off
+      // - #finalize (contractually) cuts off the publish trigger
+      // - _wrapperFinalizers.unregister cuts off the wrapper trigger
+      // #finalize is guaranteed to be called once #isDead() becomes true in all cases:
+      // - If #wrapper.deref() became undefined, then the wrapper trigger will soon follow
+      // - If #handlers.length became 0, then the unsubscribe trigger will immediately follow
+      // - #isDead() couldn't have started out true because #wrapper starts off non-empty
+      #finalize;
+
+      static _wrapperFinalizers = new FinalizationRegistry(that => {
+        if (that.#handlers.length === 0) {
+          // that.#isDead() is implicitly true
+          that.#finalize();
+        }
+      });
+
+      constructor(subscribe, wrapper) {
+        this.#wrapper = new WeakRef(wrapper);
+        // The cleanup logic breaks if this arrow function ends up strongly referencing the wrapper
+        // I haven't tested if it does hold a strong reference
+        this.#finalize = subscribe(x => {
+          if (this.#isDead()) {
+            _wrapperFinalizers.unregister(this);
+            this.#finalize();
+          } else {
+            // Actual non-cleanup logic
+            for (const handle of this.#handlers) {
+              handle(x);
+            }
+          }
+        });
+        this._wrapperFinalizers.register(wrapper, this, this);
+      }
+
+      #isDead() {
+        return this.#wrapper.deref() === undefined && this.#handlers.length === 0;
+      }
+
+      subscribe(handle) {
+        this.#handlers.push(handle); // Last rare line of non-cleanup logic
+        const unsubscribe = _ => {
+          const index = this.#handlers.indexOf(handle);
+          if (index === -1) {
+            // Treat this as an error because it indicates brittle logic elsewhere
+            throw "Can't unsubscribe a non-existant handler"
+          }
+          this.#handlers.splice(index, 1);
+          if (this.#isDead()) {
+            _wrapperFinalizers.unregister(this);
+            this.#finalize();
+          }
+        };
+        return unsubscribe;
+      }
+    }
+
+    class Event {
+      #inner;
+
+      // Similar to the promise constructor
+      // In the promise constructor, you pass a resolve function into the input,
+      // whereas here you pass a publish function into the input
+      // Subscribe also must return a finalizer callback that prevents any more values from being published
+      constructor(subscribe) {
+        this.#inner = new _InnerEvent(subscribe, this);
+      }
+
+      // Returns an unsubscribe function that you must call to allow garbage collection
+      // Only call when creating a new abstraction
+      _subscribe(handle) {
+        return this.#inner.deref().subscribe(handle);
+      }
+      
+      #createChild(publishWrapper) {
+        return new Event(publish => this._subscribe(publishWrapper(publish)))
+      }
+
+      map(f) {
+        return this.#createChild(publish => x => publish(f(x)))
+      }
+    }
+
     // This implementation creates memory leaks.
     // I'm not fixing it yet because the interface is unstable and it's still not even a performance bottleneck.
     const startEvents = subscribe => {
@@ -116,6 +208,8 @@
           handle(x);
         }
       });
+      // In startHandler, think of f as a wrapper for publish
+      // If js was typed, publish would have the same type as f(publish)
       const startHandler = f =>
         startEvents(publish => handlers.push(f(publish)));
       return {
@@ -331,6 +425,7 @@
       });
 
     const start = recurse2Events((signupAttempts, authPages) => {
+      //div(userTable(signupAttempts).var("userTable"), slot(loginDiv))
       const {
         userTableDiv,
         passwordChanges,
@@ -456,9 +551,9 @@
           never
         ];
       };
-      
+
       let publishStartPage;
-      const startPage = startEvents(p => publishStartPage = p);
+      const startPage = startEvents(p => (publishStartPage = p));
       const start = _ => publishStartPage(createLoginDiv());
 
       const appPages = authPages.merge(startPage);
@@ -474,7 +569,7 @@
         start
       ];
     });
-    
+
     start();
   </script>
 </html>
