@@ -106,29 +106,33 @@
       };
     };
 
-    // This class is mostly cleanup code
+    // This class is mostly resource management
+    // TODO optimize using a linked list for handlers
     class _InnerEvent {
-      #handlers = []; // The only non-cleanup var
-      #wrapper;
 
-      // Triggers to call #finalize:
-      // - unsubscribe a handler then #isDead()
-      // - publish a value when #isDead() (redundant, but may be earlier than the wrapper trigger)
-      // - wrapper gets finalized when #isDead()
+      // Triggers to call #unsubscribe:
+      // - [handler] gets unsubscribed then this.#isDead()
+      // - [publish] a value when this.#isDead() (redundant, but may be earlier than the wrapper trigger)
+      // - [wrapper] gets finalized when this.#isDead()
       // How all of these triggers cut off the other ones:
-      // - #isDead() implies the unsubscribe trigger is cut off
-      // - #finalize (contractually) cuts off the publish trigger
-      // - _wrapperFinalizers.unregister cuts off the wrapper trigger
-      // #finalize is guaranteed to be called once #isDead() becomes true in all cases:
-      // - If #wrapper.deref() became undefined, then the wrapper trigger will soon follow
-      // - If #handlers.length became 0, then the unsubscribe trigger will immediately follow
-      // - #isDead() couldn't have started out true because #wrapper starts off non-empty
-      #finalize;
+      // - this.#isDead() implies the [handler] trigger is cut off
+      // - this.#unsubscribe() (contractually) cuts off the [publish] trigger
+      // - _wrapperFinalizers.unregister cuts off the [wrapper] trigger
+      // this.#unsubscribe is guaranteed to be called once this.#isDead() becomes true in all cases:
+      // - If this.#wrapper.deref() became undefined, then the [wrapper] trigger will soon follow
+      // - If this.#handlers.length became 0, then the [handler] trigger will immediately follow
+      // - this.#isDead() couldn't have started out true because #wrapper starts off non-empty
+      #unsubscribe;
+      
+      #setHotness;
+      #numHotHandlers = 0;
+      #handlers = [];
+      #wrapper;
 
       static _wrapperFinalizers = new FinalizationRegistry(that => {
         if (that.#handlers.length === 0) {
           // that.#isDead() is implicitly true
-          that.#finalize();
+          that.#unsubscribe();
         }
       });
 
@@ -136,14 +140,16 @@
         this.#wrapper = new WeakRef(wrapper);
         // The cleanup logic breaks if this arrow function ends up strongly referencing the wrapper
         // I haven't tested if it does hold a strong reference
-        this.#finalize = subscribe(x => {
+        [this.#unsubscribe, this.#setHotness] = subscribe(x => {
           if (this.#isDead()) {
             _wrapperFinalizers.unregister(this);
-            this.#finalize();
+            this.#unsubscribe();
           } else {
             // Actual non-cleanup logic
-            for (const handle of this.#handlers) {
-              handle(x);
+            for (const [handle, isHot] of this.#handlers) {
+              if (isHot) {
+                handle(x);
+              }
             }
           }
         });
@@ -153,22 +159,48 @@
       #isDead() {
         return this.#wrapper.deref() === undefined && this.#handlers.length === 0;
       }
+      
+      #findHandle(handle) {
+        const index = this.#handlers.findIndex([,foundHandle] => foundHandle === handle);
+        if (index === -1) {
+          // Treat this as an error because it indicates brittle logic elsewhere
+          throw "Can't unsubscribe a non-existant handler";
+        }
+        return index;
+      }
+      
+      #changeNumHotHandlers(increment) {
+        const oldHotness = this.#numHotHandlers === 0;
+        this.#numHotHandlers += increment;
+        const newHotness = this.#numHotHandlers === 0;
+        if (oldHotness !== newHotness) {
+          this.#setHotness(newHotness);
+        }
+      }
 
-      subscribe(handle) {
-        this.#handlers.push(handle); // Last rare line of non-cleanup logic
+      // There's a significant difference between [unsubscribe, setHotness] and [this.#unsubscribe, this.#setHotness]
+      // The former affect one specific handler and the latter affect the entire event
+      // All calls to this.#changeNumHotHandlers here coerce a bool into an int
+      subscribe(handle, isHot) {
+        this.#changeNumHotHandlers(isHot);
+        this.#handlers.push([handle, isHot]);
+        
         const unsubscribe = _ => {
-          const index = this.#handlers.indexOf(handle);
-          if (index === -1) {
-            // Treat this as an error because it indicates brittle logic elsewhere
-            throw "Can't unsubscribe a non-existant handler"
-          }
+          const index = this.#findHandle(handle);
+          this.#changeNumHotHandlers(-this.#handlers[index][1]);
           this.#handlers.splice(index, 1);
+          
           if (this.#isDead()) {
             _wrapperFinalizers.unregister(this);
-            this.#finalize();
+            this.#unsubscribe();
           }
         };
-        return unsubscribe;
+        const setHotness = isHot => {
+          const index = this.#findHandle(handle);
+          this.#changeNumHotHandlers(isHot - this.#handlers[index][1]);
+          this.#handlers[index][1] = isHot;
+        }
+        return [unsubscribe, setHotness];
       }
     }
 
@@ -178,7 +210,8 @@
       // Similar to the promise constructor
       // In the promise constructor, you pass a resolve function into the input,
       // whereas here you pass a publish function into the input
-      // Subscribe also must return a finalizer callback that prevents any more values from being published
+      // Subscribe also must return an unsubscribe callback that prevents any more values from being published,
+      // and a setHotness callback that temporarily changes whether values get published
       constructor(subscribe) {
         this.#inner = new _InnerEvent(subscribe, this);
       }
