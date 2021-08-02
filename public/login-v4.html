@@ -109,7 +109,6 @@
     // This class is mostly resource management
     // TODO optimize using a linked list for handlers
     class _InnerEvent {
-
       // Triggers to call #unsubscribe:
       // - [handler] gets unsubscribed then this.#isDead()
       // - [publish] a value when this.#isDead() (redundant, but may be earlier than the wrapper trigger)
@@ -123,7 +122,7 @@
       // - If this.#handlers.length became 0, then the [handler] trigger will immediately follow
       // - this.#isDead() couldn't have started out true because #wrapper starts off non-empty
       #unsubscribe;
-      
+
       #setHotness;
       #numHotHandlers = 0;
       #handlers = [];
@@ -157,18 +156,26 @@
       }
 
       #isDead() {
-        return this.#wrapper.deref() === undefined && this.#handlers.length === 0;
+        return (
+          this.#wrapper.deref() === undefined && this.#handlers.length === 0
+        );
       }
-      
+
       #findHandle(handle) {
-        const index = this.#handlers.findIndex([,foundHandle] => foundHandle === handle);
+        const index = this.#handlers.findIndex(
+          ([, foundHandle]) => foundHandle === handle
+        );
         if (index === -1) {
           // Treat this as an error because it indicates brittle logic elsewhere
           throw "Can't unsubscribe a non-existant handler";
         }
         return index;
       }
-      
+
+      // Triggers to call:
+      // - subscribe a handler
+      // - unsubscribe a handler
+      // - set hotness of a handler
       #changeNumHotHandlers(increment) {
         const oldHotness = this.#numHotHandlers === 0;
         this.#numHotHandlers += increment;
@@ -184,12 +191,12 @@
       subscribe(handle, isHot) {
         this.#changeNumHotHandlers(isHot);
         this.#handlers.push([handle, isHot]);
-        
+
         const unsubscribe = _ => {
           const index = this.#findHandle(handle);
           this.#changeNumHotHandlers(-this.#handlers[index][1]);
           this.#handlers.splice(index, 1);
-          
+
           if (this.#isDead()) {
             _wrapperFinalizers.unregister(this);
             this.#unsubscribe();
@@ -199,7 +206,7 @@
           const index = this.#findHandle(handle);
           this.#changeNumHotHandlers(isHot - this.#handlers[index][1]);
           this.#handlers[index][1] = isHot;
-        }
+        };
         return [unsubscribe, setHotness];
       }
     }
@@ -221,13 +228,47 @@
       _subscribe(handle) {
         return this.#inner.deref().subscribe(handle);
       }
-      
+
+      // The return value of this._subscribe is extremely important for resource management
       #createChild(publishWrapper) {
-        return new Event(publish => this._subscribe(publishWrapper(publish)))
+        return new Event(publish => this._subscribe(publishWrapper(publish)));
       }
 
       map(f) {
-        return this.#createChild(publish => x => publish(f(x)))
+        return this.#createChild(publish => x => publish(f(x)));
+      }
+
+      filter(predicate) {
+        return this.#createChild(publish => x => {
+          if (predicate(x)) {
+            publish(x);
+          }
+        });
+      }
+
+      tag(get) {
+        return this.#createChild(publish => x => publish(get()));
+      }
+
+      mapTag(get, f) {
+        return this.#createChild(publish => x => publish(f(x, get())));
+      }
+
+      merge(other) {
+        return new Event(publish => {
+          const [thisUnsubscribe, thisSetHotness] = this._subscribe(publish);
+          const [otherUnsubscribe, otherSetHotness] = other._subscribe(publish);
+          return [
+            _ => {
+              thisUnsubscribe();
+              otherUnsubscribe();
+            },
+            isHot => {
+              thisSetHotness(isHot);
+              otherSetHotness(isHot);
+            }
+          ];
+        });
       }
     }
 
