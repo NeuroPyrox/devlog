@@ -106,68 +106,107 @@
       };
     };
 
-    // This class is mostly resource management
-    // TODO optimize using a linked list for handlers
-    class _InnerEvent {
-      // Triggers to call #unsubscribe:
-      // - [handler] gets unsubscribed then this.#isDead()
-      // - [publish] a value when this.#isDead() (redundant, but may be earlier than the wrapper trigger)
-      // - [wrapper] gets finalized when this.#isDead()
-      // How all of these triggers cut off the other ones:
-      // - this.#isDead() implies the [handler] trigger is cut off
-      // - this.#unsubscribe() (contractually) cuts off the [publish] trigger
-      // - _wrapperFinalizers.unregister cuts off the [wrapper] trigger
-      // this.#unsubscribe is guaranteed to be called once this.#isDead() becomes true in all cases:
-      // - If this.#wrapper.deref() became undefined, then the [wrapper] trigger will soon follow
-      // - If this.#handlers.length became 0, then the [handler] trigger will immediately follow
-      // - this.#isDead() couldn't have started out true because #wrapper starts off non-empty
-      #unsubscribe;
+    // These next 3 functions are part of _InnerEvent,
+    // but I factored them out because I'm paranoid of
+    // accidentally capturing "this" as a strong reference
+    function _unsubscribeHandler(weakThat, weakHandle) {
+      return _ => {
+        const that = weakThat.deref();
+        const handle = weakHandle.deref();
+        if (that === undefined) {
+          return;
+        }
 
+        const index = that._findHandle(handle);
+        that._changeNumHotHandlers(-that.handlers[index][1]);
+        that._handlers.splice(index, 1);
+
+        if (that._isDead()) {
+          that._wrapperFinalizers.unregister(that);
+          that._unsubscribe();
+        }
+      };
+    }
+    function _setHandlerHotness(weakThat, weakHandle) {
+      return isHot => {
+        const that = weakThat.deref();
+        const handle = weakHandle.deref();
+        if (that === undefined) {
+          return;
+        }
+
+        const index = that._findHandle(handle);
+        that._changeNumHotHandlers(isHot - that._handlers[index][1]);
+        that._handlers[index][1] = isHot;
+      };
+    }
+    function _publish(that) {
+      return x => {
+        if (that._isDead()) {
+          that._wrapperFinalizers.unregister(that);
+          that._unsubscribe();
+        } else {
+          // Actual non-cleanup logic
+          for (const [handle, isHot] of that._handlers) {
+            if (isHot) {
+              handle(x);
+            }
+          }
+        }
+      };
+    }
+
+    // I absolutely hate this inscrutable tangle of mutability and resource management,
+    // but at least it only has one public method
+    class _InnerEvent {
+      // Triggers to call unsubscribe:
+      // - [handler] gets unsubscribed then _isDead()
+      // - [publish] a value when _isDead() (redundant, but may be earlier than the wrapper trigger)
+      // - [wrapper] gets finalized when _isDead()
+      // How all of these triggers cut off the other ones:
+      // - _isDead() implies the [handler] trigger is cut off
+      // - _unsubscribe() (contractually) cuts off the [publish] trigger
+      // - _wrapperFinalizers.unregister cuts off the [wrapper] trigger
+      // _unsubscribe is guaranteed to be called once _isDead() becomes true in all cases:
+      // - If #wrapper.deref() became undefined, then the [wrapper] trigger will soon follow
+      // - If _handlers.length became 0, then the [handler] trigger will immediately follow
+      // - _isDead() couldn't have started out true because #wrapper starts off non-empty
+      _unsubscribe;
+
+      _handlers = []; // TODO optimize by using a linked list
       #setHotness;
       #numHotHandlers = 0;
-      #handlers = [];
       #wrapper;
 
-      static _wrapperFinalizers = new FinalizationRegistry(that => {
-        if (that.#handlers.length === 0) {
-          // that.#isDead() is implicitly true
-          that.#unsubscribe();
+      static _wrapperFinalizers = new FinalizationRegistry(weakThat => {
+        const that = weakThat.deref();
+        if (that !== undefined && that._handlers.length === 0) {
+          // that._isDead() is implicitly true
+          that._unsubscribe();
         }
       });
 
       constructor(subscribe, wrapper) {
         this.#wrapper = new WeakRef(wrapper);
-        // The cleanup logic breaks if this arrow function ends up strongly referencing the wrapper
-        // I haven't tested if it does hold a strong reference
-        [this.#unsubscribe, this.#setHotness] = subscribe(x => {
-          if (this.#isDead()) {
-            _wrapperFinalizers.unregister(this);
-            this.#unsubscribe();
-          } else {
-            // Actual non-cleanup logic
-            for (const [handle, isHot] of this.#handlers) {
-              if (isHot) {
-                handle(x);
-              }
-            }
-          }
-        });
-        this._wrapperFinalizers.register(wrapper, this, this);
+        // VERY IMPORTANT: subscribe(_publish(this)) is the only way a strong reference to this gets exposed
+        // That way, this can be garbage collected as soon as _publish(this) gets garbage collected
+        [this._unsubscribe, this.#setHotness] = subscribe(_publish(this));
+        this._wrapperFinalizers.register(wrapper, new WeakRef(this), this);
       }
 
-      #isDead() {
+      _isDead() {
         return (
-          this.#wrapper.deref() === undefined && this.#handlers.length === 0
+          this.#wrapper.deref() === undefined && this._handlers.length === 0
         );
       }
 
-      #findHandle(handle) {
-        const index = this.#handlers.findIndex(
+      _findHandle(handle) {
+        const index = this._handlers.findIndex(
           ([, foundHandle]) => foundHandle === handle
         );
         if (index === -1) {
           // Treat this as an error because it indicates brittle logic elsewhere
-          throw "Can't unsubscribe a non-existant handler";
+          throw "Can't find handler";
         }
         return index;
       }
@@ -176,7 +215,9 @@
       // - subscribe a handler
       // - unsubscribe a handler
       // - set hotness of a handler
-      #changeNumHotHandlers(increment) {
+      // All callsites currently coerce a bool into an int
+      // This method can never be called after _unsubscribe
+      _changeNumHotHandlers(increment) {
         const oldHotness = this.#numHotHandlers === 0;
         this.#numHotHandlers += increment;
         const newHotness = this.#numHotHandlers === 0;
@@ -185,29 +226,21 @@
         }
       }
 
-      // There's a significant difference between [unsubscribe, setHotness] and [this.#unsubscribe, this.#setHotness]
-      // The former affect one specific handler and the latter affect the entire event
-      // All calls to this.#changeNumHotHandlers here coerce a bool into an int
       subscribe(handle, isHot) {
-        this.#changeNumHotHandlers(isHot);
-        this.#handlers.push([handle, isHot]);
+        this._changeNumHotHandlers(isHot);
+        this._handlers.push([handle, isHot]);
 
-        const unsubscribe = _ => {
-          const index = this.#findHandle(handle);
-          this.#changeNumHotHandlers(-this.#handlers[index][1]);
-          this.#handlers.splice(index, 1);
-
-          if (this.#isDead()) {
-            _wrapperFinalizers.unregister(this);
-            this.#unsubscribe();
-          }
-        };
-        const setHotness = isHot => {
-          const index = this.#findHandle(handle);
-          this.#changeNumHotHandlers(isHot - this.#handlers[index][1]);
-          this.#handlers[index][1] = isHot;
-        };
-        return [unsubscribe, setHotness];
+        // With weak references, the memory graph is a DAG
+        // With strong references, each edge in the memory graph would become invertable,
+        // so any endpoint subscription would prevent all garbage collection
+        // In theory you only sometimes need the references to be weak,
+        // but that would introduce unnecessary complexity compared to always making them weak
+        const weakThis = new WeakRef(this);
+        const weakHandle = new WeakRef(handle);
+        return [
+          _unsubscribeHandler(weakThis, weakHandle),
+          _setHandlerHotness(weakThis, weakHandle)
+        ];
       }
     }
 
@@ -219,14 +252,19 @@
       // whereas here you pass a publish function into the input
       // Subscribe also must return an unsubscribe callback that prevents any more values from being published,
       // and a setHotness callback that temporarily changes whether values get published
+      // In order for garbage collection to take place,
+      // the callbacks returned from subscribe can't strongly reference the publish function
       constructor(subscribe) {
-        this.#inner = new _InnerEvent(subscribe, this);
+        this.#inner = new WeakRef(new _InnerEvent(subscribe, this));
       }
 
       // Returns an unsubscribe function that you must call to allow garbage collection
       // Only call when creating a new abstraction
       _subscribe(handle) {
-        return this.#inner.deref().subscribe(handle);
+        const inner = this.#inner.deref();
+        return inner === undefined
+          ? [_ => {}, _ => {}]
+          : inner.subscribe(handle);
       }
 
       // The return value of this._subscribe is extremely important for resource management
