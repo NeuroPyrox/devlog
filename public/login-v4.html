@@ -15,6 +15,223 @@
   </head>
   <body></body>
   <script>
+    
+    class Output {
+      static isHot = true;
+      
+      constructor(publisher, makeAction) {
+        this._publisher = publisher;
+        this._makeAction = makeAction;
+        this.priority = 0;
+      }
+
+      // Publish monad
+      *poll() {
+        const value = (yield this._publisher.read()).value;
+        // Mutable: context
+        yield context => context.queueAction(this._makeAction(value));
+        return [];
+      }
+    }
+
+    // We separate this from Subscriber to allow for garbage collection.
+    // All the strong references to this are from:
+    // - Parent publishers
+    // - External event listeners (via inputSubscriber)
+    // - Children publishers that only have one parent
+    // This is dead when:
+    //   ((its parents are dead) and (its external event listeners are dead))
+    //   or ((it has no children) and (its Subscriber is dead))
+    class Publisher {
+      constructor(poll) {
+        this._poll = poll;
+        this._children = [];
+        this.isHot = false;
+        this.priority = 0;
+      }
+
+      // Publish monad
+      *poll() {
+        const maybe = yield* this._poll();
+        if (maybe === nothing) return [];
+        yield this.write(maybe.value);
+        return this._children.filter(
+          child => child.isHot && this.priority < child.priority
+        );
+      }
+
+      // Publish monad
+      // Instead of storing the current value as a variable,
+      // we store it in the monadic Publish context,
+      // so we can easily delete every Publisher's value once the changes get flushed.
+      read() {
+        return context => context.read(this);
+      }
+
+      // Publish monad
+      // Mutable: context
+      write(value) {
+        return context => context.write(this, value);
+      }
+
+      // Subscribe monad
+      // Mutable: context
+      queueAddChild(child) {
+        return context => context.queueAddChild(this, child)
+      }
+
+      removeChild(child) {
+        // TODO
+      }
+
+      onSubscriberDeath() {
+        // TODO
+      }
+    }
+
+    // Publish monad
+    function* readWeakPublisher(weak) {
+      publisher = weak.deref();
+      // It's simpler to check for undefined than to use the Maybe monad here
+      if (publisher === undefined) {
+        return nothing;
+      } else {
+        return yield publisher.read();
+      }
+    }
+
+    // We separate this from Publisher to allow for garbage collection.
+    // When this dies, it means no more children can be added to its Publisher instance.
+    class Subscriber {
+      // Mutable: publisher
+      static _finalizers = new FinalizationRegistry(weakPublisher => {
+        const publisher = weakPublisher.deref();
+        if (publisher !== undefined) {
+          publisher.onSubscriberDeath();
+        }
+      });
+
+      // poll is in the Publish monad
+      constructor(poll) {
+        this._publisher = new WeakRef(new Publisher(poll));
+        _finalizers.register(this, this._publisher);
+      }
+
+      // Subscribe monad
+      // Mutable: publisher
+      *subscribe(makeAction) {
+        const parent = this._publisher.deref();
+        if (parent === undefined) return () => {};
+
+        const output = new Output(parent, makeAction);
+
+        yield parent.queueAddChild(output);
+        const unsubscribe = parent.removeChild(output);
+        return unsubscribe;
+      }
+
+      // Subscribe monad
+      *map(f) {
+        const parent = this._publisher.deref();
+        if (parent === undefined) return never;
+
+        // TODO test what "this" is
+        // TODO unsubscribe
+        const [publisher, subscriber] = newPubSub(function*() {
+          return (yield parent.read()).chain(f);
+        });
+
+        yield parent.queueAddChild(publisher);
+        return subscriber;
+      }
+
+      // Subscribe monad
+      *filter(predicate) {
+        const parent = this._publisher.deref();
+        if (parent === undefined) return never;
+
+        const [publisher, subscriber] = newPubSub(function*() {
+          const value = (yield parent.read()).value;
+          return predicate(value) ? just(value) : nothing;
+        });
+
+        yield parent.queueAddChild(publisher);
+        return subscriber;
+      }
+
+      // Subscribe monad
+      *merge(other, simultaneousCase = (a, b) => a) {
+        const [publisher, subscriber] = newPubSub(function*() {
+          const maybeA = yield* readWeakPublisher(this._publisher);
+          const maybeB = yield* readWeakPublisher(other._publisher);
+          return maybeA.case(maybeB, a =>
+            maybeB.case(maybeA, b => just(simultaneousCase(a, b)))
+          );
+        });
+
+        yield* this.queueAddChild(publisher);
+        yield* other.queueAddChild(publisher);
+        return subscriber;
+      }
+
+      // Subscribe monad
+      // Mutable: context
+      *queueAddChild(child) {
+        const publisher = this._publisher.deref();
+        if (publisher !== undefined) {
+          yield publisher.queueAddChild(child);
+        }
+      }
+    }
+
+    const newPubSub = (poll, onUnpollable) => {
+      const publisher = new Publisher(poll);
+      const subscriber = new Subscriber(publisher);
+      return [publisher, subscriber];
+    };
+
+    // Mutable: generator, context
+    const runEvalPulse = generator => {
+      let step = generator.next();
+      // TODO define this class
+      const context = new EvalPulseContext();
+      while (!step.done) {
+        step = generator.next(step.value(context));
+      }
+    };
+
+    // Publish monad
+    // Mutable: queue
+    function* publish(publisher, value) {
+      yield publisher.write(value);
+      // TODO define this class
+      const queue = new PriorityQueue();
+      queue.push(publisher);
+      for (const pollable of queue) {
+        const childrenToPoll = yield* pollable.poll();
+        for (const child of childrenToPoll) {
+          // Yes, I'm mutating the queue while iterating over it.
+          queue.push(child);
+        }
+      }
+    }
+
+    // Subscribe monad
+    // Impure: subscribe, runEvalPulses
+    // Subscribe takes a handler function, attaches it as an event listener,
+    // and returns an unsubscribe function.
+    // The closures shouldn't keep pulsePull alive.
+    function* inputSubscriber(subscribe) {
+      const [publisher, subscriber] = newPubSub(function*() {
+        // Assume publisher.write has been called in publish.
+        return yield publisher.read();
+      }, subscribe(x => runPublishMonad(publish(publisher, x))));
+      return subscriber;
+    }
+
+    // TODO
+    const never = undefined;
+    
     // TODO separate layers of abstraction
     const userDatabase = ({
       insertions,
@@ -156,8 +373,8 @@
       };
     }
 
-    // I absolutely hate this inscrutable tangle of mutability and resource management,
-    // but at least it only has one public method
+    // This is a very complex class heavy with resource management,
+    // but rest assured its interface is simple
     class _InnerEvent {
       // Triggers to call unsubscribe:
       // - [handler] gets unsubscribed then _isDead()
@@ -260,24 +477,26 @@
 
       // Returns an unsubscribe function that you must call to allow garbage collection
       // Only call when creating a new abstraction
-      _subscribe(handle) {
+      _subscribe(handle, isHot) {
         const inner = this.#inner.deref();
         return inner === undefined
           ? [_ => {}, _ => {}]
-          : inner.subscribe(handle);
+          : inner.subscribe(handle, isHot);
       }
 
       // The return value of this._subscribe is extremely important for resource management
-      #createChild(publishWrapper) {
-        return new Event(publish => this._subscribe(publishWrapper(publish)));
+      #wrapPublish(publishWrapper) {
+        return new Event(publish =>
+          this._subscribe(publishWrapper(publish), false)
+        );
       }
 
       map(f) {
-        return this.#createChild(publish => x => publish(f(x)));
+        return this.#wrapPublish(publish => x => publish(f(x)));
       }
 
       filter(predicate) {
-        return this.#createChild(publish => x => {
+        return this.#wrapPublish(publish => x => {
           if (predicate(x)) {
             publish(x);
           }
@@ -285,17 +504,23 @@
       }
 
       tag(get) {
-        return this.#createChild(publish => x => publish(get()));
+        return this.#wrapPublish(publish => x => publish(get()));
       }
 
       mapTag(get, f) {
-        return this.#createChild(publish => x => publish(f(x, get())));
+        return this.#wrapPublish(publish => x => publish(f(x, get())));
       }
 
       merge(other) {
         return new Event(publish => {
-          const [thisUnsubscribe, thisSetHotness] = this._subscribe(publish);
-          const [otherUnsubscribe, otherSetHotness] = other._subscribe(publish);
+          const [thisUnsubscribe, thisSetHotness] = this._subscribe(
+            publish,
+            false
+          );
+          const [otherUnsubscribe, otherSetHotness] = other._subscribe(
+            publish,
+            false
+          );
           return [
             _ => {
               thisUnsubscribe();
@@ -308,6 +533,26 @@
           ];
         });
       }
+
+      mergeBind(f) {
+        return new Event(publish => {
+          const unsubscribers = [];
+          const hotnessSetters = [];
+          unsubscribers.push(
+            this._subscribe(x => {
+              const [unsubscribe, setHotness] = f(x)._subscribe(publish);
+              unsubscribers.push(unsubscribe);
+              hotnessSetters.push(setHotness);
+            }, true)[0]
+          );
+          return [
+            _ => unsubscribers.map(x => x()),
+            isHot => hotnessSetters.map(x => x(isHot))
+          ];
+        });
+      }
+
+      bind(f) {}
     }
 
     // This implementation creates memory leaks.
