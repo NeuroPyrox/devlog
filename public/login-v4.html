@@ -23,7 +23,7 @@
 
       push(value) {
         const index = this._array.length;
-        // This part of the function optimizes special cases of the loop below
+        // Special cases of the loop below, so we can avoid writing this._array.push(null)
         if (index === 0) {
           this._array.push(value);
           return;
@@ -50,6 +50,54 @@
         }
 
         this._array[index] = value;
+      }
+
+      next() {
+        switch (this._array.length) {
+          case 0:
+            return { done: true };
+          case 1:
+            return {
+              value: this._array.pop(),
+              done: false
+            };
+        }
+        const value = this._array[0];
+
+        const index = 0;
+        const end = this._array.pop();
+
+        while (true) {
+          const swapIndex = index;
+          const swap = end;
+
+          // swap = min(swap, leftChild)
+          const leftIndex = 2 * index + 1;
+          const leftChild = this._array[leftIndex];
+          if (leftChild && leftChild.priority < swap.priority) {
+            swapIndex = leftIndex;
+            swap = leftChild;
+          }
+
+          // swap = min(swap, rightChild)
+          const rightIndex = leftIndex + 1;
+          const rightChild = this._array[rightIndex];
+          if (rightChild && rightChild.priority < swap.priority) {
+            swapIndex = rightIndex;
+            swap = rightChild;
+          }
+
+          if (swapIndex === index) break;
+          this._array[index] = swap;
+          index = swapIndex;
+        }
+
+        this._array[index] = end;
+        return { value, done: false };
+      }
+
+      [Symbol.iterator]() {
+        return this;
       }
     }
 
