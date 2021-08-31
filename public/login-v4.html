@@ -101,6 +101,28 @@
       }
     }
 
+    class PublishContext {
+      constructor() {
+        this._values = new WeakMap();
+        this._dependencies = [];
+      }
+      
+      read(publisher) {
+        // TODO use undefined as nothing instead of using the Maybe monad
+        const value = this._values.get(publisher);
+        return value === undefined ? nothing : just(value);
+      }
+      
+      write(publisher, value) {
+        this._values.set(publisher, value);
+      }
+      
+      // Parent and child are both publishers
+      queueAddChild(parent, child) {
+        this._dependencies.push([parent, child]);
+      }
+    }
+    
     class Output {
       static isHot = true;
 
@@ -260,7 +282,6 @@
       }
 
       // Subscribe monad
-      // Mutable: context
       *queueAddChild(child) {
         const publisher = this._publisher.deref();
         if (publisher !== undefined) {
@@ -276,20 +297,19 @@
     };
 
     // Mutable: generator, context
-    const runEvalPulse = generator => {
+    const runPublishMonad = generator => {
       let step = generator.next();
-      // TODO define this class
-      const context = new EvalPulseContext();
+      const context = new PublishContext();
       while (!step.done) {
         step = generator.next(step.value(context));
       }
+      // TODO handle context._dependencies
     };
 
     // Publish monad
     // Mutable: queue
     function* publish(publisher, value) {
       yield publisher.write(value);
-      // TODO define this class
       const queue = new PriorityQueue();
       queue.push(publisher);
       for (const pollable of queue) {
