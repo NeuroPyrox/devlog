@@ -106,23 +106,21 @@
         this._values = new WeakMap();
         this._dependencies = [];
       }
-      
+
       read(publisher) {
-        // TODO use undefined as nothing instead of using the Maybe monad
-        const value = this._values.get(publisher);
-        return value === undefined ? nothing : just(value);
+        return this._values.get(publisher);
       }
-      
+
       write(publisher, value) {
         this._values.set(publisher, value);
       }
-      
+
       // Parent and child are both publishers
       queueAddChild(parent, child) {
         this._dependencies.push([parent, child]);
       }
     }
-    
+
     class Output {
       static isHot = true;
 
@@ -134,8 +132,10 @@
 
       // Publish monad
       *poll() {
-        const value = (yield this._publisher.read()).value;
+        // value !== undefined
+        const value = yield this._publisher.read();
         // Mutable: context
+        // TODO queueAction
         yield context => context.queueAction(this._makeAction(value));
         return [];
       }
@@ -159,9 +159,9 @@
 
       // Publish monad
       *poll() {
-        const maybe = yield* this._poll();
-        if (maybe === nothing) return [];
-        yield this.write(maybe.value);
+        const value = yield* this._poll();
+        if (value === undefined) return [];
+        yield this.write(value);
         return this._children.filter(
           child => child.isHot && this.priority < child.priority
         );
@@ -201,7 +201,7 @@
       publisher = weak.deref();
       // It's simpler to check for undefined than to use the Maybe monad here
       if (publisher === undefined) {
-        return nothing;
+        return undefined;
       } else {
         return yield publisher.read();
       }
@@ -245,7 +245,8 @@
         // TODO test what "this" is
         // TODO unsubscribe
         const [publisher, subscriber] = newPubSub(function*() {
-          return (yield parent.read()).chain(f);
+          // yield parent.read() !== undefined;
+          return f(yield parent.read());
         });
 
         yield parent.queueAddChild(publisher);
@@ -258,8 +259,9 @@
         if (parent === undefined) return never;
 
         const [publisher, subscriber] = newPubSub(function*() {
-          const value = (yield parent.read()).value;
-          return predicate(value) ? just(value) : nothing;
+          // value !== undefined
+          const value = yield parent.read();
+          return predicate(value) ? value : undefined;
         });
 
         yield parent.queueAddChild(publisher);
@@ -267,13 +269,14 @@
       }
 
       // Subscribe monad
-      *merge(other, simultaneousCase = (a, b) => a) {
+      *merge(other, simultaneous = (a, b) => a) {
+        // TODO fix memory leak
         const [publisher, subscriber] = newPubSub(function*() {
-          const maybeA = yield* readWeakPublisher(this._publisher);
-          const maybeB = yield* readWeakPublisher(other._publisher);
-          return maybeA.case(maybeB, a =>
-            maybeB.case(maybeA, b => just(simultaneousCase(a, b)))
-          );
+          const a = yield* readWeakPublisher(this._publisher);
+          const b = yield* readWeakPublisher(other._publisher);
+          if (a === undefined) return b;
+          if (b === undefined) return a;
+          return simultaneous(a, b);
         });
 
         yield* this.queueAddChild(publisher);
@@ -328,7 +331,6 @@
     // The closures shouldn't keep pulsePull alive.
     function* inputSubscriber(subscribe) {
       const [publisher, subscriber] = newPubSub(function*() {
-        // Assume publisher.write has been called in publish.
         return yield publisher.read();
       }, subscribe(x => runPublishMonad(publish(publisher, x))));
       return subscriber;
