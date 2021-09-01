@@ -270,10 +270,13 @@
 
       // Subscribe monad
       *merge(other, simultaneous = (a, b) => a) {
-        // TODO fix memory leak
+        // Don't hold references to this or other inside the generator
+        const weakA = this._publisher;
+        const weakB = other._publisher;
+        
         const [publisher, subscriber] = newPubSub(function*() {
-          const a = yield* readWeakPublisher(this._publisher);
-          const b = yield* readWeakPublisher(other._publisher);
+          const a = yield* readWeakPublisher(weakA);
+          const b = yield* readWeakPublisher(weakB);
           if (a === undefined) return b;
           if (b === undefined) return a;
           return simultaneous(a, b);
