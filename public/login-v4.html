@@ -116,6 +116,7 @@
         this._values.set(publisher, value);
       }
 
+      // TODO move to correct monad
       // Parent and child are both publishers
       queueAddChild(parent, child) {
         this._dependencies.push([parent, child]);
@@ -155,7 +156,12 @@
     //   or ((it has no children) and (its Subscriber is dead))
     class Publisher {
       constructor(poll) {
+        // A monadic publish function that returns the current value of the publisher.
+        // Returns undefined to represent non-occurrence of an event, such as in a filter.
+        // Holds weak references to the parent publishers,
+        // but if there's only one parent it can hold a strong reference.
         this._poll = poll;
+        // Strong references to the publishers which may have a value if this one does.
         this._children = [];
         this.isHot = false;
         this.priority = 0;
@@ -192,11 +198,11 @@
       }
 
       removeChild(child) {
-        // TODO
+        // TODO update children array, update numHotChildren, and finalize if dead
       }
 
       onSubscriberDeath() {
-        // TODO
+        // TODO if no children, then finalize this publisher
       }
     }
 
@@ -291,6 +297,7 @@
         return subscriber;
       }
 
+      // TODO for the sake of recursion, don't access _publisher
       // Subscribe monad
       *queueAddChild(child) {
         const publisher = this._publisher.deref();
