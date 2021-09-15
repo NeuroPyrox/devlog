@@ -105,6 +105,7 @@
       constructor() {
         this._values = new WeakMap();
         this._dependencies = [];
+        this._actions = [];
       }
 
       read(publisher) {
@@ -118,6 +119,10 @@
       // Parent and child are both publishers
       queueAddChild(parent, child) {
         this._dependencies.push([parent, child]);
+      }
+      
+      queueAction(action) {
+        this._actions.push(action);
       }
     }
 
@@ -135,7 +140,6 @@
         // value !== undefined
         const value = yield this._publisher.read();
         // Mutable: context
-        // TODO queueAction
         yield context => context.queueAction(this._makeAction(value));
         return [];
       }
@@ -199,7 +203,6 @@
     // Publish monad
     function* readWeakPublisher(weak) {
       publisher = weak.deref();
-      // It's simpler to check for undefined than to use the Maybe monad here
       if (publisher === undefined) {
         return undefined;
       } else {
@@ -218,6 +221,7 @@
         }
       });
 
+      // TODO change parameters
       // poll is in the Publish monad
       constructor(poll) {
         this._publisher = new WeakRef(new Publisher(poll));
@@ -296,6 +300,7 @@
       }
     }
 
+    // TODO handle onUnpollable
     const newPubSub = (poll, onUnpollable) => {
       const publisher = new Publisher(poll);
       const subscriber = new Subscriber(publisher);
