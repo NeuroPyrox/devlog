@@ -103,8 +103,9 @@
 
     class PublishContext {
       constructor() {
+        // We're able to use a weakMap without fear of losing access to the values
+        // because the keys will be strongly referenced by a chain of parent publishers.
         this._values = new WeakMap();
-        this._dependencies = [];
         this._actions = [];
       }
 
@@ -115,15 +116,20 @@
       write(publisher, value) {
         this._values.set(publisher, value);
       }
-
-      // TODO move to correct monad
-      // Parent and child are both publishers
-      queueAddChild(parent, child) {
-        this._dependencies.push([parent, child]);
-      }
       
       queueAction(action) {
         this._actions.push(action);
+      }
+    }
+    
+    class SubscribeContext {
+      constructor() {
+        this._dependencies = [];
+      }
+      
+      // Parent is a subscriber and child is a publisher
+      queueAddChild(parent, child) {
+        this._dependencies.push([parent, child]);
       }
     }
 
@@ -138,7 +144,7 @@
 
       // Publish monad
       *poll() {
-        // value !== undefined
+        // value !== undefined because there's only one parent publisher
         const value = yield this._publisher.read();
         // Mutable: context
         yield context => context.queueAction(this._makeAction(value));
