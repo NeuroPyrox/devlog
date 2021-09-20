@@ -357,8 +357,7 @@
       return subscriber;
     }
 
-    // TODO
-    const never = undefined;
+    const never = inputSubscriber(() => ());
 
     // TODO separate layers of abstraction
     const userDatabase = ({
