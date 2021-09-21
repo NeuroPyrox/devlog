@@ -161,12 +161,16 @@
     //   ((its parents are dead) and (its external event listeners are dead))
     //   or ((it has no children) and (its Subscriber is dead))
     class Publisher {
-      constructor(poll) {
+      
+      // The constructor is only used in newPubSub
+      // Poll and unsubscribe holds weak references to parent publishers,
+      // or a strong reference if there's only one parent.
+      constructor(poll, unsubscribe) {
         // A monadic publish function that returns the current value of the publisher.
         // Returns undefined to represent non-occurrence of an event, such as in a filter.
-        // Holds weak references to the parent publishers,
-        // but if there's only one parent it can hold a strong reference.
         this._poll = poll;
+        // Impure. Called when there are no more children and the subscriber is dead.
+        this._unsubscribe = unsubscribe;
         // Strong references to the publishers which may have a value if this one does.
         this._children = [];
         this.isHot = false;
@@ -178,6 +182,7 @@
         const value = yield* this._poll();
         if (value === undefined) return [];
         yield this.write(value);
+        // TODO do we really need to check priority?
         return this._children.filter(
           child => child.isHot && this.priority < child.priority
         );
@@ -225,18 +230,19 @@
     // We separate this from Publisher to allow for garbage collection.
     // When this dies, it means no more children can be added to its Publisher instance.
     class Subscriber {
+      
       // Mutable: publisher
       static _finalizers = new FinalizationRegistry(weakPublisher => {
+        // TODO confirm that this callback gets called.
         const publisher = weakPublisher.deref();
         if (publisher !== undefined) {
           publisher.onSubscriberDeath();
         }
       });
-
-      // TODO change parameters
-      // poll is in the Publish monad
-      constructor(poll) {
-        this._publisher = new WeakRef(new Publisher(poll));
+      
+      // The constructor is only used in newPubSub
+      constructor(publisher) {
+        this._publisher = new WeakRef(publisher);
         _finalizers.register(this, this._publisher);
       }
 
@@ -259,11 +265,10 @@
         if (parent === undefined) return never;
 
         // TODO test what "this" is
-        // TODO unsubscribe
         const [publisher, subscriber] = newPubSub(function*() {
           // yield parent.read() !== undefined;
           return f(yield parent.read());
-        });
+        }, () => parent.removeChild(publisher));
 
         yield parent.queueAddChild(publisher);
         return subscriber;
@@ -278,7 +283,7 @@
           // value !== undefined
           const value = yield parent.read();
           return predicate(value) ? value : undefined;
-        });
+        }, () => parent.removeChild(publisher));
 
         yield parent.queueAddChild(publisher);
         return subscriber;
@@ -296,6 +301,9 @@
           if (a === undefined) return b;
           if (b === undefined) return a;
           return simultaneous(a, b);
+        }, () => {
+          weakA.deref()?.removeChild(publisher);
+          weakB.deref()?.removeChild(publisher);
         });
 
         yield* this.queueAddChild(publisher);
@@ -313,9 +321,10 @@
       }
     }
 
-    // TODO handle onUnpollable
-    const newPubSub = (poll, onUnpollable) => {
-      const publisher = new Publisher(poll);
+    // Poll and unsubscribe holds weak references to parent publishers,
+    // or a strong reference if there's only one parent.
+    const newPubSub = (poll, unsubscribe) => {
+      const publisher = new Publisher(poll, unsubscribe);
       const subscriber = new Subscriber(publisher);
       return [publisher, subscriber];
     };
