@@ -116,17 +116,17 @@
       write(publisher, value) {
         this._values.set(publisher, value);
       }
-      
+
       queueAction(action) {
         this._actions.push(action);
       }
     }
-    
+
     class SubscribeContext {
       constructor() {
         this._dependencies = [];
       }
-      
+
       // Parent is a subscriber and child is a publisher
       queueAddChild(parent, child) {
         this._dependencies.push([parent, child]);
@@ -161,23 +161,29 @@
     //   ((its parents are dead) and (its external event listeners are dead))
     //   or ((it has no children) and (its Subscriber is dead))
     class Publisher {
-      
-      // The constructor is only used in newPubSub
+
+      // The constructor is only used in newPubSub.
       // Poll and unsubscribe holds weak references to parent publishers,
       // or a strong reference if there's only one parent.
       constructor(poll, unsubscribe) {
         // A monadic publish function that returns the current value of the publisher.
         // Returns undefined to represent non-occurrence of an event, such as in a filter.
         this._poll = poll;
-        // Impure. Called when there are no more children and the subscriber is dead.
-        this._unsubscribe = unsubscribe;
-        // Strong references to the publishers which may have a value if this one does.
+        // Strong references. Children will only written to if one of their parents is.
         this._children = [];
+        // Impure
+        // Called when there are no more children and the subscriber is dead.
+        // Called at most once, either called from this.removeChild or this.onSubscriberDeath.
+        // this.poll will never be called again after this._unsubscribe is called.
+        this._unsubscribe = unsubscribe;
+        // A condition to call this._unsubscribe in this.removeChild.
+        this._isSubscriberDead = false;
         this.isHot = false;
         this.priority = 0;
       }
 
       // Publish monad
+      // Returns the children to be written to after this is written to.
       *poll() {
         const value = yield* this._poll();
         if (value === undefined) return [];
@@ -208,12 +214,27 @@
         return context => context.queueAddChild(this, child);
       }
 
+      // Impure: this._unsubscribe
+      // Mutable: this._children
+      // Will be called at most once per child.
       removeChild(child) {
-        // TODO update children array, update numHotChildren, and finalize if dead
+        // TODO update numHotChildren
+        const index = this._children.findIndex(child);
+        that._children.splice(index, 1);
+        if (this._children.length === 0 && this.isSubscriberDead) {
+          this._unsubscribe();
+        }
       }
 
+      // Impure: this._unsubscribe
       onSubscriberDeath() {
-        // TODO if no children, then finalize this publisher
+        if (this._children.length === 0) {
+          this._unsubscribe();
+        } else {
+          // You only have to set this true if there are children,
+          // because this variable is only read in removeChild.
+          this._isSubscriberDead = true;
+        }
       }
     }
 
@@ -230,17 +251,14 @@
     // We separate this from Publisher to allow for garbage collection.
     // When this dies, it means no more children can be added to its Publisher instance.
     class Subscriber {
-      
+
       // Mutable: publisher
-      static _finalizers = new FinalizationRegistry(weakPublisher => {
-        // TODO confirm that this callback gets called.
-        const publisher = weakPublisher.deref();
-        if (publisher !== undefined) {
-          publisher.onSubscriberDeath();
-        }
-      });
-      
-      // The constructor is only used in newPubSub
+      // TODO confirm that this callback gets called.
+      static _finalizers = new FinalizationRegistry(weakPublisher =>
+        weakPublisher.deref()?.onSubscriberDeath()
+      );
+
+      // The constructor is only used in newPubSub.
       constructor(publisher) {
         this._publisher = new WeakRef(publisher);
         _finalizers.register(this, this._publisher);
@@ -291,10 +309,10 @@
 
       // Subscribe monad
       *merge(other, simultaneous = (a, b) => a) {
-        // Don't hold references to this or other inside the generator
+        // Don't hold references to this or other inside any closures
         const weakA = this._publisher;
         const weakB = other._publisher;
-        
+
         const [publisher, subscriber] = newPubSub(function*() {
           const a = yield* readWeakPublisher(weakA);
           const b = yield* readWeakPublisher(weakB);
