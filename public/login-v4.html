@@ -125,11 +125,18 @@
     class PullContext {
       constructor() {
         this._dependencies = [];
+        this._rootDependencies = [];
       }
 
-      // Parent is a subscriber and child is a pulsePush
+      // Parent is a pulsePull and child is a pulsePush
       queueAddChild(parent, child) {
-        this._dependencies.push([parent, child]);
+        // Check if the parent has already been built.
+        // We can safely ignore the case where the parent has been built but later became unpushable.
+        if (parent.isPushable()) {
+          this._rootDependencies.push([parent, child]);
+        } else {
+          this._dependencies.push([parent, child]);
+        }
       }
     }
 
@@ -152,14 +159,14 @@
       }
     }
 
-    // We separate this from Subscriber to allow for garbage collection.
+    // We separate this from pulsePull to allow for garbage collection.
     // All the strong references to this are from:
     // - Parent pulsePushes
-    // - External event listeners (via inputSubscriber)
+    // - External event listeners (via inputPulsePull)
     // - Children pulsePushes that only have one parent
     // This is dead when:
     //   ((its parents are dead) and (its external event listeners are dead))
-    //   or ((it has no children) and (its Subscriber is dead))
+    //   or ((it has no children) and (its pulsePull is dead))
     class PulsePush {
 
       // The constructor is only used in newPubSub.
@@ -172,12 +179,12 @@
         // Strong references. Children will only written to if one of their parents is.
         this._children = [];
         // Impure
-        // Called when there are no more children and the subscriber is dead.
-        // Called at most once, either called from this.removeChild or this.onSubscriberDeath.
+        // Called when there are no more children and the pulsePull is dead.
+        // Called at most once, either called from this.removeChild or this.onPulsePullDeath.
         // this.poll must never be called again after this._unsubscribe is called.
         this._unsubscribe = unsubscribe;
         // A condition to call this._unsubscribe in this.removeChild.
-        this._isSubscriberDead = false;
+        this._isPulsePullDead = false;
         this.isHot = false;
         this.priority = 0;
       }
@@ -221,19 +228,19 @@
         // TODO update numHotChildren
         const index = this._children.findIndex(child);
         that._children.splice(index, 1);
-        if (this._children.length === 0 && this.isSubscriberDead) {
+        if (this._children.length === 0 && this.isPulsePullDead) {
           this._unsubscribe();
         }
       }
 
       // Impure: this._unsubscribe
-      onSubscriberDeath() {
+      onPulsePullDeath() {
         if (this._children.length === 0) {
           this._unsubscribe();
         } else {
           // You only have to set this true if there are children,
           // because this variable is only read in removeChild.
-          this._isSubscriberDead = true;
+          this._isPulsePullDead = true;
         }
       }
     }
@@ -250,12 +257,12 @@
 
     // We separate this from pulsePush to allow for garbage collection.
     // When this dies, it means no more children can be added to its pulsePush instance.
-    class Subscriber {
+    class PulsePull {
 
       // Mutable: pulsePush
       // TODO confirm that this callback gets called.
       static _finalizers = new FinalizationRegistry(weakpulsePush =>
-        weakpulsePush.deref()?.onSubscriberDeath()
+        weakpulsePush.deref()?.onPulsePullDeath()
       );
 
       // The constructor is only used in newPubSub.
@@ -283,13 +290,13 @@
         if (parent === undefined) return never;
 
         // TODO test what "this" is
-        const [pulsePush, subscriber] = newPubSub(function*() {
+        const [pulsePush, pulsePull] = newPubSub(function*() {
           // yield parent.read() !== undefined;
           return f(yield parent.read());
         }, () => parent.removeChild(pulsePush));
 
         yield parent.queueAddChild(pulsePush);
-        return subscriber;
+        return pulsePull;
       }
 
       // Subscribe monad
@@ -297,14 +304,14 @@
         const parent = this._pulsePush.deref();
         if (parent === undefined) return never;
 
-        const [pulsePush, subscriber] = newPubSub(function*() {
+        const [pulsePush, pulsePull] = newPubSub(function*() {
           // value !== undefined
           const value = yield parent.read();
           return predicate(value) ? value : undefined;
         }, () => parent.removeChild(pulsePush));
 
         yield parent.queueAddChild(pulsePush);
-        return subscriber;
+        return pulsePull;
       }
 
       // Subscribe monad
@@ -313,7 +320,7 @@
         const weakA = this._pulsePush;
         const weakB = other._pulsePush;
 
-        const [pulsePush, subscriber] = newPubSub(function*() {
+        const [pulsePush, pulsePull] = newPubSub(function*() {
           const a = yield* readWeakPulsePush(weakA);
           const b = yield* readWeakPulsePush(weakB);
           if (a === undefined) return b;
@@ -326,7 +333,7 @@
 
         yield* this.queueAddChild(pulsePush);
         yield* other.queueAddChild(pulsePush);
-        return subscriber;
+        return pulsePull;
       }
 
       // TODO for the sake of recursion, don't access _pulsePush
@@ -343,8 +350,8 @@
     // or a strong reference if there's only one parent.
     const newPubSub = (poll, unsubscribe) => {
       const pulsePush = new pulsePush(poll, unsubscribe);
-      const subscriber = new Subscriber(pulsePush);
-      return [pulsePush, subscriber];
+      const pulsePull = new pulsePull(pulsePush);
+      return [pulsePush, pulsePull];
     };
 
     // Mutable: generator, context
@@ -377,14 +384,14 @@
     // Subscribe takes a handler function, attaches it as an event listener,
     // and returns an unsubscribe function.
     // The closures shouldn't keep pulsePull alive.
-    function* inputSubscriber(subscribe) {
-      const [pulsePush, subscriber] = newPubSub(function*() {
+    function* inputPulsePull(subscribe) {
+      const [pulsePush, pulsePull] = newPubSub(function*() {
         return yield pulsePush.read();
       }, subscribe(x => runPublishMonad(publish(pulsePush, x))));
-      return subscriber;
+      return pulsePull;
     }
 
-    const never = inputSubscriber(() => ());
+    const never = inputPulsePull(() => ());
 
     // TODO separate layers of abstraction
     const userDatabase = ({
