@@ -149,7 +149,7 @@
         this.priority = 0;
       }
 
-      // Publish monad
+      // Push monad
       *poll() {
         // value !== undefined because there's only one parent pulsePush
         const value = yield this._pulsePush.read();
@@ -189,7 +189,7 @@
         this.priority = 0;
       }
 
-      // Publish monad
+      // Push monad
       // Returns the children to be written to after this is written to.
       *poll() {
         const value = yield* this._poll();
@@ -201,15 +201,15 @@
         );
       }
 
-      // Publish monad
+      // Push monad
       // Instead of storing the current value as a variable,
-      // we store it in the monadic Publish context,
+      // we store it in the monadic Push context,
       // so we can easily delete every pulsePush's value once the changes get flushed.
       read() {
         return context => context.read(this);
       }
 
-      // Publish monad
+      // Push monad
       // Mutable: context
       write(value) {
         return context => context.write(this, value);
@@ -245,7 +245,7 @@
       }
     }
 
-    // Publish monad
+    // Push monad
     function* readWeakPulsePush(weak) {
       pulsePush = weak.deref();
       if (pulsePush === undefined) {
@@ -355,7 +355,7 @@
     };
 
     // Mutable: generator, context
-    const runPublishMonad = generator => {
+    const runPushMonad = generator => {
       let step = generator.next();
       const context = new PushContext();
       while (!step.done) {
@@ -364,7 +364,7 @@
       // TODO handle context._dependencies
     };
 
-    // Publish monad
+    // Push monad
     // Mutable: queue
     function* publish(pulsePush, value) {
       yield pulsePush.write(value);
@@ -387,7 +387,7 @@
     function* inputPulsePull(subscribe) {
       const [pulsePush, pulsePull] = newPubSub(function*() {
         return yield pulsePush.read();
-      }, subscribe(x => runPublishMonad(publish(pulsePush, x))));
+      }, subscribe(x => runPushMonad(publish(pulsePush, x))));
       return pulsePull;
     }
 
