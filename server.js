@@ -99,7 +99,7 @@ const handlersPromise = fs.promises
 const secureHeaders = (req, res, next) => {
   // This can be done with helmet.js, but I wanted to minimize dependencies for the learning experience
   res.setHeader("Referrer-Policy", "no-referrer");
-  res.setHeader("X-Frame-Options", "deny");
+  //res.setHeader("X-Frame-Options", "deny");
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Permitted-Cross-Domain-Policies", "none"); // TODO I still don't understand what this does
   res.setHeader("X-XSS-Protection", "0");
