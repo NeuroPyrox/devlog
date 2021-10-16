@@ -101,6 +101,29 @@
       }
     }
 
+    class PullContext {
+      constructor() {
+        this._dependencies = [];
+        this._rootDependencies = [];
+      }
+
+      // Parent is a pulsePull and child is a pulsePush
+      queueAddChild(parent, child) {
+        // Check if the parent has already been built.
+        // We can safely ignore the case where the parent has been built but later became unpushable.
+        if (parent.isPushable()) {
+          this._rootDependencies.push([parent, child]);
+        } else {
+          this._dependencies.push([parent, child]);
+        }
+      }
+      
+      // Should only be called from runPull
+      _flushChanges() {
+        // TODO
+      }
+    }
+
     class PushContext {
       constructor() {
         // We're able to use a weakMap without fear of losing access to the values
@@ -119,24 +142,6 @@
 
       queueAction(action) {
         this._actions.push(action);
-      }
-    }
-
-    class PullContext {
-      constructor() {
-        this._dependencies = [];
-        this._rootDependencies = [];
-      }
-
-      // Parent is a pulsePull and child is a pulsePush
-      queueAddChild(parent, child) {
-        // Check if the parent has already been built.
-        // We can safely ignore the case where the parent has been built but later became unpushable.
-        if (parent.isPushable()) {
-          this._rootDependencies.push([parent, child]);
-        } else {
-          this._dependencies.push([parent, child]);
-        }
       }
     }
 
@@ -360,6 +365,16 @@
       const pulsePull = new pulsePull(pulsePush);
       return [pulsePush, pulsePull];
     };
+    
+    // Mutable: generator, context
+    const runPull = generator => {
+      let step = generator.next();
+      const context = new PullContext();
+      while (!step.done) {
+        step = generator.next(step.value(context));
+      }
+      context._flushChanges();
+    }
 
     // Mutable: generator, context
     const runPushMonad = generator => {
@@ -368,7 +383,7 @@
       while (!step.done) {
         step = generator.next(step.value(context));
       }
-      // TODO handle context._dependencies
+      // TODO
     };
 
     // Push monad
@@ -782,6 +797,6 @@
       return start;
     }
 
-    runMoment(main())();
+    runPull(main())();
   </script>
 </html>
