@@ -357,6 +357,10 @@
         }
       }
     }
+    
+    class LoopEvent {
+      
+    }
 
     // Poll and unsubscribe holds weak references to parent pulsePushes,
     // or a strong reference if there's only one parent.
@@ -648,7 +652,7 @@
 
     // Moment monad
     function* main() {
-      const signupAttempts = loopEvent();
+      const signupAttempts = new LoopEvent();
 
       //div(yield* userTable(signupAttempts).var("userTable"), slot(loginDiv))
       const {
@@ -781,7 +785,7 @@
       const startPage = startEvents(p => (publishStartPage = p));
       const start = _ => publishStartPage(createLoginDiv());
 
-      const authPages = loopEvent();
+      const authPages = new LoopEvent();
       const appPages = authPages.merge(startPage);
 
       appPages.map(([appDiv, ,]) => {
