@@ -117,7 +117,7 @@
           this._dependencies.push([parent, child]);
         }
       }
-      
+
       // Should only be called from runPull
       _flushChanges() {
         // TODO
@@ -357,10 +357,8 @@
         }
       }
     }
-    
-    class LoopEvent {
-      
-    }
+
+    class LoopEvent {}
 
     // Poll and unsubscribe holds weak references to parent pulsePushes,
     // or a strong reference if there's only one parent.
@@ -369,7 +367,7 @@
       const pulsePull = new pulsePull(pulsePush);
       return [pulsePush, pulsePull];
     };
-    
+
     // Mutable: generator, context
     const runPull = generator => {
       let step = generator.next();
@@ -378,7 +376,7 @@
         step = generator.next(step.value(context));
       }
       context._flushChanges();
-    }
+    };
 
     // Mutable: generator, context
     const runPushMonad = generator => {
@@ -410,14 +408,17 @@
     // Subscribe takes a handler function, attaches it as an event listener,
     // and returns an unsubscribe function.
     // The closures shouldn't keep pulsePull alive.
-    function* inputPulsePull(subscribe) {
+    const inputPulsePull = subscribe => {
       const [pulsePush, pulsePull] = newPubSub(function*() {
         return yield pulsePush.read();
       }, subscribe(x => runPushMonad(publish(pulsePush, x))));
       return pulsePull;
-    }
+    };
 
     const never = inputPulsePull(() => {});
+
+    const getClicks = domNode =>
+      inputPulsePull(push => domNode.addEventListener("click", push));
 
     // TODO separate layers of abstraction
     const userDatabase = ({
