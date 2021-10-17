@@ -360,6 +360,7 @@
 
     class LoopEvent {}
 
+    // TODO replace this function
     // Poll and unsubscribe holds weak references to parent pulsePushes,
     // or a strong reference if there's only one parent.
     const newPubSub = (poll, unsubscribe) => {
@@ -378,6 +379,7 @@
       context._flushChanges();
     };
 
+    // TODO rename
     // Mutable: generator, context
     const runPushMonad = generator => {
       let step = generator.next();
@@ -402,17 +404,30 @@
         }
       }
     }
+    
+    class InputSink {
+      
+      // Impure: subscribe, runPushMonad
+      // Subscribe takes a push function, attaches it as an event listener,
+      // and returns an unsubscribe function.
+      // The closure shouldn't keep pulsePull alive, only pulsePush.
+      constructor(subscribe) {
+        // TODO check if it captures the right "this"
+        this._unsubscribe = subscribe(x => runPushMonad(publish(this, x)));
+      }
+    }
+    
+    class InputSource {
+      constructor(sink) {
+        // TODO check if sink gets GC'd
+        this._sink = new WeakRef(sink);
+      }
+    }
 
-    // Pull monad
-    // Impure: subscribe, runEvalPulses
-    // Subscribe takes a handler function, attaches it as an event listener,
-    // and returns an unsubscribe function.
-    // The closures shouldn't keep pulsePull alive.
+    // Impure: subscribe
     const inputPulsePull = subscribe => {
-      const [pulsePush, pulsePull] = newPubSub(function*() {
-        return yield pulsePush.read();
-      }, subscribe(x => runPushMonad(publish(pulsePush, x))));
-      return pulsePull;
+      const sink = new InputSink(subscribe);
+      return new InputSource(sink);
     };
 
     const never = inputPulsePull(() => {});
