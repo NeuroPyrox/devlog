@@ -32,7 +32,6 @@
   (json        /post-locations              .js)
   (json        /post-finder                 .js)
   (json        /get-may-days                .js)
-  (html        /login-v4                    .html)
   (html        /login-v3                    .html)
   (html        /login-v2                    .html)
   (html        /login-v1                    .html)
