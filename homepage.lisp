@@ -1,5 +1,4 @@
 (homepage
-  ("Login v4"                 "29 June 2021" "/login-v4")
   ("Login v3"                 "28 June 2021" "/login-v3")
   ("Login v2"                 "27 June 2021" "/login-v2")
   ("Login v1"                 "26 June 2021" "/login-v1")
