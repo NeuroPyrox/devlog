@@ -360,15 +360,6 @@
 
     class LoopEvent {}
 
-    // TODO replace this function
-    // Poll and unsubscribe holds weak references to parent pulsePushes,
-    // or a strong reference if there's only one parent.
-    const newPubSub = (poll, unsubscribe) => {
-      const pulsePush = new pulsePush(poll, unsubscribe);
-      const pulsePull = new pulsePull(pulsePush);
-      return [pulsePush, pulsePull];
-    };
-
     // Mutable: generator, context
     const runPull = generator => {
       let step = generator.next();
