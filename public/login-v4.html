@@ -434,6 +434,9 @@
 
     const getClicks = domNode =>
       inputPulsePull(push => domNode.addEventListener("click", push));
+    
+    // TODO replace with behavior
+    const getInputValues = domNode => () => domNode.value;
 
     // TODO separate layers of abstraction
     const userDatabase = ({
