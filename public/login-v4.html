@@ -103,18 +103,18 @@
 
     class PullContext {
       constructor() {
-        this._dependencies = [];
-        this._rootDependencies = [];
+        this._pulseGraphEdges = [];
+        this._pulseGraphRootEdges = [];
       }
 
-      // Parent is a pulsePull and child is a pulsePush
-      queueAddChild(parent, child) {
+      addPulseChild(parent, child) {
         // Check if the parent has already been built.
-        // We can safely ignore the case where the parent has been built but later became unpushable.
+        // The isPushable condition is more restrictive than necessary,
+        // but it's easier to check and has the same end result.
         if (parent.isPushable()) {
-          this._rootDependencies.push([parent, child]);
+          this._pulseGraphRootEdges.push([parent, child]);
         } else {
-          this._dependencies.push([parent, child]);
+          this._pulseGraphEdges.push([parent, child]);
         }
       }
 
@@ -167,7 +167,7 @@
     // We separate this from pulsePull to allow for garbage collection.
     // All the strong references to this are from:
     // - Parent pulsePushes
-    // - External event listeners (via inputPulsePull)
+    // - External event listeners (via inputPulse)
     // - Children pulsePushes that only have one parent
     // This is dead when:
     //   ((its parents are dead) and (its external event listeners are dead))
@@ -395,37 +395,55 @@
         }
       }
     }
-    
+
+    const undefinedSink = new WeakRef({});
+
     class InputSink {
-      
       // Impure: subscribe, runPushMonad
       // Subscribe takes a push function, attaches it as an event listener,
       // and returns an unsubscribe function.
-      // The closure shouldn't keep pulsePull alive, only pulsePush.
       constructor(subscribe) {
         // TODO check if it captures the right "this"
         this._unsubscribe = subscribe(x => runPushMonad(publish(this, x)));
       }
     }
-    
+
     class InputSource {
-      constructor(sink) {
+      constructor(subscribe) {
         // TODO check if sink gets GC'd
-        this._sink = new WeakRef(sink);
+        this._sink = new WeakRef(new InputSink(subscribe));
+      }
+
+      // Pull monad
+      *tag(getter) {
+        const result = new TagSource(getter);
+        yield addPulseChild(this, result);
+        return result;
       }
     }
 
+    class TagSource {
+      constructor(getter) {
+        this._sink = undefinedSink;
+      }
+    }
+
+    const addPulseChild = (parent, child) => context =>
+      context.addPulseChild(parent, child);
+
     // Impure: subscribe
-    const inputPulsePull = subscribe => {
-      const sink = new InputSink(subscribe);
-      return new InputSource(sink);
+    // We assume that it won't be pushed until the surrounding
+    // pull monad finishes. If this assumption turns out false,
+    // we can just defer subscriptions until the end of the monad.
+    const inputPulse = subscribe => {
+      return new InputSource(subscribe);
     };
 
-    const never = inputPulsePull(() => {});
+    const never = inputPulse(() => {});
 
     const getClicks = domNode =>
-      inputPulsePull(push => domNode.addEventListener("click", push));
-    
+      inputPulse(push => domNode.addEventListener("click", push));
+
     // TODO replace with behavior
     const getInputValues = domNode => () => domNode.value;
 
