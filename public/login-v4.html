@@ -413,19 +413,6 @@
         // TODO check if sink gets GC'd
         this._sink = new WeakRef(new InputSink(subscribe));
       }
-
-      // Pull monad
-      *tag(getter) {
-        const result = new TagSource(getter);
-        yield addPulseChild(this, result);
-        return result;
-      }
-      
-      *mapTag(getter, combine) {
-        const result = new MapTagSource(getter, combine);
-        yield addPulseChild(this, result);
-        return result;
-      }
     }
 
     class TagSource {
@@ -433,11 +420,25 @@
         this._sink = undefinedSink;
       }
     }
-    
+
     class MapTagSource {
       constructor(getter, combine) {
         this._sink = undefinedSink;
       }
+    }
+
+    // Pull monad
+    function* tag(pulse, latchGet) {
+      const result = new TagSource(getter);
+      yield addPulseChild(this, result);
+      return result;
+    }
+
+    // Pull monad
+    function* mapTag(pulse, latchGet, combine) {
+      const result = new MapTagSource(getter, combine);
+      yield addPulseChild(pulse, result);
+      return result;
     }
 
     const addPulseChild = (parent, child) => context =>
@@ -631,13 +632,20 @@
         )
       ).build();
 
-      const insertions = (yield* getClicks(insertButton)
-        .tag(getInputValues(usernameInsertInput)))
-        .mapTag(getInputValues(passwordInsertInput), (username, password) => ({
-          username,
-          password
-        }))
-        .filter(({ username, password }) => username !== "" && password !== "");
+      const insertions = yield* filter(
+        yield* mapTag(
+          yield* tag(
+            getClicks(insertButton),
+            getInputValues(usernameInsertInput)
+          ),
+          getInputValues(passwordInsertInput),
+          (username, password) => ({
+            username,
+            password
+          })
+        ),
+        ({ username, password }) => username !== "" && password !== ""
+      );
 
       const usernamesToRemove = loopEvent();
 
