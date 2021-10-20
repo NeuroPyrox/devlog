@@ -420,10 +420,22 @@
         yield addPulseChild(this, result);
         return result;
       }
+      
+      *mapTag(getter, combine) {
+        const result = new MapTagSource(getter, combine);
+        yield addPulseChild(this, result);
+        return result;
+      }
     }
 
     class TagSource {
       constructor(getter) {
+        this._sink = undefinedSink;
+      }
+    }
+    
+    class MapTagSource {
+      constructor(getter, combine) {
         this._sink = undefinedSink;
       }
     }
@@ -619,8 +631,8 @@
         )
       ).build();
 
-      const insertions = getClicks(insertButton)
-        .tag(getInputValues(usernameInsertInput))
+      const insertions = (yield* getClicks(insertButton)
+        .tag(getInputValues(usernameInsertInput)))
         .mapTag(getInputValues(passwordInsertInput), (username, password) => ({
           username,
           password
