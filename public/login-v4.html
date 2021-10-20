@@ -426,17 +426,29 @@
         this._sink = undefinedSink;
       }
     }
+    
+    class FilterSource {
+      constructor(predicate) {
+        this._sink = undefinedSink;
+      }
+    }
 
     // Pull monad
     function* tag(pulse, latchGet) {
-      const result = new TagSource(getter);
+      const result = new TagSource(latchGet);
       yield addPulseChild(this, result);
       return result;
     }
 
     // Pull monad
     function* mapTag(pulse, latchGet, combine) {
-      const result = new MapTagSource(getter, combine);
+      const result = new MapTagSource(latchGet, combine);
+      yield addPulseChild(pulse, result);
+      return result;
+    }
+    
+    function* filter(pulse, predicate) {
+      const result = new MapTagSource(predicate);
       yield addPulseChild(pulse, result);
       return result;
     }
