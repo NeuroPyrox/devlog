@@ -419,42 +419,38 @@
         // TODO check if sink gets GC'd
         this._sink = new WeakRef(new InputSink(subscribe));
       }
-    }
-
-    class TagSource {
-      constructor(getter) {
-        this._sink = undefinedSink;
-      }
-    }
-
-    class MapTagSource {
-      constructor(getter, combine) {
-        this._sink = undefinedSink;
+      
+      isPushable() {
+        return true;
       }
     }
     
-    class FilterSource {
-      constructor(predicate) {
+    class SingleParentSource {
+      constructor() {
         this._sink = undefinedSink;
+      }
+      
+      isPushable() {
+        return this._sink !== undefinedSink;
       }
     }
 
     // Pull monad
     function* tag(pulse, latchGet) {
-      const result = new TagSource(latchGet);
-      yield addPulseChild(this, result);
+      const result = new SingleParentSource(latchGet);
+      yield addPulseChild(pulse, result);
       return result;
     }
 
     // Pull monad
     function* mapTag(pulse, latchGet, combine) {
-      const result = new MapTagSource(latchGet, combine);
+      const result = new SingleParentSource(latchGet, combine);
       yield addPulseChild(pulse, result);
       return result;
     }
     
     function* filter(pulse, predicate) {
-      const result = new MapTagSource(predicate);
+      const result = new SingleParentSource(predicate);
       yield addPulseChild(pulse, result);
       return result;
     }
