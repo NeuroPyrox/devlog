@@ -358,7 +358,11 @@
       }
     }
 
-    class LoopEvent {}
+    class LoopEvent {
+      isPushable() {
+        return false;
+      }
+    }
 
     // Mutable: generator, context
     const runPull = generator => {
@@ -399,7 +403,6 @@
     const undefinedSink = new WeakRef({});
 
     class InputSink {
-      
       // Impure: subscribe, runPushMonad
       // Subscribe takes a push function, attaches it as an event listener,
       // and returns an unsubscribe function.
@@ -413,26 +416,39 @@
     }
 
     class InputSource {
-      
       // Impure: subscribe
       constructor(subscribe) {
         // TODO check if sink gets GC'd
         this._sink = new WeakRef(new InputSink(subscribe));
       }
-      
+
       isPushable() {
         return true;
       }
     }
-    
+
     class SingleParentSource {
       constructor() {
         this._sink = undefinedSink;
       }
-      
+
       isPushable() {
         return this._sink !== undefinedSink;
       }
+    }
+
+    class DoubleParentSource {
+      constructor() {
+        this._sink = undefinedSink;
+      }
+
+      isPushable() {
+        return this._sink !== undefinedSink;
+      }
+
+      parentSlotA() {}
+
+      parentSlotB() {}
     }
 
     // Pull monad
@@ -448,18 +464,26 @@
       yield addPulseChild(pulse, result);
       return result;
     }
-    
+
     // Pull monad
     function* map(pulse, f) {
       const result = new SingleParentSource();
       yield addPulseChild(pulse, result);
       return result;
     }
-    
+
     // Pull monad
     function* filter(pulse, predicate) {
       const result = new SingleParentSource();
       yield addPulseChild(pulse, result);
+      return result;
+    }
+
+    // Pull monad
+    function* merge(pulseA, pulseB) {
+      const result = new DoubleParentSource();
+      yield addPulseChild(pulseA, result.parentSlotA());
+      yield addPulseChild(pulseB, result.parentSlotB());
       return result;
     }
 
@@ -497,7 +521,8 @@
       const findUsername = username =>
         protoFindUsername(0, internalTable.length, username);
 
-      let signups = yield* filter(yield* map(signupAttempts, user => {
+      let signups = yield* filter(
+        yield* map(signupAttempts, user => {
           const index = findUsername(user.username);
           const foundUser = internalTable[index];
           if (foundUser === undefined || foundUser.username !== user.username) {
@@ -505,9 +530,11 @@
             return [index, user];
           }
           return null;
-        }), x => x !== null);
+        }),
+        x => x !== null
+      );
 
-      insertions = insertions.map(({ username, password }) => {
+      insertions = yield* map(insertions, ({ username, password }) => {
         const index = findUsername(username);
         const foundUser = internalTable[index];
         if (foundUser === undefined || foundUser.username !== username) {
@@ -518,13 +545,16 @@
         }
         return [];
       });
-      const createdUsers = insertions
-        .filter(x => x[0] === "createUser")
-        .map(([, index, user]) => {
-          internalTable.splice(index, 0, user);
-          return [index, user];
-        })
-        .merge(signups);
+      const createdUsers = yield* merge(
+        yield* map(
+          yield* filter(insertions, x => x[0] === "createUser"),
+          ([, index, user]) => {
+            internalTable.splice(index, 0, user);
+            return [index, user];
+          }
+        ),
+        signups
+      );
       const passwordChanges = insertions
         .filter(x => x[0] === "changePassword")
         .map(([, index, password]) => {
@@ -561,7 +591,7 @@
         tryLogins,
         signups
       };
-    };
+    }
 
     const nodeBuilder = (constructor, modifiers) => {
       const fromImpureBuilder = impureBuild => {
