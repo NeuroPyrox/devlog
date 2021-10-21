@@ -399,9 +399,13 @@
     const undefinedSink = new WeakRef({});
 
     class InputSink {
+      
       // Impure: subscribe, runPushMonad
       // Subscribe takes a push function, attaches it as an event listener,
       // and returns an unsubscribe function.
+      // We assume that this won't be pushed until the surrounding
+      // pull monad finishes. If this assumption turns out false,
+      // we can just defer subscriptions until the end of the monad.
       constructor(subscribe) {
         // TODO check if it captures the right "this"
         this._unsubscribe = subscribe(x => runPushMonad(publish(this, x)));
@@ -409,6 +413,8 @@
     }
 
     class InputSource {
+      
+      // Impure: subscribe
       constructor(subscribe) {
         // TODO check if sink gets GC'd
         this._sink = new WeakRef(new InputSink(subscribe));
@@ -456,18 +462,10 @@
     const addPulseChild = (parent, child) => context =>
       context.addPulseChild(parent, child);
 
-    // Impure: subscribe
-    // We assume that it won't be pushed until the surrounding
-    // pull monad finishes. If this assumption turns out false,
-    // we can just defer subscriptions until the end of the monad.
-    const inputPulse = subscribe => {
-      return new InputSource(subscribe);
-    };
-
-    const never = inputPulse(() => {});
+    const never = new InputSource(() => {});
 
     const getClicks = domNode =>
-      inputPulse(push => domNode.addEventListener("click", push));
+      new InputSource(push => domNode.addEventListener("click", push));
 
     // TODO replace with behavior
     const getInputValues = domNode => () => domNode.value;
