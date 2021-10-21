@@ -437,20 +437,28 @@
 
     // Pull monad
     function* tag(pulse, latchGet) {
-      const result = new SingleParentSource(latchGet);
+      const result = new SingleParentSource();
       yield addPulseChild(pulse, result);
       return result;
     }
 
     // Pull monad
     function* mapTag(pulse, latchGet, combine) {
-      const result = new SingleParentSource(latchGet, combine);
+      const result = new SingleParentSource();
       yield addPulseChild(pulse, result);
       return result;
     }
     
+    // Pull monad
+    function* map(pulse, f) {
+      const result = new SingleParentSource();
+      yield addPulseChild(pulse, result);
+      return result;
+    }
+    
+    // Pull monad
     function* filter(pulse, predicate) {
-      const result = new SingleParentSource(predicate);
+      const result = new SingleParentSource();
       yield addPulseChild(pulse, result);
       return result;
     }
@@ -466,13 +474,13 @@
     // TODO replace with behavior
     const getInputValues = domNode => () => domNode.value;
 
-    // TODO separate layers of abstraction
-    const userDatabase = ({
+    // TODO use output pulses instead of making the pulse lambdas impure
+    function* userDatabase({
       insertions,
       usernamesToRemove,
       clears,
       signupAttempts
-    }) => {
+    }) {
       let internalTable = [];
 
       const protoFindUsername = (start, end, username) => {
@@ -489,8 +497,7 @@
       const findUsername = username =>
         protoFindUsername(0, internalTable.length, username);
 
-      let signups = signupAttempts
-        .map(user => {
+      let signups = yield* filter(yield* map(signupAttempts, user => {
           const index = findUsername(user.username);
           const foundUser = internalTable[index];
           if (foundUser === undefined || foundUser.username !== user.username) {
@@ -498,8 +505,7 @@
             return [index, user];
           }
           return null;
-        })
-        .filter(x => x !== null);
+        }), x => x !== null);
 
       insertions = insertions.map(({ username, password }) => {
         const index = findUsername(username);
@@ -653,7 +659,7 @@
         ({ username, password }) => username !== "" && password !== ""
       );
 
-      const usernamesToRemove = loopEvent();
+      const usernamesToRemove = new LoopEvent();
 
       const {
         createdUsers,
@@ -661,7 +667,7 @@
         removedUsers,
         clears,
         tryLogins
-      } = userDatabase({
+      } = yield* userDatabase({
         insertions,
         usernamesToRemove,
         clears: getClicks(clearButton),
