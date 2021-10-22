@@ -739,8 +739,8 @@
         clears: getClicks(clearButton),
         signupAttempts
       });
-
-      yield* map(insertions, _ => {
+      
+      new OutputSource(insertions, () => {
         usernameInsertInput.value = "";
         passwordInsertInput.value = "";
       });
@@ -764,15 +764,15 @@
           return getClicks(xButton).map(_ => user.username);
         })
       );
-
-      passwordChanges.map(({ index, password }) => {
+      
+      new OutputSource(passwordChanges, ({ index, password }) => {
         const rowElement = userTableBody.children[index];
         rowElement.children[1].textContent = password;
       });
+      
+      new OutputSource(removedUsers, ({ index }) => userTableBody.children[index].remove());
 
-      removedUsers.map(({ index }) => userTableBody.children[index].remove());
-
-      clears.map(_ => (userTableBody.innerHTML = ""));
+      new OutputSource(clears, _ => (userTableBody.innerHTML = ""));
 
       return { userTableDiv, passwordChanges, removedUsers, clears, tryLogins };
     }
