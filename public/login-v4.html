@@ -358,12 +358,6 @@
       }
     }
 
-    class LoopEvent {
-      isPushable() {
-        return false;
-      }
-    }
-
     // Mutable: generator, context
     const runPull = generator => {
       let step = generator.next();
@@ -433,6 +427,28 @@
       }
     }
 
+    class LoopPulseSource {
+      constructor() {
+        this._pulse = null;
+      }
+      
+      // Relies on the unpushable check in this.loop.
+      // Otherwise, we'd have to return true until this.loop was called.
+      isPushable() {
+        return false;
+      }
+      
+      loop(pulse) {
+        if(this._pulse !== null) {
+          throw new Error("Can't call LoopPulseSource.loop more than once!");
+        }
+        if(pulse.isPushable()) {
+          throw new Error("Can't use a pulse that's already been built!");
+        }
+        this._pulse = pulse;
+      }
+    }
+
     class SingleParentSource extends PulseSource {
       constructor() {
         super(undefinedSink);
@@ -449,6 +465,8 @@
       parentSlotB() {}
     }
 
+    const never = {isPushable: () => false};
+    
     // Pull monad
     function* tag(pulse, latchGet) {
       const result = new SingleParentSource();
@@ -494,8 +512,6 @@
     const addPulseChild = (parent, child) => context =>
       context.addPulseChild(parent, child);
 
-    const never = new InputSource(() => {});
-
     const getClicks = domNode =>
       new InputSource(push => domNode.addEventListener("click", push));
 
@@ -505,7 +521,7 @@
     // TODO optimize with binary tree
     // TODO use cached moments
     function* mergeBind(pulse, f) {
-      const result = new LoopEvent();
+      const result = new LoopPulseSource();
       result.loop(
         yield* switchE(yield* map(result, mergeMe => merge(f(mergeMe), result)))
       );
@@ -703,7 +719,7 @@
         ({ username, password }) => username !== "" && password !== ""
       );
 
-      const usernamesToRemove = new LoopEvent();
+      const usernamesToRemove = new LoopPulseSource();
 
       const {
         createdUsers,
@@ -756,7 +772,7 @@
 
     // Moment monad
     function* main() {
-      const signupAttempts = new LoopEvent();
+      const signupAttempts = new LoopPulseSource();
 
       //div(yield* userTable(signupAttempts).var("userTable"), slot(loginDiv))
       const {
@@ -889,7 +905,7 @@
       const startPage = startEvents(p => (publishStartPage = p));
       const start = _ => publishStartPage(createLoginDiv());
 
-      const authPages = new LoopEvent();
+      const authPages = new LoopPulseSource();
       const appPages = authPages.merge(startPage);
 
       appPages.map(([appDiv, ,]) => {
