@@ -413,19 +413,19 @@
       }
     }
 
-    const undefinedSink = {deref: () => undefined};
-    
+    const undefinedSink = { deref: () => undefined };
+
     class PulseSource {
       constructor(sink) {
         this._sink = sink;
       }
-      
+
       isPushable() {
         return this._sink.deref() !== undefined;
       }
     }
 
-    class InputSource {
+    class InputSource extends PulseSource {
       // Impure: subscribe
       constructor(subscribe) {
         // TODO check if sink gets GC'd
@@ -433,13 +433,13 @@
       }
     }
 
-    class SingleParentSource {
+    class SingleParentSource extends PulseSource {
       constructor() {
         super(undefinedSink);
       }
     }
 
-    class DoubleParentSource {
+    class DoubleParentSource extends PulseSource {
       constructor() {
         super(undefinedSink);
       }
@@ -484,7 +484,7 @@
       yield addPulseChild(pulseB, result.parentSlotB());
       return result;
     }
-    
+
     // Pull monad
     function* switchE(pulseOfPulse) {
       // TODO
@@ -506,10 +506,12 @@
     // TODO use cached moments
     function* mergeBind(pulse, f) {
       const result = new LoopEvent();
-      result.loop(yield* switchE(yield* map(result, mergeMe => merge(f(mergeMe), result))));
+      result.loop(
+        yield* switchE(yield* map(result, mergeMe => merge(f(mergeMe), result)))
+      );
       return result;
     }
-    
+
     // TODO use output pulses instead of making the pulse lambdas impure
     function* userDatabase({
       insertions,
@@ -567,12 +569,15 @@
         ),
         signups
       );
-      const passwordChanges = yield* map(yield* filter(insertions, x => x[0] === "changePassword"), ([, index, password]) => {
+      const passwordChanges = yield* map(
+        yield* filter(insertions, x => x[0] === "changePassword"),
+        ([, index, password]) => {
           const user = internalTable[index];
           user.password = password;
           const { username } = user;
           return { index, username, password };
-        });
+        }
+      );
       const removedUsers = yield* map(usernamesToRemove, username => {
         const index = findUsername(username);
         internalTable.splice(index, 1);
@@ -712,7 +717,7 @@
         clears: getClicks(clearButton),
         signupAttempts
       });
-      
+
       yield* map(insertions, _ => {
         usernameInsertInput.value = "";
         passwordInsertInput.value = "";
