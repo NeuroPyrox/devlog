@@ -400,8 +400,6 @@
       }
     }
 
-    const undefinedSink = new WeakRef({});
-
     class InputSink {
       // Impure: subscribe, runPushMonad
       // Subscribe takes a push function, attaches it as an event listener,
@@ -415,35 +413,35 @@
       }
     }
 
+    const undefinedSink = {deref: () => undefined};
+    
+    class PulseSource {
+      constructor(sink) {
+        this._sink = sink;
+      }
+      
+      isPushable() {
+        return this._sink.deref() !== undefined;
+      }
+    }
+
     class InputSource {
       // Impure: subscribe
       constructor(subscribe) {
         // TODO check if sink gets GC'd
-        this._sink = new WeakRef(new InputSink(subscribe));
-      }
-
-      isPushable() {
-        return true;
+        super(new WeakRef(new InputSink(subscribe)));
       }
     }
 
     class SingleParentSource {
       constructor() {
-        this._sink = undefinedSink;
-      }
-
-      isPushable() {
-        return this._sink !== undefinedSink;
+        super(undefinedSink);
       }
     }
 
     class DoubleParentSource {
       constructor() {
-        this._sink = undefinedSink;
-      }
-
-      isPushable() {
-        return this._sink !== undefinedSink;
+        super(undefinedSink);
       }
 
       parentSlotA() {}
