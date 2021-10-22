@@ -907,23 +907,23 @@
           never
         ];
       };
-
+      
       let publishStartPage;
-      const startPage = startEvents(p => (publishStartPage = p));
+      const startPage = new InputSource(p => (publishStartPage = p));
       const start = _ => publishStartPage(createLoginDiv());
 
       const authPages = new LoopPulseSource();
-      const appPages = authPages.merge(startPage);
-
-      appPages.map(([appDiv, ,]) => {
+      const appPages = yield* merge(authPages, startPage);
+      
+      new OutputSource(appPages, ([appDiv, ,]) => {
         document.body.lastElementChild.remove();
         document.body.appendChild(appDiv);
       });
 
       signupAttempts.loop(
-        appPages.bind(([, , signupAttempts]) => signupAttempts)
+        yield* switchE(yield* map(appPages, ([, , signupAttempts]) => signupAttempts))
       );
-      authPages.loop(appPages.bind(([, nextAuthPage]) => nextAuthPage));
+      authPages.loop(yield* switchE(yield* map(appPages, ([, nextAuthPage]) => nextAuthPage)));
 
       return start;
     }
