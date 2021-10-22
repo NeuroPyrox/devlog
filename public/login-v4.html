@@ -486,6 +486,12 @@
       yield addPulseChild(pulseB, result.parentSlotB());
       return result;
     }
+    
+    // Pull monad
+    function* switchE(pulseOfPulse) {
+      // TODO
+      return never;
+    }
 
     const addPulseChild = (parent, child) => context =>
       context.addPulseChild(parent, child);
@@ -498,6 +504,14 @@
     // TODO replace with behavior
     const getInputValues = domNode => () => domNode.value;
 
+    // TODO optimize with binary tree
+    // TODO use cached moments
+    function* mergeBind(pulse, f) {
+      const result = new LoopEvent();
+      result.loop(yield* switchE(yield* map(result, mergeMe => merge(f(mergeMe), result))));
+      return result;
+    }
+    
     // TODO use output pulses instead of making the pulse lambdas impure
     function* userDatabase({
       insertions,
@@ -707,7 +721,7 @@
       });
 
       usernamesToRemove.loop(
-        createdUsers.mergeBind(([index, user]) => {
+        yield* mergeBind(createdUsers, ([index, user]) => {
           const { root: rowElement, xButton } = tr(
             td.textContent(user.username),
             td.textContent(user.password),
