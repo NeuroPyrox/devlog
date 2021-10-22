@@ -145,25 +145,6 @@
       }
     }
 
-    class Output {
-      static isHot = true;
-
-      constructor(pulsePush, makeAction) {
-        this._pulsePush = pulsePush;
-        this._makeAction = makeAction;
-        this.priority = 0;
-      }
-
-      // Push monad
-      *poll() {
-        // value !== undefined because there's only one parent pulsePush
-        const value = yield this._pulsePush.read();
-        // Mutable: context
-        yield context => context.queueAction(this._makeAction(value));
-        return [];
-      }
-    }
-
     // We separate this from pulsePull to allow for garbage collection.
     // All the strong references to this are from:
     // - Parent pulsePushes
@@ -427,28 +408,6 @@
       }
     }
 
-    class LoopPulseSource {
-      constructor() {
-        this._pulse = null;
-      }
-      
-      // Relies on the unpushable check in this.loop.
-      // Otherwise, we'd have to return true until this.loop was called.
-      isPushable() {
-        return false;
-      }
-      
-      loop(pulse) {
-        if(this._pulse !== null) {
-          throw new Error("Can't call LoopPulseSource.loop more than once!");
-        }
-        if(pulse.isPushable()) {
-          throw new Error("Can't use a pulse that's already been built!");
-        }
-        this._pulse = pulse;
-      }
-    }
-
     class SingleParentSource extends PulseSource {
       constructor() {
         super(undefinedSink);
@@ -465,8 +424,49 @@
       parentSlotB() {}
     }
 
-    const never = {isPushable: () => false};
-    
+    class OutputSource {
+      static isHot = true;
+
+      constructor(pulseSource, makeAction) {
+        this._pulseSource = pulseSource;
+        this._makeAction = makeAction;
+        this.priority = 0;
+      }
+
+      // Push monad
+      *poll() {
+        // value !== undefined because there's only one parent pulseSource
+        const value = yield this._pulseSource.read();
+        // Mutable: context
+        yield context => context.queueAction(this._makeAction(value));
+        return [];
+      }
+    }
+
+    class LoopPulseSource {
+      constructor() {
+        this._pulse = null;
+      }
+
+      // Relies on the unpushable check in this.loop.
+      // Otherwise, we'd have to return true until this.loop was called.
+      isPushable() {
+        return false;
+      }
+
+      loop(pulse) {
+        if (this._pulse !== null) {
+          throw new Error("Can't call LoopPulseSource.loop more than once!");
+        }
+        if (pulse.isPushable()) {
+          throw new Error("Can't use a pulse that's already been built!");
+        }
+        this._pulse = pulse;
+      }
+    }
+
+    const never = { isPushable: () => false };
+
     // Pull monad
     function* tag(pulse, latchGet) {
       const result = new SingleParentSource();
@@ -528,7 +528,6 @@
       return result;
     }
 
-    // TODO use output pulses instead of making the pulse lambdas impure
     function* userDatabase({
       insertions,
       usernamesToRemove,
@@ -556,12 +555,14 @@
           const index = findUsername(user.username);
           const foundUser = internalTable[index];
           if (foundUser === undefined || foundUser.username !== user.username) {
-            internalTable.splice(index, 0, user);
             return [index, user];
           }
           return null;
         }),
         x => x !== null
+      );
+      new OutputSource(signups, ([index, user]) =>
+        internalTable.splice(index, 0, user)
       );
 
       insertions = yield* map(insertions, ({ username, password }) => {
@@ -575,34 +576,39 @@
         }
         return [];
       });
-      const createdUsers = yield* merge(
-        yield* map(
-          yield* filter(insertions, x => x[0] === "createUser"),
-          ([, index, user]) => {
-            internalTable.splice(index, 0, user);
-            return [index, user];
-          }
-        ),
-        signups
+      const createUserInsertions = yield* map(
+        yield* filter(insertions, x => x[0] === "createUser"),
+        ([, index, user]) => [index, user]
+      );
+      new OutputSource(createUserInsertions, ([index, user]) => {
+        internalTable.splice(index, 0, user);
+      });
+      const createdUsers = yield* merge(createUserInsertions, signups);
+      const changePasswordInsertions = yield* filter(
+        insertions,
+        x => x[0] === "changePassword"
       );
       const passwordChanges = yield* map(
-        yield* filter(insertions, x => x[0] === "changePassword"),
-        ([, index, password]) => {
-          const user = internalTable[index];
-          user.password = password;
-          const { username } = user;
-          return { index, username, password };
-        }
+        changePasswordInsertions,
+        ([, index, password]) => ({
+          index,
+          username: internalTable[index].username,
+          password
+        })
       );
-      const removedUsers = yield* map(usernamesToRemove, username => {
-        const index = findUsername(username);
-        internalTable.splice(index, 1);
-        return { index, username };
-      });
+      new OutputSource(
+        passwordChanges,
+        ({ index, password }) => (internalTable[index].password = password)
+      );
+      const removedUsers = yield* map(usernamesToRemove, username => ({
+        index: findUsername(username),
+        username
+      }));
+      new OutputSource(removedUsers, ({ index }) =>
+        internalTable.splice(index, 1)
+      );
       clears = yield* filter(clears, _ => internalTable.length !== 0);
-      yield* map(clears, _ => (internalTable = []));
-
-      yield* map(signups, ([, { username }]) => username);
+      new OutputSource(clears, _ => (internalTable = []));
 
       const tryLogins = stream =>
         stream.map(({ username, password }) => {
@@ -739,6 +745,7 @@
         passwordInsertInput.value = "";
       });
 
+      // TODO make pure
       usernamesToRemove.loop(
         yield* mergeBind(createdUsers, ([index, user]) => {
           const { root: rowElement, xButton } = tr(
