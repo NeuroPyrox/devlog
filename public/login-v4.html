@@ -101,6 +101,19 @@
       }
     }
 
+    const weakMapFromEdges = edges => {
+      const graph = new WeakMap();
+      for(const [parent, child] of edges) {
+        const children = graph.get(parent);
+        if (children === undefined) {
+          graph.set(parent, [child]);
+        } else {
+          children.push(child);
+        }
+      }
+      return graph;
+    }
+    
     class PullContext {
       constructor() {
         this._pulseGraphEdges = [];
@@ -120,6 +133,7 @@
 
       // Should only be called from runPull
       _flushChanges() {
+        const graph = weakMapFromEdges(this._pulseGraphEdges.map(([parent, child]) => [parent.getRecursiveSelf(), child.getRecursiveSelf()]));
         // TODO
       }
     }
