@@ -103,7 +103,7 @@
 
     const weakMapFromEdges = edges => {
       const graph = new WeakMap();
-      for(const [parent, child] of edges) {
+      for (const [parent, child] of edges) {
         const children = graph.get(parent);
         if (children === undefined) {
           graph.set(parent, [child]);
@@ -112,28 +112,38 @@
         }
       }
       return graph;
-    }
-    
+    };
+
     class PullContext {
       constructor() {
         this._pulseGraphEdges = [];
         this._pulseGraphRootEdges = [];
       }
 
-      addPulseChild(parent, child) {
+      // The parentSlot is a wrapper around the child
+      // that specifies the index of the child's parent.
+      // When you get a pulse's children, the order doesn't matter,
+      // but when you get its parents, the order does matter.
+      addPulseGraphEdge(parent, parentSlot) {
         // Check if the parent has already been built.
         // The isPushable condition is more restrictive than necessary,
         // but it's easier to check and has the same end result.
         if (parent.isPushable()) {
-          this._pulseGraphRootEdges.push([parent, child]);
+          this._pulseGraphRootEdges.push([parent, parentSlot]);
         } else {
-          this._pulseGraphEdges.push([parent, child]);
+          this._pulseGraphEdges.push([parent, parentSlot]);
         }
       }
 
       // Should only be called from runPull
       _flushChanges() {
-        const graph = weakMapFromEdges(this._pulseGraphEdges.map(([parent, child]) => [parent.getRecursiveSelf(), child.getRecursiveSelf()]));
+        // [parent.getPulseSource()] is used for [LoopPulseSource].
+        const graph = weakMapFromEdges(
+          this._pulseGraphEdges.map(([parent, parentSlot]) => [
+            parent.getPulseSource(),
+            parentSlot
+          ])
+        );
         // TODO
       }
     }
@@ -409,6 +419,10 @@
         this._sink = sink;
       }
 
+      getPulseSource() {
+        return this;
+      }
+
       isPushable() {
         return this._sink.deref() !== undefined;
       }
@@ -432,10 +446,18 @@
       constructor() {
         super(undefinedSink);
       }
+    }
 
-      parentSlotA() {}
+    class ParentSlotA {
+      constructor(doubleParentSource) {
+        this._source = doubleParentSource;
+      }
+    }
 
-      parentSlotB() {}
+    class ParentSlotB {
+      constructor(doubleParentSource) {
+        this._source = doubleParentSource;
+      }
     }
 
     class OutputSource {
@@ -445,6 +467,10 @@
         this._pulseSource = pulseSource;
         this._makeAction = makeAction;
         this.priority = 0;
+      }
+
+      getPulseSource() {
+        return this;
       }
 
       // Push monad
@@ -462,6 +488,13 @@
         this._pulse = null;
       }
 
+      getPulseSource() {
+        if (this._pulse === null) {
+          throw new Error("Must call [loop] for each [LoopPulseSource]!");
+        }
+        return this._pulse;
+      }
+
       // Relies on the unpushable check in this.loop.
       // Otherwise, we'd have to return true until this.loop was called.
       isPushable() {
@@ -470,7 +503,7 @@
 
       loop(pulse) {
         if (this._pulse !== null) {
-          throw new Error("Can't call LoopPulseSource.loop more than once!");
+          throw new Error("Can't call [LoopPulseSource.loop] more than once!");
         }
         if (pulse.isPushable()) {
           throw new Error("Can't use a pulse that's already been built!");
@@ -484,36 +517,36 @@
     // Pull monad
     function* tag(pulse, latchGet) {
       const result = new SingleParentSource();
-      yield addPulseChild(pulse, result);
+      yield addPulseGraphEdge(pulse, result);
       return result;
     }
 
     // Pull monad
     function* mapTag(pulse, latchGet, combine) {
       const result = new SingleParentSource();
-      yield addPulseChild(pulse, result);
+      yield addPulseGraphEdge(pulse, result);
       return result;
     }
 
     // Pull monad
     function* map(pulse, f) {
       const result = new SingleParentSource();
-      yield addPulseChild(pulse, result);
+      yield addPulseGraphEdge(pulse, result);
       return result;
     }
 
     // Pull monad
     function* filter(pulse, predicate) {
       const result = new SingleParentSource();
-      yield addPulseChild(pulse, result);
+      yield addPulseGraphEdge(pulse, result);
       return result;
     }
 
     // Pull monad
     function* merge(pulseA, pulseB) {
       const result = new DoubleParentSource();
-      yield addPulseChild(pulseA, result.parentSlotA());
-      yield addPulseChild(pulseB, result.parentSlotB());
+      yield addPulseGraphEdge(pulseA, new ParentSlotA(result));
+      yield addPulseGraphEdge(pulseB, new ParentSlotB(result));
       return result;
     }
 
@@ -523,8 +556,8 @@
       return never;
     }
 
-    const addPulseChild = (parent, child) => context =>
-      context.addPulseChild(parent, child);
+    const addPulseGraphEdge = (parent, child) => context =>
+      context.addPulseGraphEdge(parent, child);
 
     const getClicks = domNode =>
       new InputSource(push => domNode.addEventListener("click", push));
@@ -753,7 +786,7 @@
         clears: getClicks(clearButton),
         signupAttempts
       });
-      
+
       new OutputSource(insertions, () => {
         usernameInsertInput.value = "";
         passwordInsertInput.value = "";
@@ -778,13 +811,15 @@
           return getClicks(xButton).map(_ => user.username);
         })
       );
-      
+
       new OutputSource(passwordChanges, ({ index, password }) => {
         const rowElement = userTableBody.children[index];
         rowElement.children[1].textContent = password;
       });
-      
-      new OutputSource(removedUsers, ({ index }) => userTableBody.children[index].remove());
+
+      new OutputSource(removedUsers, ({ index }) =>
+        userTableBody.children[index].remove()
+      );
 
       new OutputSource(clears, _ => (userTableBody.innerHTML = ""));
 
@@ -921,23 +956,27 @@
           never
         ];
       };
-      
+
       let publishStartPage;
       const startPage = new InputSource(p => (publishStartPage = p));
       const start = _ => publishStartPage(createLoginDiv());
 
       const authPages = new LoopPulseSource();
       const appPages = yield* merge(authPages, startPage);
-      
+
       new OutputSource(appPages, ([appDiv, ,]) => {
         document.body.lastElementChild.remove();
         document.body.appendChild(appDiv);
       });
 
       signupAttempts.loop(
-        yield* switchE(yield* map(appPages, ([, , signupAttempts]) => signupAttempts))
+        yield* switchE(
+          yield* map(appPages, ([, , signupAttempts]) => signupAttempts)
+        )
       );
-      authPages.loop(yield* switchE(yield* map(appPages, ([, nextAuthPage]) => nextAuthPage)));
+      authPages.loop(
+        yield* switchE(yield* map(appPages, ([, nextAuthPage]) => nextAuthPage))
+      );
 
       return start;
     }
