@@ -149,12 +149,13 @@
         const visit = parent => {
           const parentSlots = graph.get(parent) ?? [];
           for (const parentSlot of parentSlots) {
-            // This is a rare case where checking the class is simpler than polymorphism.
+            // A rare case where checking the class is simpler than polymorphism.
             if (parentSlot.constructor === SingleParentSource) {
-              // Since there's only one parent, you don't have to spend any overhead
-              // checking if it has already been visited.
-              // Notice [const child = parentSlot.getPulseSource()] isn't necessary,
+              // This branch is redundant, but it's included as a performance optimization.
+              // It's unnecessary to check if a [SingleParentSource] has been visited.
+              // Notice [const child = parentSlot.getPulseSource()] isn't necessary either,
               // because then [child === parentSlot].
+              // TODO test the performance of including this branch.
               visit(parentSlot);
               sortedEdges.push([parent, parentSlot]);
               continue;
