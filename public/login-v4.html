@@ -123,11 +123,12 @@
       // The [parentSlot] is a wrapper around the child,
       // and you get the child via [parentSlot.getPulseSource()].
       addPulseGraphEdge(parent, parentSlot) {
-        // Check if the parent has already been built.
-        // The isPushable condition is more restrictive than necessary,
-        // but it's easier to check and has the same end result.
-        if (parent.isPushable()) {
-          this._pulseGraphRootEdges.push([parent, parentSlot]);
+        if (parent.isBuilt()) {
+          // This inner condition is a performance optimization.
+          // TODO profile.
+          if (parent.isPushable()) {
+            this._pulseGraphRootEdges.push([parent, parentSlot]);
+          }
         } else {
           this._pulseGraphEdges.push([parent, parentSlot]);
         }
@@ -441,39 +442,63 @@
       }
     }
 
-    const undefinedSink = { deref: () => undefined };
-
-    class PulseSource {
-      constructor(sink) {
-        this._sink = sink;
+    class InputSource {
+      // Impure: subscribe
+      constructor(subscribe) {
+        // TODO check if sink gets GC'd
+        this._sink = new WeakRef(new InputSink(subscribe));
       }
-
-      getPulseSource() {
-        return this;
+      
+      isBuilt() {
+        return true;
       }
 
       isPushable() {
         return this._sink.deref() !== undefined;
       }
-    }
 
-    class InputSource extends PulseSource {
-      // Impure: subscribe
-      constructor(subscribe) {
-        // TODO check if sink gets GC'd
-        super(new WeakRef(new InputSink(subscribe)));
+      getPulseSource() {
+        return this;
       }
     }
 
     class SingleParentSource extends PulseSource {
       constructor() {
-        super(undefinedSink);
+        this._sink = null;
+      }
+      
+      isBuilt() {
+        return this._sink !== null;
+      }
+      
+      // No methods beyond this point should be called if !this.isBuilt()
+
+      isPushable() {
+        return this._sink.deref() !== undefined;
+      }
+
+      getPulseSource() {
+        return this;
       }
     }
 
     class DoubleParentSource extends PulseSource {
       constructor() {
         super(undefinedSink);
+      }
+      
+      isBuilt() {
+        this._sink !== null;
+      }
+      
+      // No methods beyond this point should be called if !this.isBuilt()
+
+      isPushable() {
+        return this._sink.deref() !== undefined;
+      }
+
+      getPulseSource() {
+        return this;
       }
     }
 
@@ -529,12 +554,16 @@
       isPushable() {
         return false;
       }
+      
+      isBuilt() {
+        return false;
+      }
 
       loop(pulse) {
         if (this._pulse !== null) {
           throw new Error("Can't call [LoopPulseSource.loop] more than once!");
         }
-        if (pulse.isPushable()) {
+        if (pulse.isBuilt()) {
           throw new Error("Can't use a pulse that's already been built!");
         }
         this._pulse = pulse;
