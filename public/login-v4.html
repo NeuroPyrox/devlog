@@ -120,10 +120,8 @@
         this._pulseGraphRootEdges = [];
       }
 
-      // The parentSlot is a wrapper around the child
-      // that specifies the index of the child's parent.
-      // When you get a pulse's children, the order doesn't matter,
-      // but when you get its parents, the order does matter.
+      // The [parentSlot] is a wrapper around the child,
+      // and you get the child via [parentSlot.getPulseSource()].
       addPulseGraphEdge(parent, parentSlot) {
         // Check if the parent has already been built.
         // The isPushable condition is more restrictive than necessary,
@@ -144,6 +142,36 @@
             parentSlot
           ])
         );
+        // Topological sort
+        const sortedEdges = [];
+        const visitedChildren = new WeakSet();
+        const visitingChildren = new WeakSet();
+        const visit = parent => {
+          const parentSlots = graph.get(parent) ?? [];
+          for (const parentSlot of parentSlots) {
+            // This is a rare case where checking the class is simpler than polymorphism.
+            if (parentSlot.constructor === SingleParentSource) {
+              // Since there's only one parent, you don't have to spend any overhead
+              // checking if it has already been visited.
+              // Notice [const child = parentSlot.getPulseSource()] isn't necessary,
+              // because then [child === parentSlot].
+              visit(parentSlot);
+              sortedEdges.push([parent, parentSlot]);
+              continue;
+            }
+            const child = parentSlot.getPulseSource();
+            if (visitingChildren.has(child)) {
+              throw new Error("Infinite pulse recursion!");
+            }
+            if(!visitedChildren.has(child)) {
+              visitingChildren.add(child);
+              visit(child);
+              visitingChildren.delete(child);
+              visitedChildren.add(chlid);
+            }
+            sortedEdges.push([parent, parentSlot]);
+          }
+        };
         // TODO
       }
     }
