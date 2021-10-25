@@ -146,39 +146,44 @@
         // Topological sort
         const sortedSinks = [];
         const visitedChildren = new WeakSet();
-        const visitingChildren = new WeakSet();
         const visit = (parentSource, parentSink) => {
           const parentSinkSlots = graph.get(parentSource) ?? [];
           // Before the for loop: DFS over each graph vertex [parentSource].
           // Inside the for loop: DFS over each graph edge [parentSource, childSource].
           // After the for loop: topological ordering of each graph vertex [parentSource].
           for (const parentSinkSlot of parentSinkSlots) {
+            // Besides the error condition,
+            // [parentSinkSlot.setParent(parentSink)] will get called once per iteration,
+            // right before visiting the child (in DFS order),
+            // but algorithmic magic prevents from putting that line of code here.
             
-            // Side effect: create the sinks and link them up.
-            const childSink = parentSinkSlot.fill(parentSink);
-            
-            // A rare case where checking the class is simpler than polymorphism.
-            if (parentSinkSlot.constructor === SingleParentSource) {
-              // This branch is redundant, but it's included as a performance optimization.
-              // It's unnecessary to check if a [SingleParentSource] has been visited.
+            if (parentSinkSlot.hasSingleParent()) {
+              // This branch is redundant, but it's included as a performance optimization,
+              // because you can omit the visitation checks if there's only one parent.
               // Notice [const childSource = parentSinkSlot.getPulseSource()]
-              // isn't necessary either, because then [childSource === parentSinkSlot].
+              // can be omitted too, because otherwise [childSource === parentSinkSlot].
               // TODO test the performance of including this branch.
+              const childSink = parentSinkSlot.setParent(parentSink); // Side effect
               visit(parentSinkSlot, childSink);
               continue;
             }
             const childSource = parentSinkSlot.getPulseSource();
-            if (visitingChildren.has(childSource)) {
-              throw new Error("Infinite pulse recursion!");
-            }
-            if(!visitedChildren.has(childSource)) {
-              visitingChildren.add(childSource);
+            // Tightly coupled algorithmic magic:
+            //   [childSource.isBuilt()]
+            //   iff [parentSinkSlot.setParent] has been called
+            //   iff [childSource] has been visited or is being visited.
+            if (!childSource.isBuilt()) {
+              const childSink = parentSinkSlot.setParent(parentSink); // Side effect
               visit(childSource, childSink);
-              visitingChildren.delete(childSource);
               visitedChildren.add(childSource);
+              continue;
             }
+            if (!visitedChildren.has(childSource)) {
+              throw new Error("Illegal pulse recursion!");
+            }
+            parentSinkSlot.setParent(parentSink); // Side effect
           }
-          sortedSinks.push(parentSink);
+          sortedSinks.push(parentSink); // Main effect
         };
         // TODO
       }
@@ -454,6 +459,10 @@
         // TODO check if sink gets GC'd
         this._sink = new WeakRef(new InputSink(subscribe));
       }
+
+      getPulseSource() {
+        return this;
+      }
       
       isBuilt() {
         return true;
@@ -462,15 +471,19 @@
       isPushable() {
         return this._sink.deref() !== undefined;
       }
-
-      getPulseSource() {
-        return this;
-      }
     }
 
     class SingleParentSource extends PulseSource {
       constructor() {
         this._sink = null;
+      }
+      
+      hasSingleParent() {
+        return true;
+      }
+
+      getPulseSource() {
+        return this;
       }
       
       isBuilt() {
@@ -482,15 +495,15 @@
       isPushable() {
         return this._sink.deref() !== undefined;
       }
-
-      getPulseSource() {
-        return this;
-      }
     }
 
     class DoubleParentSource extends PulseSource {
       constructor() {
-        super(undefinedSink);
+        this._sink = null;
+      }
+
+      getPulseSource() {
+        return this;
       }
       
       isBuilt() {
@@ -502,21 +515,33 @@
       isPushable() {
         return this._sink.deref() !== undefined;
       }
-
-      getPulseSource() {
-        return this;
-      }
     }
 
     class ParentSlotA {
       constructor(doubleParentSource) {
         this._source = doubleParentSource;
       }
+      
+      hasSingleParent() {
+        return false;
+      }
+
+      getPulseSource() {
+        return this._source;
+      }
     }
 
     class ParentSlotB {
       constructor(doubleParentSource) {
         this._source = doubleParentSource;
+      }
+      
+      hasSingleParent() {
+        return false;
+      }
+
+      getPulseSource() {
+        return this._source;
       }
     }
 
@@ -527,6 +552,10 @@
         this._pulseSource = pulseSource;
         this._makeAction = makeAction;
         this.priority = 0;
+      }
+      
+      hasSingleParent() {
+        return true;
       }
 
       getPulseSource() {
