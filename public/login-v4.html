@@ -120,17 +120,17 @@
         this._pulseGraphRootEdges = [];
       }
 
-      // The [parentSlot] is a wrapper around the child,
-      // and you get the child via [parentSlot.getPulseSource()].
-      addPulseGraphEdge(parent, parentSlot) {
+      // The [parentSinkSlot] is a wrapper around the child,
+      // and you get the child via [parentSinkSlot.getPulseSource()].
+      addPulseGraphEdge(parent, parentSinkSlot) {
         if (parent.isBuilt()) {
           // This inner condition is a performance optimization.
           // TODO profile.
           if (parent.isPushable()) {
-            this._pulseGraphRootEdges.push([parent, parentSlot]);
+            this._pulseGraphRootEdges.push([parent, parentSinkSlot]);
           }
         } else {
-          this._pulseGraphEdges.push([parent, parentSlot]);
+          this._pulseGraphEdges.push([parent, parentSinkSlot]);
         }
       }
 
@@ -138,41 +138,47 @@
       _flushChanges() {
         // [parent.getPulseSource()] is used for [LoopPulseSource].
         const graph = weakMapFromEdges(
-          this._pulseGraphEdges.map(([parent, parentSlot]) => [
+          this._pulseGraphEdges.map(([parent, parentSinkSlot]) => [
             parent.getPulseSource(),
-            parentSlot
+            parentSinkSlot
           ])
         );
         // Topological sort
-        const sortedEdges = [];
+        const sortedSinks = [];
         const visitedChildren = new WeakSet();
         const visitingChildren = new WeakSet();
-        const visit = parent => {
-          const parentSlots = graph.get(parent) ?? [];
-          for (const parentSlot of parentSlots) {
+        const visit = (parentSource, parentSink) => {
+          const parentSinkSlots = graph.get(parentSource) ?? [];
+          // Before the for loop: DFS over each graph vertex [parentSource].
+          // Inside the for loop: DFS over each graph edge [parentSource, childSource].
+          // After the for loop: topological ordering of each graph vertex [parentSource].
+          for (const parentSinkSlot of parentSinkSlots) {
+            
+            // Side effect: create the sinks and link them up.
+            const childSink = parentSinkSlot.fill(parentSink);
+            
             // A rare case where checking the class is simpler than polymorphism.
-            if (parentSlot.constructor === SingleParentSource) {
+            if (parentSinkSlot.constructor === SingleParentSource) {
               // This branch is redundant, but it's included as a performance optimization.
               // It's unnecessary to check if a [SingleParentSource] has been visited.
-              // Notice [const child = parentSlot.getPulseSource()] isn't necessary either,
-              // because then [child === parentSlot].
+              // Notice [const childSource = parentSinkSlot.getPulseSource()]
+              // isn't necessary either, because then [childSource === parentSinkSlot].
               // TODO test the performance of including this branch.
-              visit(parentSlot);
-              sortedEdges.push([parent, parentSlot]);
+              visit(parentSinkSlot, childSink);
               continue;
             }
-            const child = parentSlot.getPulseSource();
-            if (visitingChildren.has(child)) {
+            const childSource = parentSinkSlot.getPulseSource();
+            if (visitingChildren.has(childSource)) {
               throw new Error("Infinite pulse recursion!");
             }
-            if(!visitedChildren.has(child)) {
-              visitingChildren.add(child);
-              visit(child);
-              visitingChildren.delete(child);
-              visitedChildren.add(chlid);
+            if(!visitedChildren.has(childSource)) {
+              visitingChildren.add(childSource);
+              visit(childSource, childSink);
+              visitingChildren.delete(childSource);
+              visitedChildren.add(childSource);
             }
-            sortedEdges.push([parent, parentSlot]);
           }
+          sortedSinks.push(parentSink);
         };
         // TODO
       }
