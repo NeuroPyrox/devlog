@@ -122,16 +122,23 @@
 
       // The [parentSinkSlot] is a wrapper around the child,
       // and you get the child via [parentSinkSlot.getPulseSource()].
-      addPulseGraphEdge(parent, parentSinkSlot) {
-        if (parent.isBuilt()) {
-          // This inner condition is a performance optimization.
-          // TODO profile.
-          if (parent.isPushable()) {
-            this._pulseGraphRootEdges.push([parent, parentSinkSlot]);
-          }
-        } else {
-          this._pulseGraphEdges.push([parent, parentSinkSlot]);
+      addPulseGraphEdge(parentSource, parentSinkSlot) {
+        if (!parentSource.isBuilt()) {
+          this._pulseGraphEdges.push([parentSource, parentSinkSlot]);
+          return;
         }
+        const parentSink = parentSource.getSink();
+        if (parentSink !== undefined) {
+          this._pulseGraphRootEdges.push([parentSink, parentSinkSlot]);
+        }
+        // TODO use profiler to tell which implementation to use.
+        // Alternate implementation:
+        //   const parentSink = parentSource.getSink();
+        //   if (parentSink !== undefined) {
+        //     this._pulseGraphRootEdges.push([parentSink, parentSinkSlot]);
+        //   } else {
+        //     this._pulseGraphEdges.push([parentSource, parentSinkSlot]);
+        //   }
       }
 
       // Should only be called from runPull
@@ -185,7 +192,23 @@
           }
           sortedSinks.push(parentSink); // Main effect
         };
-        // TODO
+        // Similar to the for loop in [visit], but we don't check for illegal loops,
+        // because the child isn't in in the middle of being visited.
+        for (const [parentSink, parentSinkSlot] of this._pulseGraphRootEdges) {
+          if (parentSinkSlot.hasSingleParent()) {
+            const childSink = parentSinkSlot.setParent(parentSink);
+            visit(parentSinkSlot, childSink);
+            continue;
+          }
+          const childSource = parentSinkSlot.getPulseSource();
+          if (!childSource.isBuilt()) {
+            const childSink = parentSinkSlot.setParent(parentSink);
+            visit(childSource, childSink);
+            visitedChildren.add(childSource);
+            continue;
+          }
+          parentSinkSlot.setParent(parentSink);
+        }
       }
     }
 
