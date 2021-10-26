@@ -143,10 +143,10 @@
 
       // Should only be called from runPull
       _flushChanges() {
-        // [parent.getPulseSource()] is used for [LoopPulseSource].
+        // [parentSource.getRecursiveSelf()] is used for [LoopPulseSource].
         const graph = weakMapFromEdges(
-          this._pulseGraphEdges.map(([parent, parentSinkSlot]) => [
-            parent.getPulseSource(),
+          this._pulseGraphEdges.map(([parentSource, parentSinkSlot]) => [
+            parentSource.getRecursiveSelf(),
             parentSinkSlot
           ])
         );
@@ -164,11 +164,10 @@
             // right before visiting the child (in DFS order),
             // but algorithmic magic prevents from putting that line of code here.
             
-            if (parentSinkSlot.hasSingleParent()) {
+            if (parentSinkSlot.isSingle()) {
               // This branch is redundant, but it's included as a performance optimization,
               // because you can omit the visitation checks if there's only one parent.
-              // Notice [const childSource = parentSinkSlot.getPulseSource()]
-              // can be omitted too, because otherwise [childSource === parentSinkSlot].
+              // Also, [parentSinkSlot] will be its own pulse source in this case.
               // TODO test the performance of including this branch.
               const childSink = parentSinkSlot.setParent(parentSink); // Side effect
               visit(parentSinkSlot, childSink);
@@ -195,7 +194,7 @@
         // Similar to the for loop in [visit], but we don't check for illegal loops,
         // because the child isn't in in the middle of being visited.
         for (const [parentSink, parentSinkSlot] of this._pulseGraphRootEdges) {
-          if (parentSinkSlot.hasSingleParent()) {
+          if (parentSinkSlot.isSingle()) {
             const childSink = parentSinkSlot.setParent(parentSink);
             visit(parentSinkSlot, childSink);
             continue;
@@ -464,6 +463,20 @@
       }
     }
 
+    // Interfaces
+    // Source:
+    //   isBuilt()
+    //   Parent:
+    //     Unbuilt:
+    //       getRecursiveSelf()
+    //     Built:
+    //       getSink()
+    // Slot:
+    //   isSingle()
+    //   setParent()
+    //   Non-single:
+    //     getPulseSource()
+    
     class InputSink {
       // Impure: subscribe, runPushMonad
       // Subscribe takes a push function, attaches it as an event listener,
@@ -484,70 +497,102 @@
         this._sink = new WeakRef(new InputSink(subscribe));
       }
 
-      getPulseSource() {
+      getRecursiveSelf() {
         return this;
       }
       
       isBuilt() {
         return true;
       }
-
-      isPushable() {
-        return this._sink.deref() !== undefined;
+      
+      getSink() {
+        return this._sink.deref();
       }
     }
 
-    class SingleParentSource extends PulseSource {
-      constructor() {
-        this._sink = null;
-      }
-      
-      hasSingleParent() {
-        return true;
-      }
-
-      getPulseSource() {
-        return this;
+    class OutputSource {
+      constructor(makeAction) {
+        this._parentSink = null;
+        this._makeAction = makeAction;
       }
       
       isBuilt() {
-        return this._sink !== null;
+        return this._parentSink !== null;
       }
       
-      // No methods beyond this point should be called if !this.isBuilt()
-
-      isPushable() {
-        return this._sink.deref() !== undefined;
+      isSingle() {
+        return true;
+      }
+      
+      setParent(parentSink) {
+        // TODO
       }
     }
 
-    class DoubleParentSource extends PulseSource {
+    class LoopPulseSource {
+      constructor() {
+        this._source = null;
+      }
+
+      getRecursiveSelf() {
+        if (this._source === null) {
+          throw new Error("Must call [loop] for each [LoopPulseSource]!");
+        }
+        return this._source;
+      }
+      
+      isBuilt() {
+        return this._source?.isBuilt();
+      }
+      
+      // Only called if [this.isBuilt()].
+      getSink() {
+        return this._source.getSink();
+      }
+
+      loop(pulse) {
+        if (this._source !== null) {
+          throw new Error("Can't call [LoopPulseSource.loop] more than once!");
+        }
+        if (pulse.isBuilt()) {
+          throw new Error("Can't use a pulse that's already been built!");
+        }
+        this._source = pulse;
+      }
+    }
+
+    const never = { isBuilt: () => false, getRecursiveSelf: () => never };
+
+    class DoubleParentSource {
       constructor() {
         this._sink = null;
       }
 
-      getPulseSource() {
+      getRecursiveSelf() {
         return this;
       }
       
       isBuilt() {
         this._sink !== null;
       }
-      
-      // No methods beyond this point should be called if !this.isBuilt()
 
-      isPushable() {
-        return this._sink.deref() !== undefined;
+      // Only called if [this.isBuilt()].
+      getSink() {
+        return this._sink.deref();
       }
     }
 
     class ParentSlotA {
-      constructor(doubleParentSource) {
-        this._source = doubleParentSource;
+      constructor(source) {
+        this._source = source;
       }
       
-      hasSingleParent() {
+      isSingle() {
         return false;
+      }
+      
+      setParent(parentSink) {
+        // TODO
       }
 
       getPulseSource() {
@@ -556,12 +601,16 @@
     }
 
     class ParentSlotB {
-      constructor(doubleParentSource) {
-        this._source = doubleParentSource;
+      constructor(source) {
+        this._source = source;
       }
       
-      hasSingleParent() {
+      isSingle() {
         return false;
+      }
+      
+      setParent(parentSink) {
+        // TODO
       }
 
       getPulseSource() {
@@ -569,67 +618,32 @@
       }
     }
 
-    class OutputSource {
-      static isHot = true;
-
-      constructor(pulseSource, makeAction) {
-        this._pulseSource = pulseSource;
-        this._makeAction = makeAction;
-        this.priority = 0;
-      }
-      
-      hasSingleParent() {
-        return true;
-      }
-
-      getPulseSource() {
-        return this;
-      }
-
-      // Push monad
-      *poll() {
-        // value !== undefined because there's only one parent pulseSource
-        const value = yield this._pulseSource.read();
-        // Mutable: context
-        yield context => context.queueAction(this._makeAction(value));
-        return [];
-      }
-    }
-
-    class LoopPulseSource {
+    class SingleParentSource {
       constructor() {
-        this._pulse = null;
+        this._sink = null;
       }
 
-      getPulseSource() {
-        if (this._pulse === null) {
-          throw new Error("Must call [loop] for each [LoopPulseSource]!");
-        }
-        return this._pulse;
-      }
-
-      // Relies on the unpushable check in this.loop.
-      // Otherwise, we'd have to return true until this.loop was called.
-      isPushable() {
-        return false;
+      getRecursiveSelf() {
+        return this;
       }
       
       isBuilt() {
-        return false;
+        return this._sink !== null;
       }
-
-      loop(pulse) {
-        if (this._pulse !== null) {
-          throw new Error("Can't call [LoopPulseSource.loop] more than once!");
-        }
-        if (pulse.isBuilt()) {
-          throw new Error("Can't use a pulse that's already been built!");
-        }
-        this._pulse = pulse;
+      
+      // Only called if [this.isBuilt()].
+      getSink() {
+        return this._sink.deref();
+      }
+      
+      isSingle() {
+        return true;
+      }
+      
+      setParent(parentSink) {
+        // TODO
       }
     }
-
-    const never = { isPushable: () => false };
 
     // Pull monad
     function* tag(pulse, latchGet) {
