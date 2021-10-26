@@ -122,7 +122,7 @@
 
       // The [parentSinkSlot] is a wrapper around the child,
       // and you get the child via [parentSinkSlot.getPulseSource()].
-      addPulseGraphEdge(parentSource, parentSinkSlot) {
+      addGraphEdge(parentSource, parentSinkSlot) {
         if (!parentSource.isBuilt()) {
           this._graphEdges.push([parentSource, parentSinkSlot]);
           return;
@@ -648,36 +648,36 @@
     // Pull monad
     function* tag(pulse, latchGet) {
       const result = new SingleParentSource();
-      yield addPulseGraphEdge(pulse, result);
+      yield addGraphEdge(pulse, result);
       return result;
     }
 
     // Pull monad
     function* mapTag(pulse, latchGet, combine) {
       const result = new SingleParentSource();
-      yield addPulseGraphEdge(pulse, result);
+      yield addGraphEdge(pulse, result);
       return result;
     }
 
     // Pull monad
     function* map(pulse, f) {
       const result = new SingleParentSource();
-      yield addPulseGraphEdge(pulse, result);
+      yield addGraphEdge(pulse, result);
       return result;
     }
 
     // Pull monad
     function* filter(pulse, predicate) {
       const result = new SingleParentSource();
-      yield addPulseGraphEdge(pulse, result);
+      yield addGraphEdge(pulse, result);
       return result;
     }
 
     // Pull monad
     function* merge(pulseA, pulseB) {
       const result = new DoubleParentSource();
-      yield addPulseGraphEdge(pulseA, new ParentSlotA(result));
-      yield addPulseGraphEdge(pulseB, new ParentSlotB(result));
+      yield addGraphEdge(pulseA, new ParentSlotA(result));
+      yield addGraphEdge(pulseB, new ParentSlotB(result));
       return result;
     }
 
@@ -687,8 +687,8 @@
       return never;
     }
 
-    const addPulseGraphEdge = (parent, child) => context =>
-      context.addPulseGraphEdge(parent, child);
+    const addGraphEdge = (parent, child) => context =>
+      context.addGraphEdge(parent, child);
 
     const getClicks = domNode =>
       new InputSource(push => domNode.addEventListener("click", push));
