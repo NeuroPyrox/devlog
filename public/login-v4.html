@@ -209,6 +209,7 @@
           }
           parentSinkSlot.setParent(parentSink);
         }
+        sortedSinks.reverse().map(sink => sink.initPriority());
       }
     }
 
