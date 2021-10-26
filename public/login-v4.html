@@ -116,36 +116,36 @@
 
     class PullContext {
       constructor() {
-        this._pulseGraphEdges = [];
-        this._pulseGraphRootEdges = [];
+        this._graphEdges = [];
+        this._graphRoots = [];
       }
 
       // The [parentSinkSlot] is a wrapper around the child,
       // and you get the child via [parentSinkSlot.getPulseSource()].
       addPulseGraphEdge(parentSource, parentSinkSlot) {
         if (!parentSource.isBuilt()) {
-          this._pulseGraphEdges.push([parentSource, parentSinkSlot]);
+          this._graphEdges.push([parentSource, parentSinkSlot]);
           return;
         }
         const parentSink = parentSource.getSink();
         if (parentSink !== undefined) {
-          this._pulseGraphRootEdges.push([parentSink, parentSinkSlot]);
+          this._graphRoots.push([parentSink, parentSinkSlot]);
         }
         // TODO use profiler to tell which implementation to use.
         // Alternate implementation:
         //   const parentSink = parentSource.getSink();
         //   if (parentSink !== undefined) {
-        //     this._pulseGraphRootEdges.push([parentSink, parentSinkSlot]);
+        //     this._graphRoots.push([parentSink, parentSinkSlot]);
         //   } else {
-        //     this._pulseGraphEdges.push([parentSource, parentSinkSlot]);
+        //     this._graphEdges.push([parentSource, parentSinkSlot]);
         //   }
       }
 
       // Should only be called from runPull
       _flushChanges() {
-        // [parentSource.getRecursiveSelf()] is used for [LoopPulseSource].
+        // [parentSource.getRecursiveSelf()] is used for [LoopSource].
         const graph = weakMapFromEdges(
-          this._pulseGraphEdges.map(([parentSource, parentSinkSlot]) => [
+          this._graphEdges.map(([parentSource, parentSinkSlot]) => [
             parentSource.getRecursiveSelf(),
             parentSinkSlot
           ])
@@ -193,7 +193,7 @@
         };
         // Similar to the for loop in [visit], but we don't check for illegal loops,
         // because the child isn't in in the middle of being visited.
-        for (const [parentSink, parentSinkSlot] of this._pulseGraphRootEdges) {
+        for (const [parentSink, parentSinkSlot] of this._graphRoots) {
           if (parentSinkSlot.isSingle()) {
             const childSink = parentSinkSlot.setParent(parentSink);
             visit(parentSinkSlot, childSink);
@@ -473,7 +473,7 @@
     //       getSink()
     // Slot:
     //   isSingle()
-    //   setParent()
+    //   setParent(parentSink)
     //   Non-single:
     //     getPulseSource()
     
@@ -529,14 +529,14 @@
       }
     }
 
-    class LoopPulseSource {
+    class LoopSource {
       constructor() {
         this._source = null;
       }
 
       getRecursiveSelf() {
         if (this._source === null) {
-          throw new Error("Must call [loop] for each [LoopPulseSource]!");
+          throw new Error("Must call [loop] for each [LoopSource]!");
         }
         return this._source;
       }
@@ -552,7 +552,7 @@
 
       loop(pulse) {
         if (this._source !== null) {
-          throw new Error("Can't call [LoopPulseSource.loop] more than once!");
+          throw new Error("Can't call [LoopSource.loop] more than once!");
         }
         if (pulse.isBuilt()) {
           throw new Error("Can't use a pulse that's already been built!");
@@ -699,7 +699,7 @@
     // TODO optimize with binary tree
     // TODO use cached moments
     function* mergeBind(pulse, f) {
-      const result = new LoopPulseSource();
+      const result = new LoopSource();
       result.loop(
         yield* switchE(yield* map(result, mergeMe => merge(f(mergeMe), result)))
       );
@@ -903,7 +903,7 @@
         ({ username, password }) => username !== "" && password !== ""
       );
 
-      const usernamesToRemove = new LoopPulseSource();
+      const usernamesToRemove = new LoopSource();
 
       const {
         createdUsers,
@@ -959,7 +959,7 @@
 
     // Moment monad
     function* main() {
-      const signupAttempts = new LoopPulseSource();
+      const signupAttempts = new LoopSource();
 
       //div(yield* userTable(signupAttempts).var("userTable"), slot(loginDiv))
       const {
@@ -1092,7 +1092,7 @@
       const startPage = new InputSource(p => (publishStartPage = p));
       const start = _ => publishStartPage(createLoginDiv());
 
-      const authPages = new LoopPulseSource();
+      const authPages = new LoopSource();
       const appPages = yield* merge(authPages, startPage);
 
       new OutputSource(appPages, ([appDiv, ,]) => {
