@@ -646,6 +646,13 @@
     }
 
     // Pull monad
+    function* output(source, makeAction) {
+      const result = new OutputSource(makeAction);
+      yield addGraphEdge(source, result);
+      return result;
+    }
+    
+    // Pull monad
     function* tag(pulse, latchGet) {
       const result = new SingleParentSource();
       yield addGraphEdge(pulse, result);
@@ -739,7 +746,7 @@
         }),
         x => x !== null
       );
-      new OutputSource(signups, ([index, user]) =>
+      yield* output(signups, ([index, user]) =>
         internalTable.splice(index, 0, user)
       );
 
@@ -758,7 +765,7 @@
         yield* filter(insertions, x => x[0] === "createUser"),
         ([, index, user]) => [index, user]
       );
-      new OutputSource(createUserInsertions, ([index, user]) => {
+      yield* output(createUserInsertions, ([index, user]) => {
         internalTable.splice(index, 0, user);
       });
       const createdUsers = yield* merge(createUserInsertions, signups);
@@ -774,7 +781,7 @@
           password
         })
       );
-      new OutputSource(
+      yield* output(
         passwordChanges,
         ({ index, password }) => (internalTable[index].password = password)
       );
@@ -782,11 +789,11 @@
         index: findUsername(username),
         username
       }));
-      new OutputSource(removedUsers, ({ index }) =>
+      yield* output(removedUsers, ({ index }) =>
         internalTable.splice(index, 1)
       );
       clears = yield* filter(clears, _ => internalTable.length !== 0);
-      new OutputSource(clears, _ => (internalTable = []));
+      yield* output(clears, _ => (internalTable = []));
 
       const tryLogins = stream =>
         stream.map(({ username, password }) => {
@@ -918,7 +925,7 @@
         signupAttempts
       });
 
-      new OutputSource(insertions, () => {
+      yield* output(insertions, () => {
         usernameInsertInput.value = "";
         passwordInsertInput.value = "";
       });
@@ -943,16 +950,16 @@
         })
       );
 
-      new OutputSource(passwordChanges, ({ index, password }) => {
+      yield* output(passwordChanges, ({ index, password }) => {
         const rowElement = userTableBody.children[index];
         rowElement.children[1].textContent = password;
       });
 
-      new OutputSource(removedUsers, ({ index }) =>
+      yield* output(removedUsers, ({ index }) =>
         userTableBody.children[index].remove()
       );
 
-      new OutputSource(clears, _ => (userTableBody.innerHTML = ""));
+      yield* output(clears, _ => (userTableBody.innerHTML = ""));
 
       return { userTableDiv, passwordChanges, removedUsers, clears, tryLogins };
     }
@@ -1095,7 +1102,7 @@
       const authPages = new LoopSource();
       const appPages = yield* merge(authPages, startPage);
 
-      new OutputSource(appPages, ([appDiv, ,]) => {
+      yield* output(appPages, ([appDiv, ,]) => {
         document.body.lastElementChild.remove();
         document.body.appendChild(appDiv);
       });
