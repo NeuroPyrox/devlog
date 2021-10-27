@@ -179,7 +179,7 @@
             //   iff [parentSinkSlot.setParent] has been called
             //   iff [childSource] has been visited or is being visited.
             if (!childSource.isBuilt()) {
-              const childSink = parentSinkSlot.setParent(parentSink); // Side effect
+              const childSink = parentSinkSlot.setFirstParent(parentSink); // Side effect
               visit(childSource, childSink);
               visitedChildren.add(childSource);
               continue;
@@ -187,7 +187,7 @@
             if (!visitedChildren.has(childSource)) {
               throw new Error("Illegal pulse recursion!");
             }
-            parentSinkSlot.setParent(parentSink); // Side effect
+            parentSinkSlot.setSecondParent(parentSink); // Side effect
           }
           sortedSinks.push(parentSink); // Main effect
         };
@@ -473,9 +473,12 @@
     //       getSink()
     // Slot:
     //   isSingle()
-    //   setParent(parentSink)
+    //   Single:
+    //     setParent(parentSink)
     //   Non-single:
     //     getPulseSource()
+    //     setFirstParent(parentSink)
+    //     setSecondParent(parentSink)
     
     class InputSink {
       // Impure: subscribe, runPushMonad
@@ -563,7 +566,7 @@
 
     const never = { isBuilt: () => false, getRecursiveSelf: () => never };
 
-    class DoubleParentSource {
+    class MergeSource {
       constructor() {
         this._sink = null;
       }
@@ -580,6 +583,20 @@
       getSink() {
         return this._sink.deref();
       }
+      
+      initSink() {
+        this._sink = new MergeSink();
+      }
+      
+      setParentA(parentSink) {
+        this._sink.setParentA(parentSink);
+        return this._sink;
+      }
+      
+      setParentB(parentSink) {
+        this._sink.setParentB(parentSink);
+        return this._sink;
+      }
     }
 
     class ParentSlotA {
@@ -591,8 +608,13 @@
         return false;
       }
       
-      setParent(parentSink) {
-        // TODO
+      setFirstParent(parentSink) {
+        this._source.initSink();
+        this._source.setParentA(parentSink);
+      }
+      
+      setSecondParent(parentSink) {
+        this._source.setParentA(parentSink);
       }
 
       getPulseSource() {
@@ -609,8 +631,13 @@
         return false;
       }
       
-      setParent(parentSink) {
-        // TODO
+      setFirstParent(parentSink) {
+        this._source.initSink();
+        this._source.setParentB(parentSink);
+      }
+      
+      setSecondParent(parentSink) {
+        this._source.setParentB(parentSink);
       }
 
       getPulseSource() {
@@ -683,7 +710,7 @@
 
     // Pull monad
     function* merge(sourceA, sourceB) {
-      const result = new DoubleParentSource();
+      const result = new MergeSource();
       yield addGraphEdge(sourceA, new ParentSlotA(result));
       yield addGraphEdge(sourceB, new ParentSlotB(result));
       return result;
