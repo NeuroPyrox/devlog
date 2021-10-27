@@ -645,6 +645,7 @@
       }
     }
 
+    // TODO unsubscribe
     // Pull monad
     function* output(source, makeAction) {
       const result = new OutputSource(makeAction);
@@ -653,38 +654,38 @@
     }
     
     // Pull monad
-    function* tag(pulse, latchGet) {
+    function* tag(source, latchGet) {
       const result = new SingleParentSource();
-      yield addGraphEdge(pulse, result);
+      yield addGraphEdge(source, result);
       return result;
     }
 
     // Pull monad
-    function* mapTag(pulse, latchGet, combine) {
+    function* mapTag(source, latchGet, combine) {
       const result = new SingleParentSource();
-      yield addGraphEdge(pulse, result);
+      yield addGraphEdge(source, result);
       return result;
     }
 
     // Pull monad
-    function* map(pulse, f) {
+    function* map(source, f) {
       const result = new SingleParentSource();
-      yield addGraphEdge(pulse, result);
+      yield addGraphEdge(source, result);
       return result;
     }
 
     // Pull monad
-    function* filter(pulse, predicate) {
+    function* filter(source, predicate) {
       const result = new SingleParentSource();
-      yield addGraphEdge(pulse, result);
+      yield addGraphEdge(source, result);
       return result;
     }
 
     // Pull monad
-    function* merge(pulseA, pulseB) {
+    function* merge(sourceA, sourceB) {
       const result = new DoubleParentSource();
-      yield addGraphEdge(pulseA, new ParentSlotA(result));
-      yield addGraphEdge(pulseB, new ParentSlotB(result));
+      yield addGraphEdge(sourceA, new ParentSlotA(result));
+      yield addGraphEdge(sourceB, new ParentSlotB(result));
       return result;
     }
 
