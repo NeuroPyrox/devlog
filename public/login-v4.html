@@ -491,10 +491,6 @@
         // TODO check if sink gets GC'd
         this._sink = new WeakRef(new InputSink(subscribe));
       }
-
-      getRecursiveSelf() {
-        return this;
-      }
       
       isBuilt() {
         return true;
@@ -511,18 +507,6 @@
         this._makeAction = makeAction;
       }
       
-      isBuilt() {
-        return this._parentSink !== null;
-      }
-      
-      isSingle() {
-        return true;
-      }
-      
-      setParent(parentSink) {
-        // TODO
-      }
-      
       *visitEdge(parentSink) {
         this.linkParent(parentSink);
         yield pushSortedSink(this);
@@ -537,16 +521,16 @@
       constructor() {
         this._source = null;
       }
+      
+      isBuilt() {
+        return this._source?.isBuilt();
+      }
 
       getRecursiveSelf() {
         if (this._source === null) {
           throw new Error("Must call [loop] for each [LoopSource]!");
         }
         return this._source;
-      }
-      
-      isBuilt() {
-        return this._source?.isBuilt();
       }
       
       // Only called if [this.isBuilt()].
@@ -571,36 +555,21 @@
       constructor() {
         this._sink = null;
       }
-
-      getRecursiveSelf() {
-        return this;
-      }
       
       isBuilt() {
         this._sink !== null;
+      }
+
+      getRecursiveSelf() {
+        return this;
       }
 
       // Only called if [this.isBuilt()].
       getSink() {
         return this._sink.deref();
       }
-      
-      initSink() {
-        this._sink = new MergeSink();
-      }
-      
-      setParentA(parentSink) {
-        this._sink.setParentA(parentSink);
-        return this._sink;
-      }
-      
-      setParentB(parentSink) {
-        this._sink.setParentB(parentSink);
-        return this._sink;
-      }
     }
 
-    // TODO find an alternative to inheritance
     class MergeParentSlot {
       constructor(childSource) {
         this._childSource = childSource;
@@ -646,24 +615,6 @@
     class MergeParentSlotA extends MergeParentSlot {
       constructor(childSource) {
         super(childSource);
-        this._childSource = childSource;
-      }
-      
-      isSingle() {
-        return false;
-      }
-      
-      setFirstParent(parentSink) {
-        this._childSource.initSink();
-        this._childSource.setParentA(parentSink);
-      }
-      
-      setSecondParent(parentSink) {
-        this._childSource.setParentA(parentSink);
-      }
-
-      getPulseSource() {
-        return this._childSource;
       }
       
       // Mutable: parentSink, childSink
@@ -674,25 +625,7 @@
 
     class MergeParentSlotB extends MergeParentSlot {
       constructor(childSource) {
-        super(childSource)
-        this._childSource = childSource;
-      }
-      
-      isSingle() {
-        return false;
-      }
-      
-      setFirstParent(parentSink) {
-        this._childSource.initSink();
-        this._childSource.setParentB(parentSink);
-      }
-      
-      setSecondParent(parentSink) {
-        this._childSource.setParentB(parentSink);
-      }
-
-      getPulseSource() {
-        return this._childSource;
+        super(childSource);
       }
       
       // Mutable: parentSink, childSink
@@ -705,26 +638,18 @@
       constructor() {
         this._sink = null;
       }
+      
+      isBuilt() {
+        return this._sink !== null;
+      }
 
       getRecursiveSelf() {
         return this;
       }
       
-      isBuilt() {
-        return this._sink !== null;
-      }
-      
       // Only called if [this.isBuilt()].
       getSink() {
         return this._sink.deref();
-      }
-      
-      isSingle() {
-        return true;
-      }
-      
-      setParent(parentSink) {
-        // TODO
       }
       
       *visitEdge(parentSink) {
