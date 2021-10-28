@@ -443,15 +443,6 @@
       }
     }
 
-    // Interfaces
-    // Source:
-    //   isBuilt()
-    //   Parent:
-    //     Unbuilt:
-    //       getRecursiveSelf()
-    //     Built:
-    //       getSink()
-    
     class InputSink {
       // Impure: subscribe, runMonad
       // Subscribe takes a push function, attaches it as an event listener,
@@ -597,10 +588,6 @@
     }
     
     class MergeParentSlotA extends MergeParentSlot {
-      constructor(childSource) {
-        super(childSource);
-      }
-      
       // Mutable: parentSink, childSink
       static linkParent(parentSink, childSink) {
         childSink.linkParentA(parentSink);
@@ -608,10 +595,6 @@
     }
 
     class MergeParentSlotB extends MergeParentSlot {
-      constructor(childSource) {
-        super(childSource);
-      }
-      
       // Mutable: parentSink, childSink
       static linkParent(parentSink, childSink) {
         childSink.linkParentB(parentSink);
