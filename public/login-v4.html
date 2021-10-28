@@ -140,14 +140,6 @@
       _endMonad() {
         this._sortedSinks.reverse().map(sink => sink.initPriority());
       }
-      
-      run(generator) {
-        let step = generator.next();
-        while (!step.done) {
-          step = generator.next(step.value(this));
-        }
-        this._endMonad();
-      }
     }
     
     const getSourceChildren = source => context => context.getSourceChildren(source);
@@ -199,15 +191,14 @@
         //   }
       }
 
-      // Should only be called from runPull
-      _flushChanges() {
+      _endMonad() {
         // [parentSource.getRecursiveSelf()] is used for [LoopSource].
-        new BuildContext(weakMapFromEdges(
+        runMonad(new BuildContext(weakMapFromEdges(
           this._graphEdges.map(([parentSource, parentSinkSlot]) => [
             parentSource.getRecursiveSelf(),
             parentSinkSlot
           ])
-        )).run(buildRoots(this._graphRoots));
+        )), buildRoots(this._graphRoots));
       }
     }
 
@@ -426,26 +417,16 @@
       }
     }
 
-    // Mutable: generator, context
-    const runPull = generator => {
+    // Mutable: context, generator
+    const runMonad = (context, generator) => {
       let step = generator.next();
-      const context = new PullContext();
       while (!step.done) {
         step = generator.next(step.value(context));
       }
-      context._flushChanges();
-    };
-
-    // TODO rename
-    // Mutable: generator, context
-    const runPushMonad = generator => {
-      let step = generator.next();
-      const context = new PushContext();
-      while (!step.done) {
-        step = generator.next(step.value(context));
-      }
-      // TODO
-    };
+      context._endMonad();
+      // TODO do we really need to return?
+      return step.value;
+    }
 
     // Push monad
     // Mutable: queue
@@ -472,7 +453,7 @@
     //       getSink()
     
     class InputSink {
-      // Impure: subscribe, runPushMonad
+      // Impure: subscribe, runMonad
       // Subscribe takes a push function, attaches it as an event listener,
       // and returns an unsubscribe function.
       // We assume that this won't be pushed until the surrounding
@@ -480,7 +461,7 @@
       // we can just defer subscriptions until the end of the monad.
       constructor(subscribe) {
         // TODO check if it captures the right "this"
-        this._unsubscribe = subscribe(x => runPushMonad(publish(this, x)));
+        this._unsubscribe = subscribe(x => runMonad(new PushContext(), publish(this, x)));
       }
     }
 
@@ -987,7 +968,7 @@
       return { userTableDiv, passwordChanges, removedUsers, clears, tryLogins };
     }
 
-    // Moment monad
+    // Pull monad
     function* main() {
       const signupAttempts = new LoopSource();
 
@@ -1142,6 +1123,6 @@
       return start;
     }
 
-    runPull(main())();
+    runMonad(new PullContext(), main())();
   </script>
 </html>
