@@ -114,6 +114,64 @@
       return graph;
     };
 
+    class SortContext {
+      constructor(graph) {
+        this._graph = graph;
+        this._sortedSinks = [];
+        this._visited = new WeakSet();
+      }
+      
+      getSourceChildren(source) {
+        return this._graph.get(source) ?? [];
+      }
+      
+      pushSortedSink(sink) {
+        this._sortedSinks.push(sink);
+      }
+      
+      markVisited(source) {
+        this._visited.add(source);
+      }
+      
+      isVisited(source) {
+        return this._visited.has(source);
+      }
+    
+      _endMonad() {
+        this._sortedSinks.reverse().map(sink => sink.initPriority());
+      }
+      
+      run(generator) {
+        let step = generator.next();
+        while (!step.done) {
+          step = generator.next(step.value(this));
+        }
+        this._endMonad();
+      }
+    }
+    
+    const getSourceChildren = source => context => context.getSourceChildren(source);
+    const pushSortedSink = sink => context => context.pushSortedSink(sink);
+    const markVisited = source => context => context.markVisited(source);
+    const isVisited = source => context => context.isVisited(source);
+    
+    // Sort monad
+    function* visitRoots(roots) {
+      for (const [parentSink, parentSinkSlot] of roots) {
+        yield* parentSinkSlot.visitRoot(parentSink);
+      }
+    }
+    
+    // Sort monad
+    function* visitVertex(parentSource) {
+      const parentSink = parentSource.getSink();
+      const parentSlots = yield getSourceChildren(parentSource);
+      for (const parentSlot of parentSlots) {
+        yield* parentSlot.visitEdge(parentSink);
+      }
+      yield pushSortedSink(parentSink);
+    }
+    
     class PullContext {
       constructor() {
         this._graphEdges = [];
@@ -144,72 +202,13 @@
       // Should only be called from runPull
       _flushChanges() {
         // [parentSource.getRecursiveSelf()] is used for [LoopSource].
-        const graph = weakMapFromEdges(
+        const sortContext = new SortContext(weakMapFromEdges(
           this._graphEdges.map(([parentSource, parentSinkSlot]) => [
             parentSource.getRecursiveSelf(),
             parentSinkSlot
           ])
-        );
-        // Topological sort
-        const sortedSinks = [];
-        const visitedChildren = new WeakSet();
-        const visit = (parentSource, parentSink) => {
-          const parentSinkSlots = graph.get(parentSource) ?? [];
-          // Before the for loop: DFS over each graph vertex [parentSource].
-          // Inside the for loop: DFS over each graph edge [parentSource, childSource].
-          // After the for loop: topological ordering of each graph vertex [parentSource].
-          for (const parentSinkSlot of parentSinkSlots) {
-            parentSinkSlot.build(parentSink);
-            // Besides the error condition,
-            // [parentSinkSlot.setParent(parentSink)] will get called once per iteration,
-            // right before visiting the child (in DFS order),
-            // but algorithmic magic prevents from putting that line of code here.
-            
-            if (parentSinkSlot.isSingle()) {
-              // This branch is redundant, but it's included as a performance optimization,
-              // because you can omit the visitation checks if there's only one parent.
-              // Also, [parentSinkSlot] will be its own pulse source in this case.
-              // TODO test the performance of including this branch.
-              const childSink = parentSinkSlot.setParent(parentSink); // Side effect
-              visit(parentSinkSlot, childSink);
-              continue;
-            }
-            const childSource = parentSinkSlot.getPulseSource();
-            // Tightly coupled algorithmic magic:
-            //   [childSource.isBuilt()]
-            //   iff [parentSinkSlot.setParent] has been called
-            //   iff [childSource] has been visited or is being visited.
-            if (!childSource.isBuilt()) {
-              const childSink = parentSinkSlot.setFirstParent(parentSink); // Side effect
-              visit(childSource, childSink);
-              visitedChildren.add(childSource);
-              continue;
-            }
-            if (!visitedChildren.has(childSource)) {
-              throw new Error("Illegal pulse recursion!");
-            }
-            parentSinkSlot.setSecondParent(parentSink); // Side effect
-          }
-          sortedSinks.push(parentSink); // Main effect
-        };
-        // Similar to the for loop in [visit], but we don't check for illegal loops,
-        // because the child isn't in in the middle of being visited.
-        for (const [parentSink, parentSinkSlot] of this._graphRoots) {
-          if (parentSinkSlot.isSingle()) {
-            const childSink = parentSinkSlot.setParent(parentSink);
-            visit(parentSinkSlot, childSink);
-            continue;
-          }
-          const childSource = parentSinkSlot.getPulseSource();
-          if (!childSource.isBuilt()) {
-            const childSink = parentSinkSlot.setParent(parentSink);
-            visit(childSource, childSink);
-            visitedChildren.add(childSource);
-            continue;
-          }
-          parentSinkSlot.setParent(parentSink);
-        }
-        sortedSinks.reverse().map(sink => sink.initPriority());
+        ));
+        sortContext.run(visitRoots(this._graphRoots));
       }
     }
 
@@ -472,23 +471,6 @@
     //       getRecursiveSelf()
     //     Built:
     //       getSink()
-    // Slot:
-    //   isSingle()
-    //   Single:
-    //     setParent(parentSink)
-    //   Non-single:
-    //     getPulseSource()
-    //     setFirstParent(parentSink)
-    //     setSecondParent(parentSink)
-    
-    function* visitVertex(parentSource) {
-      const parentSink = parentSource.getSink();
-      const parentSlots = yield getSourceChildren(parentSource);
-      for (const parentSlot of parentSlots) {
-        yield* parentSlot.visitEdge(parentSink);
-      }
-      yield pushSortedSink(parentSink);
-    }
     
     class InputSink {
       // Impure: subscribe, runPushMonad
