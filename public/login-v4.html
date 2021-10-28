@@ -159,6 +159,7 @@
           // Inside the for loop: DFS over each graph edge [parentSource, childSource].
           // After the for loop: topological ordering of each graph vertex [parentSource].
           for (const parentSinkSlot of parentSinkSlots) {
+            parentSinkSlot.build(parentSink);
             // Besides the error condition,
             // [parentSinkSlot.setParent(parentSink)] will get called once per iteration,
             // right before visiting the child (in DFS order),
@@ -480,6 +481,15 @@
     //     setFirstParent(parentSink)
     //     setSecondParent(parentSink)
     
+    function* visitVertex(parentSource) {
+      const parentSink = parentSource.getSink();
+      const parentSlots = yield getSourceChildren(parentSource);
+      for (const parentSlot of parentSlots) {
+        yield* parentSlot.visitEdge(parentSink);
+      }
+      yield pushSortedSink(parentSink);
+    }
+    
     class InputSink {
       // Impure: subscribe, runPushMonad
       // Subscribe takes a push function, attaches it as an event listener,
@@ -529,6 +539,15 @@
       
       setParent(parentSink) {
         // TODO
+      }
+      
+      *visitEdge(parentSink) {
+        this.linkParent(parentSink);
+        yield pushSortedSink(this);
+      }
+      
+      *visitRoot(parentSink) {
+        yield* this.visitEdge(parentSink);
       }
     }
 
@@ -599,9 +618,53 @@
       }
     }
 
-    class ParentSlotA {
-      constructor(source) {
-        this._source = source;
+    // TODO find an alternative to inheritance
+    class MergeParentSlot {
+      constructor(childSource) {
+        this._childSource = childSource;
+      }
+  
+      // Mutable: parentSink, this._childSource._sink
+      *visitEdge(parentSink) {
+        if (this._childSource._sink === null) {
+          // Child not visited
+          const childSink = new MergeSink();
+          this.linkParent(parentSink, childSink);
+          this._childSource._sink = new WeakRef(childSink);
+          yield* visitVertex(this._childSource);
+          yield markVisited(this._childSource);
+          visitedChildren.add(childSource);
+        } else if (!(yield isVisited(this._childSource))) {
+          // Child being visited
+          throw new Error("Illegal pulse recursion!");
+        } else {
+          // Child was visited
+          this.linkParent(parentSink, this._childSource.getSink());
+        }
+      }
+      
+      // The same as [this.visitEdge] but without checking for illegal pulse recursion.
+      // Mutable: parentSink, this._childSource._sink
+      *visitRoot(parentSink) {
+        if (this._childSource._sink === null) {
+          // Child not visited
+          const childSink = new MergeSink();
+          this.linkParent(parentSink, childSink);
+          this._childSource._sink = new WeakRef(childSink);
+          yield* visitVertex(this._childSource);
+          yield markVisited(this._childSource);
+          visitedChildren.add(childSource);
+        } else {
+          // Child was visited
+          this.linkParent(parentSink, this._childSource.getSink());
+        }
+      }
+    }
+    
+    class MergeParentSlotA extends MergeParentSlot {
+      constructor(childSource) {
+        super(childSource);
+        this._childSource = childSource;
       }
       
       isSingle() {
@@ -609,22 +672,28 @@
       }
       
       setFirstParent(parentSink) {
-        this._source.initSink();
-        this._source.setParentA(parentSink);
+        this._childSource.initSink();
+        this._childSource.setParentA(parentSink);
       }
       
       setSecondParent(parentSink) {
-        this._source.setParentA(parentSink);
+        this._childSource.setParentA(parentSink);
       }
 
       getPulseSource() {
-        return this._source;
+        return this._childSource;
+      }
+      
+      // Mutable: parentSink, childSink
+      static linkParent(parentSink, childSink) {
+        childSink.linkParentA(parentSink);
       }
     }
 
-    class ParentSlotB {
-      constructor(source) {
-        this._source = source;
+    class MergeParentSlotB extends MergeParentSlot {
+      constructor(childSource) {
+        super(childSource)
+        this._childSource = childSource;
       }
       
       isSingle() {
@@ -632,16 +701,21 @@
       }
       
       setFirstParent(parentSink) {
-        this._source.initSink();
-        this._source.setParentB(parentSink);
+        this._childSource.initSink();
+        this._childSource.setParentB(parentSink);
       }
       
       setSecondParent(parentSink) {
-        this._source.setParentB(parentSink);
+        this._childSource.setParentB(parentSink);
       }
 
       getPulseSource() {
-        return this._source;
+        return this._childSource;
+      }
+      
+      // Mutable: parentSink, childSink
+      static linkParent(parentSink, childSink) {
+        childSink.linkParentB(parentSink);
       }
     }
 
@@ -669,6 +743,15 @@
       
       setParent(parentSink) {
         // TODO
+      }
+      
+      *visitEdge(parentSink) {
+        this.linkParent(parentSink);
+        yield* visitVertex(this);
+      }
+      
+      *visitRoot(parentSink) {
+        yield* this.visitEdge(parentSink);
       }
     }
 
@@ -711,8 +794,8 @@
     // Pull monad
     function* merge(sourceA, sourceB) {
       const result = new MergeSource();
-      yield addGraphEdge(sourceA, new ParentSlotA(result));
-      yield addGraphEdge(sourceB, new ParentSlotB(result));
+      yield addGraphEdge(sourceA, new MergeParentSlotA(result));
+      yield addGraphEdge(sourceB, new MergeParentSlotB(result));
       return result;
     }
 
