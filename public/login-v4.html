@@ -114,7 +114,7 @@
       return graph;
     };
 
-    class SortContext {
+    class BuildContext {
       constructor(graph) {
         this._graph = graph;
         this._sortedSinks = [];
@@ -155,19 +155,19 @@
     const markVisited = source => context => context.markVisited(source);
     const isVisited = source => context => context.isVisited(source);
     
-    // Sort monad
-    function* visitRoots(roots) {
+    // Build monad
+    function* buildRoots(roots) {
       for (const [parentSink, parentSinkSlot] of roots) {
-        yield* parentSinkSlot.visitRoot(parentSink);
+        yield* parentSinkSlot.buildRoot(parentSink);
       }
     }
     
-    // Sort monad
-    function* visitVertex(parentSource) {
+    // Build monad
+    function* buildVertex(parentSource) {
       const parentSink = parentSource.getSink();
       const parentSlots = yield getSourceChildren(parentSource);
       for (const parentSlot of parentSlots) {
-        yield* parentSlot.visitEdge(parentSink);
+        yield* parentSlot.buildEdge(parentSink);
       }
       yield pushSortedSink(parentSink);
     }
@@ -202,13 +202,12 @@
       // Should only be called from runPull
       _flushChanges() {
         // [parentSource.getRecursiveSelf()] is used for [LoopSource].
-        const sortContext = new SortContext(weakMapFromEdges(
+        new BuildContext(weakMapFromEdges(
           this._graphEdges.map(([parentSource, parentSinkSlot]) => [
             parentSource.getRecursiveSelf(),
             parentSinkSlot
           ])
-        ));
-        sortContext.run(visitRoots(this._graphRoots));
+        )).run(buildRoots(this._graphRoots));
       }
     }
 
@@ -507,13 +506,15 @@
         this._makeAction = makeAction;
       }
       
-      *visitEdge(parentSink) {
+      // Build monad
+      *buildEdge(parentSink) {
         this.linkParent(parentSink);
         yield pushSortedSink(this);
       }
       
-      *visitRoot(parentSink) {
-        yield* this.visitEdge(parentSink);
+      // Build monad
+      *buildRoot(parentSink) {
+        yield* this.buildEdge(parentSink);
       }
     }
 
@@ -575,14 +576,15 @@
         this._childSource = childSource;
       }
   
+      // Build monad
       // Mutable: parentSink, this._childSource._sink
-      *visitEdge(parentSink) {
+      *buildEdge(parentSink) {
         if (this._childSource._sink === null) {
           // Child not visited
           const childSink = new MergeSink();
           this.linkParent(parentSink, childSink);
           this._childSource._sink = new WeakRef(childSink);
-          yield* visitVertex(this._childSource);
+          yield* buildVertex(this._childSource);
           yield markVisited(this._childSource);
           visitedChildren.add(childSource);
         } else if (!(yield isVisited(this._childSource))) {
@@ -594,15 +596,16 @@
         }
       }
       
-      // The same as [this.visitEdge] but without checking for illegal pulse recursion.
+      // Build monad
       // Mutable: parentSink, this._childSource._sink
-      *visitRoot(parentSink) {
+      // The same as [this.buildEdge] but without checking for illegal pulse recursion.
+      *buildRoot(parentSink) {
         if (this._childSource._sink === null) {
           // Child not visited
           const childSink = new MergeSink();
           this.linkParent(parentSink, childSink);
           this._childSource._sink = new WeakRef(childSink);
-          yield* visitVertex(this._childSource);
+          yield* buildVertex(this._childSource);
           yield markVisited(this._childSource);
           visitedChildren.add(childSource);
         } else {
@@ -652,13 +655,15 @@
         return this._sink.deref();
       }
       
-      *visitEdge(parentSink) {
+      // Build monad
+      *buildEdge(parentSink) {
         this.linkParent(parentSink);
-        yield* visitVertex(this);
+        yield* buildVertex(this);
       }
       
-      *visitRoot(parentSink) {
-        yield* this.visitEdge(parentSink);
+      // Build monad
+      *buildRoot(parentSink) {
+        yield* this.buildEdge(parentSink);
       }
     }
 
