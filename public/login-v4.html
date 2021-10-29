@@ -548,11 +548,11 @@
       }
     }
 
-    // TODO replace inheritance
     // Promiscious state sharing with [MergeSource]
     class MergeParentSlot {
-      constructor(childSource) {
+      constructor(childSource, linkParent) {
         this._childSource = childSource;
+        this._linkParent = linkParent;
       }
   
       // Build monad
@@ -561,7 +561,7 @@
         if (!this._childSource.isBuilt()) {
           // Child not visited
           const childSink = this._childSource._sink();
-          this.linkParent(parentSink, childSink);
+          this._linkParent(parentSink, childSink);
           this._childSource._sink = new WeakRef(childSink);
           yield* buildVertex(this._childSource);
           yield markVisited(this._childSource);
@@ -571,7 +571,7 @@
           throw new Error("Illegal pulse recursion!");
         } else {
           // Child was visited
-          this.linkParent(parentSink, this._childSource.getSink());
+          this._linkParent(parentSink, this._childSource.getSink());
         }
       }
       
@@ -594,20 +594,6 @@
       }
     }
     
-    class MergeParentSlotA extends MergeParentSlot {
-      // Mutable: parentSink, childSink
-      static linkParent(parentSink, childSink) {
-        childSink.linkParentA(parentSink);
-      }
-    }
-
-    class MergeParentSlotB extends MergeParentSlot {
-      // Mutable: parentSink, childSink
-      static linkParent(parentSink, childSink) {
-        childSink.linkParentB(parentSink);
-      }
-    }
-
     class SingleParentSink {
       constructor(parentSink, poll) {
         this._parentSink = parentSink;
@@ -660,8 +646,8 @@
     // Pull monad
     function* merge(sourceA, sourceB, combine = (a, b) => a) {
       const result = new MergeSource(() => new MergeSink(combine));
-      yield addGraphEdge(sourceA, new MergeParentSlotA(result));
-      yield addGraphEdge(sourceB, new MergeParentSlotB(result));
+      yield addGraphEdge(sourceA, new MergeParentSlot(result, (parentSink, childSink) => childSink.linkParentA(parentSink)));
+      yield addGraphEdge(sourceB, new MergeParentSlot(result, (parentSink, childSink) => childSink.linkParentB(parentSink)));
       return result;
     }
     
