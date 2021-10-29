@@ -121,6 +121,8 @@
     emptySinglyLinkedList._value = emptySinglyLinkedList;
     emptySinglyLinkedList._next = emptySinglyLinkedList;
     
+    const weakRefUndefined = {deref: () => undefined};
+    
     const weakMapFromEdges = edges => {
       const graph = new WeakMap();
       for (const [parent, child] of edges) {
@@ -489,6 +491,10 @@
         this._firstChild = this._children.prepend(childSink);
         return this._firstChild;
       }
+      
+      getPriority() {
+        return 0;
+      }
     }
 
     class InputSource {
@@ -510,9 +516,10 @@
     // Both a source and a sink
     class OutputPulse {
       constructor(makeAction) {
+        this._makeAction = makeAction;
         this._parentSink = null;
         this._linkedListNode = null;
-        this._makeAction = makeAction;
+        this._priority = null;
       }
 
       // Build monad
@@ -525,6 +532,11 @@
       // Build monad
       *buildRoot(parentSink) {
         yield* this.buildEdge(parentSink);
+      }
+      
+      // [this._parentSink !== null]
+      initPriority() {
+        this._priority = this._parentSink.getPriority() + 1;
       }
     }
 
@@ -566,8 +578,9 @@
       constructor(combine) {
         this._combine = combine;
         this._children = emptySinglyLinkedList;
-        this._parentA = null;
-        this._parentB = null;
+        this._parentA = weakRefUndefined;
+        this._parentB = weakRefUndefined;
+        this._priority = null;
       }
       
       linkChild(childSink) {
@@ -576,11 +589,32 @@
       }
       
       linkParentA(parentSink) {
-        this._parentA = parentSink;
+        this._parentA = new WeakRef(parentSink);
       }
       
       linkParentB(parentSink) {
-        this._parentB = parentSink;
+        this._parentB = new WeakRef(parentSink);
+      }
+      
+      // [this._priority !== null]
+      getPriority() {
+        return this._priority;
+      }
+      
+      // [this._parentA !== weakRefUndefined || this._parentB !== weakRefUndefined]
+      initPriority() {
+        // The code is written in this longhand way to prevent
+        // setting [this._priority] if both parents are undefined.
+        // That way, bugs won't pass silently.
+        const parentA = this._parentA.deref();
+        const parentB = this._parentB.deref();
+        if (parentA === undefined) {
+          this._priority = parentB.getPriority() + 1;
+        } else if (parentB === undefined) {
+          this._priority = parentA.getPriority() + 1;
+        } else {
+          this._priority = Math.max(parentA.getPriority() + parentB.getPriority()) + 1;
+        }
       }
     }
     
@@ -624,7 +658,6 @@
           this._childSource._sink = new WeakRef(childSink);
           yield* buildVertex(this._childSource);
           yield markVisited(this._childSource);
-          visitedChildren.add(childSource);
         } else if (!(yield isVisited(this._childSource))) {
           // Child being visited
           throw new Error("Illegal pulse recursion!");
@@ -638,14 +671,13 @@
       // Mutable: parentSink, this._childSource._sink
       // The same as [this.buildEdge] but without checking for illegal pulse recursion.
       *buildRoot(parentSink) {
-        if (this._childSource._sink === null) {
+        if (!this._childSource.isBuilt()) {
           // Child not visited
-          const childSink = new MergeSink();
-          this.linkParent(parentSink, childSink);
+          const childSink = this._childSource._sink();
+          this._linkParent(parentSink, childSink);
           this._childSource._sink = new WeakRef(childSink);
           yield* buildVertex(this._childSource);
           yield markVisited(this._childSource);
-          visitedChildren.add(childSource);
         } else {
           // Child was visited
           this.linkParent(parentSink, this._childSource.getSink());
@@ -658,11 +690,21 @@
         this._children = emptySinglyLinkedList;
         this._parentSink = parentSink;
         this._linkedListNode = parentSink.linkChild(this);
+        this._priority = null; // TODO see if omitting this line helps performance
       }
       
       linkChild(childSink) {
         this._firstChild = this._children.prepend(childSink);
         return this._firstChild;
+      }
+      
+      // [this._priority !== null]
+      getPriority() {
+        return this._priority;
+      }
+      
+      initPriority() {
+        this._priority = this._parentSink.getPriority() + 1;
       }
     }
 
