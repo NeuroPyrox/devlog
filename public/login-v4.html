@@ -624,7 +624,6 @@
           this._childSource._sink = new WeakRef(childSink);
           yield* buildVertex(this._childSource);
           yield markVisited(this._childSource);
-          visitedChildren.add(childSource);
         } else if (!(yield isVisited(this._childSource))) {
           // Child being visited
           throw new Error("Illegal pulse recursion!");
@@ -638,14 +637,13 @@
       // Mutable: parentSink, this._childSource._sink
       // The same as [this.buildEdge] but without checking for illegal pulse recursion.
       *buildRoot(parentSink) {
-        if (this._childSource._sink === null) {
+        if (!this._childSource.isBuilt()) {
           // Child not visited
-          const childSink = new MergeSink();
-          this.linkParent(parentSink, childSink);
+          const childSink = this._childSource._sink();
+          this._linkParent(parentSink, childSink);
           this._childSource._sink = new WeakRef(childSink);
           yield* buildVertex(this._childSource);
           yield markVisited(this._childSource);
-          visitedChildren.add(childSource);
         } else {
           // Child was visited
           this.linkParent(parentSink, this._childSource.getSink());
