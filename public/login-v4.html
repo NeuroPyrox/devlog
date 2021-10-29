@@ -154,6 +154,7 @@
       }
     }
     
+    // TODO profile to see if [parentSink] should be made into a function argument
     // Build monad
     function* buildVertex(parentSource) {
       const parentSink = parentSource.getSink();
@@ -524,13 +525,17 @@
 
     const never = { isBuilt: () => false, getRecursiveSelf: () => never };
 
+    // Promiscuous state sharing with [MergeParentSlot]
     class MergeSource {
-      constructor() {
-        this._sink = null;
+      // [sinkBuilder] is a function that makes this source's sink.
+      // [this._sink] has a different interface depending on [this.isBuilt()]
+      constructor(sinkBuilder) {
+        this._sink = sinkBuilder;
       }
       
+      // Easier than polymorphism
       isBuilt() {
-        this._sink !== null;
+        this._sink.constructor === WeakRef;
       }
 
       getRecursiveSelf() {
@@ -543,6 +548,8 @@
       }
     }
 
+    // TODO replace inheritance
+    // Promiscious state sharing with [MergeSource]
     class MergeParentSlot {
       constructor(childSource) {
         this._childSource = childSource;
@@ -551,9 +558,9 @@
       // Build monad
       // Mutable: parentSink, this._childSource._sink
       *buildEdge(parentSink) {
-        if (this._childSource._sink === null) {
+        if (!this._childSource.isBuilt()) {
           // Child not visited
-          const childSink = new MergeSink();
+          const childSink = this._childSource._sink();
           this.linkParent(parentSink, childSink);
           this._childSource._sink = new WeakRef(childSink);
           yield* buildVertex(this._childSource);
@@ -601,13 +608,22 @@
       }
     }
 
+    class SingleParentSink {
+      constructor(parentSink, poll) {
+        this._parentSink = parentSink;
+      }
+    }
+    
     class SingleParentSource {
-      constructor() {
-        this._sink = null;
+      // [sinkBuilder] is a function that takes a parent sink to make this source's sink.
+      // [this._sink] has a different interface depending on [this.isBuilt()]
+      constructor(sinkBuilder) {
+        this._sink = sinkBuilder;
       }
       
+      // Easier than polymorphism
       isBuilt() {
-        return this._sink !== null;
+        return this._sink.constructor === WeakRef;
       }
 
       getRecursiveSelf() {
@@ -620,12 +636,14 @@
       }
       
       // Build monad
+      // Only called if [!this.isBuilt()].
       *buildEdge(parentSink) {
-        this.linkParent(parentSink);
+        this._sink = new WeakRef(this._sink(parentSink));
         yield* buildVertex(this);
       }
       
       // Build monad
+      // Only called if [!this.isBuilt()].
       *buildRoot(parentSink) {
         yield* this.buildEdge(parentSink);
       }
@@ -638,41 +656,40 @@
       yield addGraphEdge(source, result);
       return result;
     }
+
+    // Pull monad
+    function* merge(sourceA, sourceB, combine = (a, b) => a) {
+      const result = new MergeSource(() => new MergeSink(combine));
+      yield addGraphEdge(sourceA, new MergeParentSlotA(result));
+      yield addGraphEdge(sourceB, new MergeParentSlotB(result));
+      return result;
+    }
     
     // Pull monad
-    function* tag(source, latchGet) {
-      const result = new SingleParentSource();
-      yield addGraphEdge(source, result);
-      return result;
-    }
-
-    // Pull monad
-    function* mapTag(source, latchGet, combine) {
-      const result = new SingleParentSource();
-      yield addGraphEdge(source, result);
-      return result;
-    }
-
-    // Pull monad
-    function* map(source, f) {
-      const result = new SingleParentSource();
+    function* singleParent(source, poll) {
+      const result = new SingleParentSource(parentSink => new SingleParentSink(parentSink, poll));
       yield addGraphEdge(source, result);
       return result;
     }
 
     // Pull monad
     function* filter(source, predicate) {
-      const result = new SingleParentSource();
-      yield addGraphEdge(source, result);
-      return result;
+      return yield* singleParent(source, undefined);
     }
 
     // Pull monad
-    function* merge(sourceA, sourceB) {
-      const result = new MergeSource();
-      yield addGraphEdge(sourceA, new MergeParentSlotA(result));
-      yield addGraphEdge(sourceB, new MergeParentSlotB(result));
-      return result;
+    function* map(source, f) {
+      return yield* singleParent(source, undefined);
+    }
+    
+    // Pull monad
+    function* tag(source, latchGet) {
+      return yield* singleParent(source, undefined);
+    }
+
+    // Pull monad
+    function* mapTag(source, latchGet, combine) {
+      return yield* singleParent(source, undefined);
     }
 
     // Pull monad
