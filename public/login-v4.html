@@ -101,6 +101,26 @@
       }
     }
 
+    class SinglyLinkedList {
+      constructor(value, next) {
+        this._value = value;
+        this._next = next;
+      }
+      
+      prepend(value) {
+        return new SinglyLinkedList(value, this);
+      }
+      
+      removeFirst() {
+        // TODO
+      }
+    }
+    
+    // Don't use a separate class because otherwise [SinglyLinkedList.removeFirst] wouldn't work.
+    const emptySinglyLinkedList = new SinglyLinkedList(null, null);
+    emptySinglyLinkedList._value = emptySinglyLinkedList;
+    emptySinglyLinkedList._next = emptySinglyLinkedList;
+    
     const weakMapFromEdges = edges => {
       const graph = new WeakMap();
       for (const [parent, child] of edges) {
@@ -462,6 +482,12 @@
         this._unsubscribe = subscribe(x =>
           runMonad(new PushContext(), publish(this, x))
         );
+        this._children = emptySinglyLinkedList;
+      }
+      
+      linkChild(childSink) {
+        this._firstChild = this._children.prepend(childSink);
+        return this._firstChild;
       }
     }
 
@@ -481,15 +507,18 @@
       }
     }
 
-    class OutputSource {
+    // Both a source and a sink
+    class OutputPulse {
       constructor(makeAction) {
         this._parentSink = null;
+        this._linkedListNode = null;
         this._makeAction = makeAction;
       }
 
       // Build monad
       *buildEdge(parentSink) {
-        this.linkParent(parentSink);
+        this._parentSink = parentSink;
+        this._linkedListNode = parentSink.linkChild(this);
         yield pushSortedSink(this);
       }
 
@@ -533,6 +562,28 @@
 
     const never = { isBuilt: () => false, getRecursiveSelf: () => never };
 
+    class MergeSink {
+      constructor(combine) {
+        this._combine = combine;
+        this._children = emptySinglyLinkedList;
+        this._parentA = null;
+        this._parentB = null;
+      }
+      
+      linkChild(childSink) {
+        this._firstChild = this._children.prepend(childSink);
+        return this._firstChild;
+      }
+      
+      linkParentA(parentSink) {
+        this._parentA = parentSink;
+      }
+      
+      linkParentB(parentSink) {
+        this._parentB = parentSink;
+      }
+    }
+    
     // Promiscuous state sharing with [MergeParentSlot]
     class MergeSource {
       // [sinkBuilder] is a function that makes this source's sink.
@@ -604,7 +655,14 @@
 
     class SingleParentSink {
       constructor(parentSink, poll) {
+        this._children = emptySinglyLinkedList;
         this._parentSink = parentSink;
+        this._linkedListNode = parentSink.linkChild(this);
+      }
+      
+      linkChild(childSink) {
+        this._firstChild = this._children.prepend(childSink);
+        return this._firstChild;
       }
     }
 
@@ -646,7 +704,7 @@
     // TODO unsubscribe
     // Pull monad
     function* output(source, makeAction) {
-      const result = new OutputSource(makeAction);
+      const result = new OutputPulse(makeAction);
       yield addGraphEdge(source, result);
       return result;
     }
