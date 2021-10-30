@@ -510,8 +510,8 @@
       }
       
       linkChild(childSink) {
-        this._firstChild = this._children.prepend(childSink);
-        return this._firstChild;
+        this._children = this._children.prepend(childSink);
+        return this._children;
       }
       
       getPriority() {
