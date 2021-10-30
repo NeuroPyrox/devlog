@@ -615,8 +615,8 @@
       constructor(combine) {
         this._combine = combine;
         this._children = emptySinglyLinkedList;
-        this._parentA = weakRefUndefined;
-        this._parentB = weakRefUndefined;
+        this._parentSinkA = weakRefUndefined;
+        this._parentSinkB = weakRefUndefined;
         this._priority = null;
       }
       
@@ -626,20 +626,20 @@
       }
       
       linkParentA(parentSink) {
-        this._parentA = new WeakRef(parentSink);
+        this._parentSinkA = new WeakRef(parentSink);
       }
       
       linkParentB(parentSink) {
-        this._parentB = new WeakRef(parentSink);
+        this._parentSinkB = new WeakRef(parentSink);
       }
       
-      // [this._parentA !== weakRefUndefined || this._parentB !== weakRefUndefined]
+      // [this._parentSinkA !== weakRefUndefined || this._parentSinkB !== weakRefUndefined]
       initPriority() {
         // The code is written in this longhand way to prevent
         // setting [this._priority] if both parents are undefined.
         // That way, bugs won't pass silently.
-        const parentA = this._parentA.deref();
-        const parentB = this._parentB.deref();
+        const parentA = this._parentSinkA.deref();
+        const parentB = this._parentSinkB.deref();
         if (parentA === undefined) {
           this._priority = parentB.getPriority() + 1;
         } else if (parentB === undefined) {
@@ -656,8 +656,8 @@
       
       // Push monad
       *poll() {
-        const parentAValue = yield readSink(this._parentA.deref());
-        const parentBValue = yield readSink(this._parentB.deref());
+        const parentAValue = yield readSink(this._parentSinkA.deref());
+        const parentBValue = yield readSink(this._parentSinkB.deref());
         // Covers all 4 cases of [parentAValue] and [parentBValue] being [undefined] or not.
         // Geez, sometimes I wish JavaScript had pattern matching.
         if (parentAValue !== undefined) {
