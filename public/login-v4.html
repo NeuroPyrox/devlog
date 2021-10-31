@@ -100,6 +100,7 @@
       }
     }
 
+    // TODO doubly linked
     class SinglyLinkedList {
       constructor(value, next) {
         this._value = value;
@@ -114,12 +115,26 @@
         this._value = next._value;
         this._next = next._next;
       }
+      
+      isEmpty() {
+        this._value === emptySinglyLinkedList._value;
+      }
+      
+      [Symbol.iterator]() {
+        const current = this;
+        return {next: () => {
+          if (current.isEmpty()) {
+            return {done: true};
+          }
+          const value = current._value;
+          current = current._next;
+          return value;
+        }};
+      }
     }
     
     // Don't use a separate class because otherwise [SinglyLinkedList.removeFirst] wouldn't work.
-    const emptySinglyLinkedList = new SinglyLinkedList(null, null);
-    emptySinglyLinkedList._value = emptySinglyLinkedList;
-    emptySinglyLinkedList._next = emptySinglyLinkedList;
+    const emptySinglyLinkedList = new SinglyLinkedList(Symbol(), null);
     
     const weakRefUndefined = {deref: () => undefined};
     
