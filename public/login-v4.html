@@ -825,15 +825,16 @@
       }
     }
 
+    ////////////////
+    // Pull monad //
+    
     // TODO unsubscribe
-    // Pull monad
     function* output(source, makeAction) {
       const result = new OutputPulse(makeAction);
       yield addGraphEdge(source, result);
       return result;
     }
 
-    // Pull monad
     function* merge(sourceA, sourceB, combine = (a, b) => a) {
       const result = new MergeSource(() => new MergeSink(combine));
       yield addGraphEdge(
@@ -851,7 +852,6 @@
       return result;
     }
 
-    // Pull monad
     function* singleParent(source, poll) {
       const result = new SingleParentSource(
         parentSink => new SingleParentSink(parentSink, poll)
@@ -860,32 +860,30 @@
       return result;
     }
 
-    // Pull monad
     function* filter(source, predicate) {
       return yield* singleParent(source, undefined);
     }
 
-    // Pull monad
     function* map(source, f) {
       return yield* singleParent(source, undefined);
     }
 
-    // Pull monad
     function* tag(source, latchGet) {
       return yield* singleParent(source, undefined);
     }
 
-    // Pull monad
     function* mapTag(source, latchGet, combine) {
       return yield* singleParent(source, undefined);
     }
 
-    // Pull monad
     function* switchE(pulseOfPulse) {
       // TODO
       return never;
     }
 
+    // Pull monad //
+    ////////////////
+    
     const addGraphEdge = (parent, child) => context =>
       context.addGraphEdge(parent, child);
 
