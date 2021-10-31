@@ -213,8 +213,7 @@
         this._graphRoots = [];
       }
 
-      // The [parentSinkSlot] is a wrapper around the child,
-      // and you get the child via [parentSinkSlot.getPulseSource()].
+      // The [parentSinkSlot] is a wrapper around the child.
       addGraphEdge(parentSource, parentSinkSlot) {
         if (!parentSource.isBuilt()) {
           this._graphEdges.push([parentSource, parentSinkSlot]);
