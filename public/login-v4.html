@@ -100,30 +100,23 @@
       }
     }
 
-    // TODO doubly linked
-    class SinglyLinkedList {
-      constructor(value, next) {
-        this._value = value;
-        this._next = next;
+    class ChildList {
+      constructor() {
+        this._prev = this;
+        this._next = this;
       }
       
-      prepend(value) {
-        return new SinglyLinkedList(value, this);
-      }
-      
-      removeFirst() {
-        this._value = next._value;
-        this._next = next._next;
-      }
-      
-      isEmpty() {
-        this._value === emptySinglyLinkedList._value;
+      add(value) {
+        const result = new ChildListNode(this, value, this._next);
+        this._next._prev = result;
+        this._next = result;
+        return result;
       }
       
       [Symbol.iterator]() {
-        const current = this;
+        const current = this._next;
         return {next: () => {
-          if (current.isEmpty()) {
+          if (current === this) {
             return {done: true};
           }
           const value = current._value;
@@ -133,8 +126,18 @@
       }
     }
     
-    // Don't use a separate class because otherwise [SinglyLinkedList.removeFirst] wouldn't work.
-    const emptySinglyLinkedList = new SinglyLinkedList(Symbol(), null);
+    class ChildListNode {
+      constructor(prev, value, next) {
+        this._prev = prev;
+        this._value = value;
+        this._next = next;
+      }
+      
+      remove() {
+        this._prev._next = this._next;
+        this._next._prev = this._prev;
+      }
+    }
     
     const weakRefUndefined = {deref: () => undefined};
     
@@ -520,12 +523,11 @@
         this._unsubscribe = subscribe(x =>
           runMonad(new PushContext(), push(this, x))
         );
-        this._children = emptySinglyLinkedList;
+        this._children = new ChildList();
       }
       
       linkChild(childSink) {
-        this._children = this._children.prepend(childSink);
-        return this._children;
+        return this._children.add(childSink);
       }
       
       getPriority() {
@@ -560,14 +562,14 @@
       constructor(handle) {
         this._handle = handle;
         this._parentSink = null;
-        this._linkedListNode = null;
+        this._childListNode = null;
         this._priority = null;
       }
 
       // Build monad
       *buildEdge(parentSink) {
         this._parentSink = parentSink;
-        this._linkedListNode = parentSink.linkChild(this);
+        this._childListNode = parentSink.linkChild(this);
         yield pushSortedSink(this);
       }
 
@@ -587,7 +589,7 @@
         if (parentValue !== undefined) {
           yield enqueueAction(this._handle, parentValue.value);
         }
-        return emptySinglyLinkedList;
+        return [];
       }
     }
 
@@ -600,6 +602,7 @@
         return this._source?.isBuilt();
       }
 
+      // [!this.isBuilt()]
       getRecursiveSelf() {
         if (this._source === null) {
           throw new Error("Must call [loop] for each [LoopSource]!");
@@ -607,7 +610,7 @@
         return this._source;
       }
 
-      // Only called if [this.isBuilt()].
+      // [this.isBuilt()]
       getSink() {
         return this._source.getSink();
       }
@@ -628,17 +631,17 @@
     class MergeSink {
       constructor(combine) {
         this._combine = combine;
-        this._children = emptySinglyLinkedList;
+        this._children = new ChildList();
         this._parentSinkA = weakRefUndefined;
         this._parentSinkB = weakRefUndefined;
         this._priority = null;
       }
       
       linkChild(childSink) {
-        this._firstChild = this._children.prepend(childSink);
-        return this._firstChild;
+        return this._children.add(childSink);
       }
       
+      // TODO get child list node
       linkParentA(parentSink) {
         this._parentSinkA = new WeakRef(parentSink);
       }
@@ -672,6 +675,7 @@
       *poll() {
         const parentAValue = yield readSink(this._parentSinkA.deref());
         const parentBValue = yield readSink(this._parentSinkB.deref());
+        // TODO refactor
         // Covers all 4 cases of [parentAValue] and [parentBValue] being [undefined] or not.
         // Geez, sometimes I wish JavaScript had pattern matching.
         if (parentAValue !== undefined) {
@@ -683,7 +687,7 @@
         } else if (parentBValue !== undefined) {
           yield writeSink(this, parentBValue.value);
         } else {
-          return emptySinglyLinkedList;
+          return [];
         }
         return this._children;
       }
@@ -702,11 +706,12 @@
         this._sink.constructor === WeakRef;
       }
 
+      // [!this.isBuilt()]
       getRecursiveSelf() {
         return this;
       }
 
-      // Only called if [this.isBuilt()].
+      // [this.isBuilt()]
       getSink() {
         return this._sink.deref();
       }
@@ -758,7 +763,7 @@
 
     class SingleParentSink {
       constructor(parentSink, mapParentValue) {
-        this._children = emptySinglyLinkedList;
+        this._children = new ChildList();
         this._parentSink = parentSink;
         this._linkedListNode = parentSink.linkChild(this);
         this._priority = null; // TODO see if omitting this line helps performance
@@ -766,8 +771,7 @@
       }
       
       linkChild(childSink) {
-        this._firstChild = this._children.prepend(childSink);
-        return this._firstChild;
+        return this._children.add(childSink);
       }
       
       // [this._priority !== null]
@@ -783,7 +787,7 @@
       *poll() {
         const parentValue = yield readSink(this._parentSink);
         if (parentValue === undefined) {
-          return emptySinglyLinkedList;
+          return [];
         }
         yield writeSink(this, this._mapParentValue(parentValue.value));
         return this._children;
@@ -802,24 +806,25 @@
         return this._sink.constructor === WeakRef;
       }
 
+      // [!this.isBuilt()]
       getRecursiveSelf() {
         return this;
       }
 
-      // Only called if [this.isBuilt()].
+      // [this.isBuilt()]
       getSink() {
         return this._sink.deref();
       }
 
       // Build monad
-      // Only called if [!this.isBuilt()].
+      // [!this.isBuilt()]
       *buildEdge(parentSink) {
         this._sink = new WeakRef(this._sink(parentSink));
         yield* buildVertex(this);
       }
 
       // Build monad
-      // Only called if [!this.isBuilt()].
+      // [!this.isBuilt()]
       *buildRoot(parentSink) {
         yield* this.buildEdge(parentSink);
       }
