@@ -634,6 +634,8 @@
         this._children = new ChildList();
         this._parentSinkA = weakRefUndefined;
         this._parentSinkB = weakRefUndefined;
+        this._childListNodeA = weakRefUndefined;
+        this._childListNodeB = weakRefUndefined;
         this._priority = null;
       }
       
@@ -641,13 +643,14 @@
         return this._children.add(childSink);
       }
       
-      // TODO get child list node
       linkParentA(parentSink) {
         this._parentSinkA = new WeakRef(parentSink);
+        this._childListNodeA = new WeakRef(parentSink.linkChild(this));
       }
       
       linkParentB(parentSink) {
         this._parentSinkB = new WeakRef(parentSink);
+        this._childListNodeB = new WeakRef(parentSink.linkChild(this));
       }
       
       // [this._parentSinkA !== weakRefUndefined || this._parentSinkB !== weakRefUndefined]
@@ -765,7 +768,7 @@
       constructor(parentSink, mapParentValue) {
         this._children = new ChildList();
         this._parentSink = parentSink;
-        this._linkedListNode = parentSink.linkChild(this);
+        this._childListNode = parentSink.linkChild(this);
         this._priority = null; // TODO see if omitting this line helps performance
         this._mapParentValue = mapParentValue;
       }
