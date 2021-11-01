@@ -653,11 +653,8 @@
         this._childListNodeB = new WeakRef(parentSink.linkChild(this));
       }
       
-      // [this._parentSinkA !== weakRefUndefined || this._parentSinkB !== weakRefUndefined]
+      // [parentA !== undefined || parentB !== undefined]
       initPriority() {
-        // The code is written in this longhand way to prevent
-        // setting [this._priority] if both parents are undefined.
-        // That way, bugs won't pass silently.
         const parentA = this._parentSinkA.deref();
         const parentB = this._parentSinkB.deref();
         if (parentA === undefined) {
@@ -675,22 +672,16 @@
       }
       
       // Push monad
+      // [parentAValue !== undefined || parentBValue !== undefined]
       *poll() {
         const parentAValue = yield readSink(this._parentSinkA.deref());
         const parentBValue = yield readSink(this._parentSinkB.deref());
-        // TODO refactor
-        // Covers all 4 cases of [parentAValue] and [parentBValue] being [undefined] or not.
-        // Geez, sometimes I wish JavaScript had pattern matching.
-        if (parentAValue !== undefined) {
-          if (parentBValue !== undefined) {
-            yield writeSink(this, this._combine(parentAValue.value, parentBValue.value));
-          } else {
-            yield writeSink(this, parentAValue.value);
-          }
-        } else if (parentBValue !== undefined) {
+        if (parentAValue === undefined) {
           yield writeSink(this, parentBValue.value);
+        } else if (parentBValue === undefined) {
+          yield writeSink(this, parentAValue.value);
         } else {
-          return [];
+          yield writeSink(this, this._combine(parentAValue.value, parentBValue.value));
         }
         return this._children;
       }
