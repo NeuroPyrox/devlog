@@ -141,6 +141,9 @@
     
     const weakRefUndefined = {deref: () => undefined};
     
+    // We use this so that type errors like [null + 1] don't pass silently.
+    const nullNumber = Symbol();
+    
     const weakMapFromEdges = edges => {
       const graph = new WeakMap();
       for (const [parent, child] of edges) {
@@ -563,7 +566,7 @@
         this._handle = handle;
         this._parentSink = null;
         this._childListNode = null;
-        this._priority = null;
+        this._priority = nullNumber;
       }
 
       // Build monad
@@ -636,7 +639,7 @@
         this._parentSinkB = weakRefUndefined;
         this._childListNodeA = weakRefUndefined;
         this._childListNodeB = weakRefUndefined;
-        this._priority = null;
+        this._priority = nullNumber;
       }
       
       linkChild(childSink) {
@@ -760,7 +763,7 @@
         this._children = new ChildList();
         this._parentSink = parentSink;
         this._childListNode = parentSink.linkChild(this);
-        this._priority = null; // TODO see if omitting this line helps performance
+        this._priority = nullNumber;
         this._mapParentValue = mapParentValue;
       }
       
