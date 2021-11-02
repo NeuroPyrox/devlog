@@ -30,7 +30,7 @@
         }
         const parentIndex = Math.floor((index - 1) / 2);
         const parent = this._array[parentIndex];
-        if (parent.priority <= value.priority) {
+        if (parent.getPriority() <= value.getPriority()) {
           this._array.push(value);
           return;
         }
@@ -42,7 +42,7 @@
           const parentIndex = Math.floor((index - 1) / 2);
           const parent = this._array[parentIndex];
 
-          if (parent.priority <= value.priority) break;
+          if (parent.getPriority() <= value.getPriority()) break;
 
           this._array[index] = parent;
           index = parentIndex;
@@ -392,6 +392,10 @@
         this._priority = this._parentSink.getPriority() + 1;
       }
       
+      getPriority() {
+        return this._priority;
+      }
+      
       // Push monad
       *poll() {
         const parentValue = yield readSink(this._parentSink);
@@ -577,13 +581,13 @@
         return this._children.add(childSink);
       }
       
+      initPriority() {
+        this._priority = this._parentSink.getPriority() + 1;
+      }
+      
       // [this._priority !== null]
       getPriority() {
         return this._priority;
-      }
-      
-      initPriority() {
-        this._priority = this._parentSink.getPriority() + 1;
       }
       
       // Push monad
