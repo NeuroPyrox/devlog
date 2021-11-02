@@ -114,7 +114,7 @@
       }
       
       [Symbol.iterator]() {
-        const current = this._next;
+        let current = this._next;
         return {next: () => {
           if (current === this) {
             return {done: true};
