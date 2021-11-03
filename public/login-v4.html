@@ -262,52 +262,54 @@
       context.addGraphEdge(parent, child);
     
     // TODO unsubscribe
-    function* output(source, makeAction) {
+    const output = (event, makeAction) => function*() {
       const result = new OutputPulse(makeAction);
-      yield addGraphEdge(source, result);
-      return result;
+      yield addGraphEdge(yield* event(), result);
+      const unsubscribe = undefined;
+      return unsubscribe;
     }
 
-    function* merge(sourceA, sourceB, combine = (a, b) => a) {
-      const result = new MergeSource(() => new MergeSink(combine));
-      yield addGraphEdge(
-        sourceA,
-        new MergeParentSlot(result, (parentSink, childSink) =>
-          childSink.linkParentA(parentSink)
-        )
-      );
-      yield addGraphEdge(
-        sourceB,
-        new MergeParentSlot(result, (parentSink, childSink) =>
-          childSink.linkParentB(parentSink)
-        )
-      );
-      return result;
+    // TODO mergeWith
+    const merge = (eventA, eventB, combine = (a, b) => a) => {
+      let result = null;
+      return function*() {
+        if (result != null) {
+          return result;
+        }
+        result = new MergeSource(() => new MergeSink(combine));
+        yield addGraphEdge(
+          yield* eventA(),
+          new MergeParentSlot(result, (parentSink, childSink) =>
+            childSink.linkParentA(parentSink)
+          )
+        );
+        yield addGraphEdge(
+          yield* eventB(),
+          new MergeParentSlot(result, (parentSink, childSink) =>
+            childSink.linkParentB(parentSink)
+          )
+        );
+        return result;
+      }
     }
 
-    function* singleParent(source, poll) {
-      const result = new SingleParentSource(
-        parentSink => new SingleParentSink(parentSink, poll)
-      );
-      yield addGraphEdge(source, result);
-      return result;
+    const singleParentEvent = (parentEvent, mapParentValue) => {
+      let result = null;
+      return function*() {
+        if (result != null) {
+          return result;
+        }
+        result = new SingleParentSource(
+          parentSink => new SingleParentSink(parentSink, mapParentValue)
+        );
+        yield addGraphEdge(yield* parentEvent(), result);
+        return result;
+      }
     }
 
-    function* filter(source, predicate) {
-      return yield* singleParent(source, undefined);
-    }
-
-    function* map(source, f) {
-      return yield* singleParent(source, undefined);
-    }
-
-    function* tag(source, latchGet) {
-      return yield* singleParent(source, undefined);
-    }
-
-    function* mapTag(source, latchGet, combine) {
-      return yield* singleParent(source, undefined);
-    }
+    const filter = (event, predicate) => singleParentEvent(event, undefined);
+    const map = (event, f) => singleParentEvent(event, undefined);
+    const mapTag = (event, latchGet, combine) => singleParentEvent(event, undefined);
 
     function* switchE(pulseOfPulse) {
       // TODO
@@ -323,6 +325,12 @@
       );
       return result;
     }
+
+    const getClicks = domNode =>
+      new InputSource(push => domNode.addEventListener("click", push));
+
+    // TODO replace with behavior
+    const getInputValues = domNode => () => domNode.value;
 
     // Pull monad //
     ////////////////
@@ -708,13 +716,7 @@
         yield* this.buildEdge(parentSink);
       }
     }
-
-    const getClicks = domNode =>
-      new InputSource(push => domNode.addEventListener("click", push));
-
-    // TODO replace with behavior
-    const getInputValues = domNode => () => domNode.value;
-
+    
     function* userDatabase({
       insertions,
       usernamesToRemove,
