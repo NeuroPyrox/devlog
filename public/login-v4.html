@@ -255,6 +255,78 @@
       }
     }
 
+    ////////////////
+    // Pull monad //
+    
+    const addGraphEdge = (parent, child) => context =>
+      context.addGraphEdge(parent, child);
+    
+    // TODO unsubscribe
+    function* output(source, makeAction) {
+      const result = new OutputPulse(makeAction);
+      yield addGraphEdge(source, result);
+      return result;
+    }
+
+    function* merge(sourceA, sourceB, combine = (a, b) => a) {
+      const result = new MergeSource(() => new MergeSink(combine));
+      yield addGraphEdge(
+        sourceA,
+        new MergeParentSlot(result, (parentSink, childSink) =>
+          childSink.linkParentA(parentSink)
+        )
+      );
+      yield addGraphEdge(
+        sourceB,
+        new MergeParentSlot(result, (parentSink, childSink) =>
+          childSink.linkParentB(parentSink)
+        )
+      );
+      return result;
+    }
+
+    function* singleParent(source, poll) {
+      const result = new SingleParentSource(
+        parentSink => new SingleParentSink(parentSink, poll)
+      );
+      yield addGraphEdge(source, result);
+      return result;
+    }
+
+    function* filter(source, predicate) {
+      return yield* singleParent(source, undefined);
+    }
+
+    function* map(source, f) {
+      return yield* singleParent(source, undefined);
+    }
+
+    function* tag(source, latchGet) {
+      return yield* singleParent(source, undefined);
+    }
+
+    function* mapTag(source, latchGet, combine) {
+      return yield* singleParent(source, undefined);
+    }
+
+    function* switchE(pulseOfPulse) {
+      // TODO
+      return never;
+    }
+
+    // TODO optimize with binary tree
+    // TODO use cached moments
+    function* mergeBind(pulse, f) {
+      const result = new LoopSource();
+      result.loop(
+        yield* switchE(yield* map(result, mergeMe => merge(f(mergeMe), result)))
+      );
+      return result;
+    }
+
+    // Pull monad //
+    ////////////////
+
     class PushContext {
       constructor() {
         // We're able to use a weakMap without fear of losing access to the values
@@ -637,83 +709,11 @@
       }
     }
 
-    ////////////////
-    // Pull monad //
-    
-    // TODO unsubscribe
-    function* output(source, makeAction) {
-      const result = new OutputPulse(makeAction);
-      yield addGraphEdge(source, result);
-      return result;
-    }
-
-    function* merge(sourceA, sourceB, combine = (a, b) => a) {
-      const result = new MergeSource(() => new MergeSink(combine));
-      yield addGraphEdge(
-        sourceA,
-        new MergeParentSlot(result, (parentSink, childSink) =>
-          childSink.linkParentA(parentSink)
-        )
-      );
-      yield addGraphEdge(
-        sourceB,
-        new MergeParentSlot(result, (parentSink, childSink) =>
-          childSink.linkParentB(parentSink)
-        )
-      );
-      return result;
-    }
-
-    function* singleParent(source, poll) {
-      const result = new SingleParentSource(
-        parentSink => new SingleParentSink(parentSink, poll)
-      );
-      yield addGraphEdge(source, result);
-      return result;
-    }
-
-    function* filter(source, predicate) {
-      return yield* singleParent(source, undefined);
-    }
-
-    function* map(source, f) {
-      return yield* singleParent(source, undefined);
-    }
-
-    function* tag(source, latchGet) {
-      return yield* singleParent(source, undefined);
-    }
-
-    function* mapTag(source, latchGet, combine) {
-      return yield* singleParent(source, undefined);
-    }
-
-    function* switchE(pulseOfPulse) {
-      // TODO
-      return never;
-    }
-
-    // Pull monad //
-    ////////////////
-    
-    const addGraphEdge = (parent, child) => context =>
-      context.addGraphEdge(parent, child);
-
     const getClicks = domNode =>
       new InputSource(push => domNode.addEventListener("click", push));
 
     // TODO replace with behavior
     const getInputValues = domNode => () => domNode.value;
-
-    // TODO optimize with binary tree
-    // TODO use cached moments
-    function* mergeBind(pulse, f) {
-      const result = new LoopSource();
-      result.loop(
-        yield* switchE(yield* map(result, mergeMe => merge(f(mergeMe), result)))
-      );
-      return result;
-    }
 
     function* userDatabase({
       insertions,
