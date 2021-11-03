@@ -121,7 +121,7 @@
           }
           const value = current._value;
           current = current._next;
-          return value;
+          return {done: false, value};
         }};
       }
     }
