@@ -369,7 +369,7 @@
     // Push monad //
     
     const writeSink = (sink, value) => context => context.writeSink(sink, value);
-    const readSink = sink => context => context.read(sink);
+    const readSink = sink => context => context.readSink(sink);
     const enqueueAction = action => context => context.enqueueAction(action);
     
     // Mutable: queue
