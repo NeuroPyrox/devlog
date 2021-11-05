@@ -262,12 +262,12 @@
       context.addGraphEdge(parent, child);
     
     // TODO unsubscribe
-    const output = (event, makeAction) => function*() {
+    const output = (event, makeAction) => pull(function*() {
       const result = new OutputPulse(makeAction);
       yield addGraphEdge(yield* event(), result);
       const unsubscribe = undefined;
       return unsubscribe;
-    }
+    });
 
     // TODO mergeWith
     const merge = (eventA, eventB, combine = (a, b) => a) => {
@@ -389,6 +389,24 @@
     
     // Push monad //
     ////////////////
+    
+    class MomentContext {
+      constructor() {
+        // TODO
+      }
+      
+      pull(monadicPullValue) {
+        // TODO
+      }
+    }
+    
+    //////////////////
+    // Moment monad //
+    
+    const pull = monadicPullValue => context => context.pull(monadicPullValue);
+    
+    // Moment monad //
+    //////////////////
 
     // Mutable: context, generator
     const runMonad = (context, generator) => {
@@ -751,9 +769,9 @@
         }),
         x => x !== null
       );
-      yield* output(signups, ([index, user]) =>
+      yield output(signups, ([index, user]) =>
         internalTable.splice(index, 0, user)
-      )();
+      );
 
       insertions = map(insertions, ({ username, password }) => {
         const index = findUsername(username);
@@ -770,9 +788,9 @@
         filter(insertions, x => x[0] === "createUser"),
         ([, index, user]) => [index, user]
       );
-      yield* output(createUserInsertions, ([index, user]) => {
+      yield output(createUserInsertions, ([index, user]) => {
         internalTable.splice(index, 0, user);
-      })();
+      });
       const createdUsers = merge(createUserInsertions, signups);
       const changePasswordInsertions = filter(
         insertions,
@@ -786,19 +804,19 @@
           password
         })
       );
-      yield* output(
+      yield output(
         passwordChanges,
         ({ index, password }) => (internalTable[index].password = password)
-      )();
+      );
       const removedUsers = map(usernamesToRemove, username => ({
         index: findUsername(username),
         username
       }));
-      yield* output(removedUsers, ({ index }) =>
+      yield output(removedUsers, ({ index }) =>
         internalTable.splice(index, 1)
-      )();
+      );
       clears = filter(clears, _ => internalTable.length !== 0);
-      yield* output(clears, _ => (internalTable = []))();
+      yield output(clears, _ => (internalTable = []));
 
       const tryLogins = stream =>
         stream.map(({ username, password }) => {
@@ -1124,6 +1142,6 @@
       return start;
     }
 
-    runMonad(new PullContext(), main())();
+    runMonad(new MomentContext(), main())();
   </script>
 </html>
