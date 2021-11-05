@@ -310,6 +310,7 @@
     const filter = (event, predicate) => singleParentEvent(event, undefined);
     const map = (event, f) => singleParentEvent(event, undefined);
     const mapTag = (event, latchGet, combine) => singleParentEvent(event, undefined);
+    const tag = (event, latchGet) => singleParentEvent(event, undefined);
 
     function* switchE(pulseOfPulse) {
       // TODO
