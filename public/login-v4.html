@@ -280,6 +280,10 @@
       const unsubscribe = undefined;
       return unsubscribe;
     });
+    
+    function* never() {
+      return neverSource;
+    }
 
     // TODO mergeWith
     const merge = (eventA, eventB, combine = (a, b) => a) => {
@@ -515,6 +519,7 @@
       }
     }
 
+    // TODO remove
     class LoopSource {
       constructor() {
         this._source = null;
@@ -548,7 +553,7 @@
       }
     }
 
-    const never = { isBuilt: () => false, getRecursiveSelf: () => never };
+    const neverSource = { isBuilt: () => false, getRecursiveSelf: () => neverSource };
 
     class MergeSink {
       constructor(combine) {
