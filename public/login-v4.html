@@ -312,21 +312,6 @@
     const mapTag = (event, latchGet, combine) => singleParentEvent(event, undefined);
     const tag = (event, latchGet) => singleParentEvent(event, undefined);
 
-    function* switchE(pulseOfPulse) {
-      // TODO
-      return never;
-    }
-
-    // TODO optimize with binary tree
-    // TODO use cached moments
-    function* mergeBind(pulse, f) {
-      const result = new LoopSource();
-      result.loop(
-        yield* switchE(yield* map(result, mergeMe => merge(f(mergeMe), result)))
-      );
-      return result;
-    }
-
     const getClicks = domNode =>
       new InputSource(push => domNode.addEventListener("click", push));
 
@@ -404,6 +389,19 @@
     // Moment monad //
     
     const pull = monadicPullValue => context => context.pull(monadicPullValue);
+
+    function* switchE(eventOfEvent) {
+      // TODO
+      return never;
+    }
+
+    // TODO optimize with binary tree
+    const mergeBind = (eventOfEvent, f) => function*() {
+      let current = never;
+      const next = map(eventOfEvent, event => merge(f(event), current));
+      yield output(next, event => current = event);
+      return yield* switchE(next);
+    };
     
     // Moment monad //
     //////////////////
@@ -948,14 +946,14 @@
         signupAttempts
       });
 
-      yield* output(insertions, () => {
+      yield output(insertions, () => {
         usernameInsertInput.value = "";
         passwordInsertInput.value = "";
       });
 
       // TODO make pure
       usernamesToRemove.loop(
-        yield* mergeBind(createdUsers, ([index, user]) => {
+        yield mergeBind(createdUsers, ([index, user]) => {
           const { root: rowElement, xButton } = tr(
             td.textContent(user.username),
             td.textContent(user.password),
@@ -973,16 +971,16 @@
         })
       );
 
-      yield* output(passwordChanges, ({ index, password }) => {
+      yield output(passwordChanges, ({ index, password }) => {
         const rowElement = userTableBody.children[index];
         rowElement.children[1].textContent = password;
       });
 
-      yield* output(removedUsers, ({ index }) =>
+      yield output(removedUsers, ({ index }) =>
         userTableBody.children[index].remove()
       );
 
-      yield* output(clears, _ => (userTableBody.innerHTML = ""));
+      yield output(clears, _ => (userTableBody.innerHTML = ""));
 
       return { userTableDiv, passwordChanges, removedUsers, clears, tryLogins };
     }
