@@ -999,7 +999,7 @@
 
     // Pull monad
     function* main() {
-      const signupAttempts = new LoopSource();
+      const signupAttempts = eventLoop();
 
       //div(yield* userTable(signupAttempts).var("userTable"), slot(loginDiv))
       const {
@@ -1132,21 +1132,21 @@
       const startPage = new InputSource(p => (publishStartPage = p));
       const start = _ => publishStartPage(createLoginDiv());
 
-      const authPages = new LoopSource();
-      const appPages = yield* merge(authPages, startPage);
+      const authPages = eventLoop();
+      const appPages = merge(authPages, startPage);
 
-      yield* output(appPages, ([appDiv, ,]) => {
+      yield output(appPages, ([appDiv, ,]) => {
         document.body.lastElementChild.remove();
         document.body.appendChild(appDiv);
       });
 
       signupAttempts.loop(
-        yield* switchE(
-          yield* map(appPages, ([, , signupAttempts]) => signupAttempts)
+        yield switchE(
+          map(appPages, ([, , signupAttempts]) => signupAttempts)
         )
       );
       authPages.loop(
-        yield* switchE(yield* map(appPages, ([, nextAuthPage]) => nextAuthPage))
+        yield switchE(map(appPages, ([, nextAuthPage]) => nextAuthPage))
       );
 
       return start;
