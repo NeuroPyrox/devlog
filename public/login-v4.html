@@ -105,45 +105,47 @@
         this._prev = this;
         this._next = this;
       }
-      
+
       add(value) {
         const result = new ChildListNode(this, value, this._next);
         this._next._prev = result;
         this._next = result;
         return result;
       }
-      
+
       [Symbol.iterator]() {
         let current = this._next;
-        return {next: () => {
-          if (current === this) {
-            return {done: true};
+        return {
+          next: () => {
+            if (current === this) {
+              return { done: true };
+            }
+            const value = current._value;
+            current = current._next;
+            return { done: false, value };
           }
-          const value = current._value;
-          current = current._next;
-          return {done: false, value};
-        }};
+        };
       }
     }
-    
+
     class ChildListNode {
       constructor(prev, value, next) {
         this._prev = prev;
         this._value = value;
         this._next = next;
       }
-      
+
       remove() {
         this._prev._next = this._next;
         this._next._prev = this._prev;
       }
     }
-    
-    const weakRefUndefined = {deref: () => undefined};
-    
+
+    const weakRefUndefined = { deref: () => undefined };
+
     // We use this so that type errors like [null + 1] don't pass silently.
     const nullNumber = Symbol();
-    
+
     const weakMapFromEdges = edges => {
       const graph = new WeakMap();
       for (const [parent, child] of edges) {
@@ -187,7 +189,7 @@
 
     /////////////////
     // Build monad //
-    
+
     const getSourceChildren = source => context =>
       context.getSourceChildren(source);
     const pushSortedSink = sink => context => context.pushSortedSink(sink);
@@ -212,7 +214,7 @@
 
     // Build monad //
     /////////////////
-    
+
     class PullContext {
       constructor() {
         this._graphEdges = [];
@@ -257,30 +259,31 @@
 
     ////////////////
     // Pull monad //
-    
+
     const addGraphEdge = (parent, child) => context =>
       context.addGraphEdge(parent, child);
-    
+
     const eventLoop = () => {
       let event = null;
       const result = function*() {
         if (event === null) {
-          throw new Error("Must call [loop] on every [eventLoop]!")
+          throw new Error("Must call [loop] on every [eventLoop]!");
         }
         return yield* event();
-      }
-      result.loop = setTo => event = setTo;
-      return  result;
-    }
-    
+      };
+      result.loop = setTo => (event = setTo);
+      return result;
+    };
+
     // TODO unsubscribe
-    const output = (event, makeAction) => pull(function*() {
-      const result = new OutputPulse(makeAction);
-      yield addGraphEdge(yield* event(), result);
-      const unsubscribe = undefined;
-      return unsubscribe;
-    });
-    
+    const output = (event, makeAction) =>
+      pull(function*() {
+        const result = new OutputPulse(makeAction);
+        yield addGraphEdge(yield* event(), result);
+        const unsubscribe = undefined;
+        return unsubscribe;
+      });
+
     function* never() {
       return neverSource;
     }
@@ -306,8 +309,8 @@
           )
         );
         return result;
-      }
-    }
+      };
+    };
 
     const singleParentEvent = (parentEvent, mapParentValue) => {
       let result = null;
@@ -320,12 +323,13 @@
         );
         yield addGraphEdge(yield* parentEvent(), result);
         return result;
-      }
-    }
+      };
+    };
 
     const filter = (event, predicate) => singleParentEvent(event, undefined);
     const map = (event, f) => singleParentEvent(event, undefined);
-    const mapTag = (event, latchGet, combine) => singleParentEvent(event, undefined);
+    const mapTag = (event, latchGet, combine) =>
+      singleParentEvent(event, undefined);
     const tag = (event, latchGet) => singleParentEvent(event, undefined);
 
     const getClicks = domNode =>
@@ -349,7 +353,7 @@
         // Store an object so that we can differentiate between
         // an unwritten sink and a sink that had [undefined] written to it.
         // Essentially, it's an ad-hoc maybe monad.
-        this._values.set(sink, {value});
+        this._values.set(sink, { value });
       }
 
       readSink(sink) {
@@ -359,7 +363,7 @@
       enqueueAction(handler, value) {
         this._actions.push([handler, value]);
       }
-      
+
       _endMonad() {
         for (const [handle, value] of this._actions) {
           handle(value);
@@ -369,11 +373,12 @@
 
     ////////////////
     // Push monad //
-    
-    const writeSink = (sink, value) => context => context.writeSink(sink, value);
+
+    const writeSink = (sink, value) => context =>
+      context.writeSink(sink, value);
     const readSink = sink => context => context.readSink(sink);
     const enqueueAction = action => context => context.enqueueAction(action);
-    
+
     // Mutable: queue
     function* push(sink, value) {
       yield writeSink(sink, value);
@@ -387,38 +392,37 @@
         }
       }
     }
-    
+
     // Push monad //
     ////////////////
-    
+
     class MomentContext {
       constructor() {
         // TODO
       }
-      
+
       pull(monadicPullValue) {
         // TODO
       }
     }
-    
+
     //////////////////
     // Moment monad //
-    
+
     const pull = monadicPullValue => context => context.pull(monadicPullValue);
 
     function* switchE(eventOfEvent) {
       // TODO
-      return never;
     }
 
     // TODO optimize with binary tree
-    const mergeBind = (eventOfEvent, f) => function*() {
+    function* mergeBind(eventOfEvent, f) {
       let current = never;
       const next = map(eventOfEvent, event => merge(f(event), current));
-      yield output(next, event => current = event);
+      yield output(next, event => (current = event));
       return yield* switchE(next);
-    };
-    
+    }
+
     // Moment monad //
     //////////////////
 
@@ -447,15 +451,15 @@
         );
         this._children = new ChildList();
       }
-      
+
       linkChild(childSink) {
         return this._children.add(childSink);
       }
-      
+
       getPriority() {
         return 0;
       }
-      
+
       // Push monad
       // Don't write because it's assumed that was already done in [push].
       *poll() {
@@ -499,16 +503,16 @@
       *buildRoot(parentSink) {
         yield* this.buildEdge(parentSink);
       }
-      
+
       // [this._parentSink !== null]
       initPriority() {
         this._priority = this._parentSink.getPriority() + 1;
       }
-      
+
       getPriority() {
         return this._priority;
       }
-      
+
       // Push monad
       *poll() {
         const parentValue = yield readSink(this._parentSink);
@@ -553,7 +557,10 @@
       }
     }
 
-    const neverSource = { isBuilt: () => false, getRecursiveSelf: () => neverSource };
+    const neverSource = {
+      isBuilt: () => false,
+      getRecursiveSelf: () => neverSource
+    };
 
     class MergeSink {
       constructor(combine) {
@@ -565,21 +572,21 @@
         this._childListNodeB = weakRefUndefined;
         this._priority = nullNumber;
       }
-      
+
       linkChild(childSink) {
         return this._children.add(childSink);
       }
-      
+
       linkParentA(parentSink) {
         this._parentSinkA = new WeakRef(parentSink);
         this._childListNodeA = new WeakRef(parentSink.linkChild(this));
       }
-      
+
       linkParentB(parentSink) {
         this._parentSinkB = new WeakRef(parentSink);
         this._childListNodeB = new WeakRef(parentSink.linkChild(this));
       }
-      
+
       // [parentA !== undefined || parentB !== undefined]
       initPriority() {
         const parentA = this._parentSinkA.deref();
@@ -589,15 +596,16 @@
         } else if (parentB === undefined) {
           this._priority = parentA.getPriority() + 1;
         } else {
-          this._priority = Math.max(parentA.getPriority() + parentB.getPriority()) + 1;
+          this._priority =
+            Math.max(parentA.getPriority() + parentB.getPriority()) + 1;
         }
       }
-      
+
       // [this._priority !== null]
       getPriority() {
         return this._priority;
       }
-      
+
       // Push monad
       // [parentAValue !== undefined || parentBValue !== undefined]
       *poll() {
@@ -608,12 +616,15 @@
         } else if (parentBValue === undefined) {
           yield writeSink(this, parentAValue.value);
         } else {
-          yield writeSink(this, this._combine(parentAValue.value, parentBValue.value));
+          yield writeSink(
+            this,
+            this._combine(parentAValue.value, parentBValue.value)
+          );
         }
         return this._children;
       }
     }
-    
+
     // Promiscuous state sharing with [MergeParentSlot]
     class MergeSource {
       // [sinkBuilder] is a function that makes this source's sink.
@@ -690,20 +701,20 @@
         this._priority = nullNumber;
         this._mapParentValue = mapParentValue;
       }
-      
+
       linkChild(childSink) {
         return this._children.add(childSink);
       }
-      
+
       initPriority() {
         this._priority = this._parentSink.getPriority() + 1;
       }
-      
+
       // [this._priority !== null]
       getPriority() {
         return this._priority;
       }
-      
+
       // Push monad
       *poll() {
         const parentValue = yield readSink(this._parentSink);
@@ -750,7 +761,7 @@
         yield* this.buildEdge(parentSink);
       }
     }
-    
+
     function* userDatabase({
       insertions,
       usernamesToRemove,
@@ -827,9 +838,7 @@
         index: findUsername(username),
         username
       }));
-      yield output(removedUsers, ({ index }) =>
-        internalTable.splice(index, 1)
-      );
+      yield output(removedUsers, ({ index }) => internalTable.splice(index, 1));
       clears = filter(clears, _ => internalTable.length !== 0);
       yield output(clears, _ => (internalTable = []));
 
@@ -935,10 +944,7 @@
 
       const insertions = filter(
         mapTag(
-          tag(
-            getClicks(insertButton),
-            getInputValues(usernameInsertInput)
-          ),
+          tag(getClicks(insertButton), getInputValues(usernameInsertInput)),
           getInputValues(passwordInsertInput),
           (username, password) => ({
             username,
@@ -1146,9 +1152,7 @@
       });
 
       signupAttempts.loop(
-        yield switchE(
-          map(appPages, ([, , signupAttempts]) => signupAttempts)
-        )
+        yield switchE(map(appPages, ([, , signupAttempts]) => signupAttempts))
       );
       authPages.loop(
         yield switchE(map(appPages, ([, nextAuthPage]) => nextAuthPage))
