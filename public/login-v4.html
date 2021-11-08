@@ -15,150 +15,154 @@
   </head>
   <body></body>
   <script>
-    // TODO learn how imports work so I can use a library instead of this custom implementation.
-    class PriorityQueue {
-      constructor() {
-        this._array = [];
-      }
-
-      push(value) {
-        const index = this._array.length;
-        // Special cases of the loop below, so we can avoid writing this._array.push(null)
-        if (index === 0) {
-          this._array.push(value);
-          return;
+    const Util = (() => {
+      // TODO learn how imports work so I can use a library instead of this custom implementation.
+      class PriorityQueue {
+        constructor() {
+          this._array = [];
         }
-        const parentIndex = Math.floor((index - 1) / 2);
-        const parent = this._array[parentIndex];
-        if (parent.getPriority() <= value.getPriority()) {
-          this._array.push(value);
-          return;
-        }
-        this._array.push(parent);
-        index = parentIndex;
 
-        // This is where the real logic is
-        while (0 < index) {
+        push(value) {
+          const index = this._array.length;
+          // Special cases of the loop below, so we can avoid writing this._array.push(null)
+          if (index === 0) {
+            this._array.push(value);
+            return;
+          }
           const parentIndex = Math.floor((index - 1) / 2);
           const parent = this._array[parentIndex];
-
-          if (parent.getPriority() <= value.getPriority()) break;
-
-          this._array[index] = parent;
+          if (parent.getPriority() <= value.getPriority()) {
+            this._array.push(value);
+            return;
+          }
+          this._array.push(parent);
           index = parentIndex;
-        }
 
-        this._array[index] = value;
-      }
+          // This is where the real logic is
+          while (0 < index) {
+            const parentIndex = Math.floor((index - 1) / 2);
+            const parent = this._array[parentIndex];
 
-      next() {
-        switch (this._array.length) {
-          case 0:
-            return { done: true };
-          case 1:
-            return {
-              value: this._array.pop(),
-              done: false
-            };
-        }
-        const value = this._array[0];
+            if (parent.getPriority() <= value.getPriority()) break;
 
-        const index = 0;
-        const end = this._array.pop();
-
-        while (true) {
-          const swapIndex = index;
-          const swap = end;
-
-          // swap = min(swap, leftChild)
-          const leftIndex = 2 * index + 1;
-          const leftChild = this._array[leftIndex];
-          if (leftChild && leftChild.priority < swap.priority) {
-            swapIndex = leftIndex;
-            swap = leftChild;
+            this._array[index] = parent;
+            index = parentIndex;
           }
 
-          // swap = min(swap, rightChild)
-          const rightIndex = leftIndex + 1;
-          const rightChild = this._array[rightIndex];
-          if (rightChild && rightChild.priority < swap.priority) {
-            swapIndex = rightIndex;
-            swap = rightChild;
-          }
-
-          if (swapIndex === index) break;
-          this._array[index] = swap;
-          index = swapIndex;
+          this._array[index] = value;
         }
 
-        this._array[index] = end;
-        return { value, done: false };
-      }
-
-      [Symbol.iterator]() {
-        return this;
-      }
-    }
-
-    class ChildList {
-      constructor() {
-        this._prev = this;
-        this._next = this;
-      }
-
-      add(value) {
-        const result = new ChildListNode(this, value, this._next);
-        this._next._prev = result;
-        this._next = result;
-        return result;
-      }
-
-      [Symbol.iterator]() {
-        let current = this._next;
-        return {
-          next: () => {
-            if (current === this) {
+        next() {
+          switch (this._array.length) {
+            case 0:
               return { done: true };
-            }
-            const value = current._value;
-            current = current._next;
-            return { done: false, value };
+            case 1:
+              return {
+                value: this._array.pop(),
+                done: false
+              };
           }
-        };
-      }
-    }
+          const value = this._array[0];
 
-    class ChildListNode {
-      constructor(prev, value, next) {
-        this._prev = prev;
-        this._value = value;
-        this._next = next;
-      }
+          const index = 0;
+          const end = this._array.pop();
 
-      remove() {
-        this._prev._next = this._next;
-        this._next._prev = this._prev;
-      }
-    }
+          while (true) {
+            const swapIndex = index;
+            const swap = end;
 
-    const weakRefUndefined = { deref: () => undefined };
+            // swap = min(swap, leftChild)
+            const leftIndex = 2 * index + 1;
+            const leftChild = this._array[leftIndex];
+            if (leftChild && leftChild.priority < swap.priority) {
+              swapIndex = leftIndex;
+              swap = leftChild;
+            }
 
-    // We use this so that type errors like [null + 1] don't pass silently.
-    const nullNumber = Symbol();
+            // swap = min(swap, rightChild)
+            const rightIndex = leftIndex + 1;
+            const rightChild = this._array[rightIndex];
+            if (rightChild && rightChild.priority < swap.priority) {
+              swapIndex = rightIndex;
+              swap = rightChild;
+            }
 
-    const weakMapFromEdges = edges => {
-      const graph = new WeakMap();
-      for (const [parent, child] of edges) {
-        const children = graph.get(parent);
-        if (children === undefined) {
-          graph.set(parent, [child]);
-        } else {
-          children.push(child);
+            if (swapIndex === index) break;
+            this._array[index] = swap;
+            index = swapIndex;
+          }
+
+          this._array[index] = end;
+          return { value, done: false };
+        }
+
+        [Symbol.iterator]() {
+          return this;
         }
       }
-      return graph;
-    };
 
+      class ChildList {
+        constructor() {
+          this._prev = this;
+          this._next = this;
+        }
+
+        add(value) {
+          const result = new ChildListNode(this, value, this._next);
+          this._next._prev = result;
+          this._next = result;
+          return result;
+        }
+
+        [Symbol.iterator]() {
+          let current = this._next;
+          return {
+            next: () => {
+              if (current === this) {
+                return { done: true };
+              }
+              const value = current._value;
+              current = current._next;
+              return { done: false, value };
+            }
+          };
+        }
+      }
+
+      class ChildListNode {
+        constructor(prev, value, next) {
+          this._prev = prev;
+          this._value = value;
+          this._next = next;
+        }
+
+        remove() {
+          this._prev._next = this._next;
+          this._next._prev = this._prev;
+        }
+      }
+
+      const weakRefUndefined = { deref: () => undefined };
+
+      // We use this so that type errors like [null + 1] don't pass silently.
+      const nullNumber = Symbol();
+
+      const weakMapFromEdges = edges => {
+        const graph = new WeakMap();
+        for (const [parent, child] of edges) {
+          const children = graph.get(parent);
+          if (children === undefined) {
+            graph.set(parent, [child]);
+          } else {
+            children.push(child);
+          }
+        }
+        return graph;
+      };
+      
+      return {PriorityQueue, ChildList, weakRefUndefined, nullNumber};
+    })();
+    
     class BuildContext {
       constructor(graph) {
         this._graph = graph;
@@ -378,7 +382,7 @@
     // Mutable: queue
     function* push(sink, value) {
       yield writeSink(sink, value);
-      const queue = new PriorityQueue();
+      const queue = new Util.PriorityQueue();
       queue.push(sink);
       for (const sink of queue) {
         const childrenToPoll = yield* sink.poll();
@@ -445,7 +449,7 @@
         this._unsubscribe = subscribe(x =>
           runMonad(new PushContext(), push(this, x))
         );
-        this._children = new ChildList();
+        this._children = new Util.ChildList();
       }
 
       linkChild(childSink) {
@@ -485,7 +489,7 @@
         this._handle = handle;
         this._parentSink = null;
         this._childListNode = null;
-        this._priority = nullNumber;
+        this._priority = Util.nullNumber;
       }
 
       // Build monad
@@ -527,12 +531,12 @@
     class MergeSink {
       constructor(combine) {
         this._combine = combine;
-        this._children = new ChildList();
-        this._parentSinkA = weakRefUndefined;
-        this._parentSinkB = weakRefUndefined;
-        this._childListNodeA = weakRefUndefined;
-        this._childListNodeB = weakRefUndefined;
-        this._priority = nullNumber;
+        this._children = new Util.ChildList();
+        this._parentSinkA = Util.weakRefUndefined;
+        this._parentSinkB = Util.weakRefUndefined;
+        this._childListNodeA = Util.weakRefUndefined;
+        this._childListNodeB = Util.weakRefUndefined;
+        this._priority = Util.nullNumber;
       }
 
       linkChild(childSink) {
@@ -652,10 +656,10 @@
 
     class SingleParentSink {
       constructor(parentSink, mapParentValue) {
-        this._children = new ChildList();
+        this._children = new Util.ChildList();
         this._parentSink = parentSink;
         this._childListNode = parentSink.linkChild(this);
-        this._priority = nullNumber;
+        this._priority = Util.nullNumber;
         this._mapParentValue = mapParentValue;
       }
 
