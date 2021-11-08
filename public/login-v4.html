@@ -242,14 +242,10 @@
       }
 
       _endMonad() {
-        // [parentSource.getRecursiveSelf()] is used for [LoopSource].
         runMonad(
           new BuildContext(
             weakMapFromEdges(
-              this._graphEdges.map(([parentSource, parentSinkSlot]) => [
-                parentSource.getRecursiveSelf(),
-                parentSinkSlot
-              ])
+              this._graphEdges
             )
           ),
           buildRoots(this._graphRoots)
@@ -523,40 +519,6 @@
       }
     }
 
-    // TODO remove
-    class LoopSource {
-      constructor() {
-        this._source = null;
-      }
-
-      isBuilt() {
-        return this._source?.isBuilt();
-      }
-
-      // [!this.isBuilt()]
-      getRecursiveSelf() {
-        if (this._source === null) {
-          throw new Error("Must call [loop] for each [LoopSource]!");
-        }
-        return this._source;
-      }
-
-      // [this.isBuilt()]
-      getSink() {
-        return this._source.getSink();
-      }
-
-      loop(pulse) {
-        if (this._source !== null) {
-          throw new Error("Can't call [LoopSource.loop] more than once!");
-        }
-        if (pulse.isBuilt()) {
-          throw new Error("Can't use a pulse that's already been built!");
-        }
-        this._source = pulse;
-      }
-    }
-
     const neverSource = {
       isBuilt: () => false,
       getRecursiveSelf: () => neverSource
@@ -636,11 +598,6 @@
       // Easier than polymorphism
       isBuilt() {
         this._sink.constructor === WeakRef;
-      }
-
-      // [!this.isBuilt()]
-      getRecursiveSelf() {
-        return this;
       }
 
       // [this.isBuilt()]
@@ -736,11 +693,6 @@
       // Easier than polymorphism
       isBuilt() {
         return this._sink.constructor === WeakRef;
-      }
-
-      // [!this.isBuilt()]
-      getRecursiveSelf() {
-        return this;
       }
 
       // [this.isBuilt()]
