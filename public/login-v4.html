@@ -163,61 +163,59 @@
       return {PriorityQueue, ChildList, weakRefUndefined, nullNumber};
     })();
     
-    class BuildContext {
-      constructor(graph) {
-        this._graph = graph;
-        this._sortedSinks = [];
-        this._visited = new WeakSet();
+    const Build = (() => {
+      class Context {
+        constructor(graph) {
+          this._graph = graph;
+          this._sortedSinks = [];
+          this._visited = new WeakSet();
+        }
+
+        getSourceChildren(source) {
+          return this._graph.get(source) ?? [];
+        }
+
+        pushSortedSink(sink) {
+          this._sortedSinks.push(sink);
+        }
+
+        markVisited(source) {
+          this._visited.add(source);
+        }
+
+        isVisited(source) {
+          return this._visited.has(source);
+        }
+
+        _endMonad() {
+          this._sortedSinks.reverse().map(sink => sink.initPriority());
+        }
       }
 
-      getSourceChildren(source) {
-        return this._graph.get(source) ?? [];
+      const getSourceChildren = source => context =>
+        context.getSourceChildren(source);
+      const pushSortedSink = sink => context => context.pushSortedSink(sink);
+      const markVisited = source => context => context.markVisited(source);
+      const isVisited = source => context => context.isVisited(source);
+
+      function* buildRoots(roots) {
+        for (const [parentSink, parentSinkSlot] of roots) {
+          yield* parentSinkSlot.buildRoot(parentSink);
+        }
       }
 
-      pushSortedSink(sink) {
-        this._sortedSinks.push(sink);
+      // TODO profile to see if [parentSink] should be made into a function argument
+      function* buildVertex(parentSource) {
+        const parentSink = parentSource.getSink();
+        const parentSlots = yield getSourceChildren(parentSource);
+        for (const parentSlot of parentSlots) {
+          yield* parentSlot.buildEdge(parentSink);
+        }
+        yield pushSortedSink(parentSink);
       }
-
-      markVisited(source) {
-        this._visited.add(source);
-      }
-
-      isVisited(source) {
-        return this._visited.has(source);
-      }
-
-      _endMonad() {
-        this._sortedSinks.reverse().map(sink => sink.initPriority());
-      }
-    }
-
-    /////////////////
-    // Build monad //
-
-    const getSourceChildren = source => context =>
-      context.getSourceChildren(source);
-    const pushSortedSink = sink => context => context.pushSortedSink(sink);
-    const markVisited = source => context => context.markVisited(source);
-    const isVisited = source => context => context.isVisited(source);
-
-    function* buildRoots(roots) {
-      for (const [parentSink, parentSinkSlot] of roots) {
-        yield* parentSinkSlot.buildRoot(parentSink);
-      }
-    }
-
-    // TODO profile to see if [parentSink] should be made into a function argument
-    function* buildVertex(parentSource) {
-      const parentSink = parentSource.getSink();
-      const parentSlots = yield getSourceChildren(parentSource);
-      for (const parentSlot of parentSlots) {
-        yield* parentSlot.buildEdge(parentSink);
-      }
-      yield pushSortedSink(parentSink);
-    }
-
-    // Build monad //
-    /////////////////
+      
+      return {Context, pushSortedSink, markVisited, isVisited, buildRoots, buildVertex};
+    })();
 
     class PullContext {
       constructor() {
@@ -247,12 +245,12 @@
 
       _endMonad() {
         runMonad(
-          new BuildContext(
+          new Build.Context(
             weakMapFromEdges(
               this._graphEdges
             )
           ),
-          buildRoots(this._graphRoots)
+          Build.buildRoots(this._graphRoots)
         );
       }
     }
@@ -496,7 +494,7 @@
       *buildEdge(parentSink) {
         this._parentSink = parentSink;
         this._childListNode = parentSink.linkChild(this);
-        yield pushSortedSink(this);
+        yield Build.pushSortedSink(this); // Equivalent to [yield* buildVertex(this)]
       }
 
       // Build monad
@@ -625,9 +623,9 @@
           const childSink = this._childSource._sink();
           this._linkParent(parentSink, childSink);
           this._childSource._sink = new WeakRef(childSink);
-          yield* buildVertex(this._childSource);
-          yield markVisited(this._childSource);
-        } else if (!(yield isVisited(this._childSource))) {
+          yield* Build.buildVertex(this._childSource);
+          yield Build.markVisited(this._childSource);
+        } else if (!(yield Build.isVisited(this._childSource))) {
           // Child being visited
           throw new Error("Illegal pulse recursion!");
         } else {
@@ -645,8 +643,8 @@
           const childSink = this._childSource._sink();
           this._linkParent(parentSink, childSink);
           this._childSource._sink = new WeakRef(childSink);
-          yield* buildVertex(this._childSource);
-          yield markVisited(this._childSource);
+          yield* Build.buildVertex(this._childSource);
+          yield Build.markVisited(this._childSource);
         } else {
           // Child was visited
           this.linkParent(parentSink, this._childSource.getSink());
@@ -708,7 +706,7 @@
       // [!this.isBuilt()]
       *buildEdge(parentSink) {
         this._sink = new WeakRef(this._sink(parentSink));
-        yield* buildVertex(this);
+        yield* Build.buildVertex(this);
       }
 
       // Build monad
