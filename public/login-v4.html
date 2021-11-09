@@ -259,61 +259,58 @@
       
       return {Context, addGraphEdge}
     })();
+    const Push = (() => {
+      class Context {
+        constructor() {
+          // We're able to use a weakMap without fear of losing access to the values
+          // because the keys will be strongly referenced by a chain of parent pulsePushes.
+          this._values = new WeakMap();
+          this._actions = [];
+        }
 
-    class PushContext {
-      constructor() {
-        // We're able to use a weakMap without fear of losing access to the values
-        // because the keys will be strongly referenced by a chain of parent pulsePushes.
-        this._values = new WeakMap();
-        this._actions = [];
-      }
+        writeSink(sink, value) {
+          // Store an object so that we can differentiate between
+          // an unwritten sink and a sink that had [undefined] written to it.
+          // Essentially, it's an ad-hoc maybe monad.
+          this._values.set(sink, { value });
+        }
 
-      writeSink(sink, value) {
-        // Store an object so that we can differentiate between
-        // an unwritten sink and a sink that had [undefined] written to it.
-        // Essentially, it's an ad-hoc maybe monad.
-        this._values.set(sink, { value });
-      }
+        readSink(sink) {
+          return this._values.get(sink);
+        }
 
-      readSink(sink) {
-        return this._values.get(sink);
-      }
+        enqueueAction(handler, value) {
+          this._actions.push([handler, value]);
+        }
 
-      enqueueAction(handler, value) {
-        this._actions.push([handler, value]);
-      }
-
-      _endMonad() {
-        for (const [handle, value] of this._actions) {
-          handle(value);
+        _endMonad() {
+          for (const [handle, value] of this._actions) {
+            handle(value);
+          }
         }
       }
-    }
 
-    ////////////////
-    // Push monad //
+      const writeSink = (sink, value) => context =>
+        context.writeSink(sink, value);
+      const readSink = sink => context => context.readSink(sink);
+      const enqueueAction = action => context => context.enqueueAction(action);
 
-    const writeSink = (sink, value) => context =>
-      context.writeSink(sink, value);
-    const readSink = sink => context => context.readSink(sink);
-    const enqueueAction = action => context => context.enqueueAction(action);
-
-    // Mutable: queue
-    function* push(sink, value) {
-      yield writeSink(sink, value);
-      const queue = new Util.PriorityQueue();
-      queue.push(sink);
-      for (const sink of queue) {
-        const childrenToPoll = yield* sink.poll();
-        for (const child of childrenToPoll) {
-          // Yes, I'm mutating the queue while iterating over it.
-          queue.push(child);
+      // Mutable: queue
+      function* push(sink, value) {
+        yield writeSink(sink, value);
+        const queue = new Util.PriorityQueue();
+        queue.push(sink);
+        for (const sink of queue) {
+          const childrenToPoll = yield* sink.poll();
+          for (const child of childrenToPoll) {
+            // Yes, I'm mutating the queue while iterating over it.
+            queue.push(child);
+          }
         }
       }
-    }
-
-    // Push monad //
-    ////////////////
+      
+      return {Context, writeSink, readSink, enqueueAction, push};
+    })();
 
     class MomentContext {
       constructor() {
@@ -366,7 +363,7 @@
       constructor(subscribe) {
         // TODO check if it captures the right "this"
         this._unsubscribe = subscribe(x =>
-          runMonad(new PushContext(), push(this, x))
+          runMonad(new Push.Context(), Push.push(this, x))
         );
         this._children = new Util.ChildList();
       }
@@ -434,9 +431,9 @@
 
       // Push monad
       *poll() {
-        const parentValue = yield readSink(this._parentSink);
+        const parentValue = yield Push.readSink(this._parentSink);
         if (parentValue !== undefined) {
-          yield enqueueAction(this._handle, parentValue.value);
+          yield Push.enqueueAction(this._handle, parentValue.value);
         }
         return [];
       }
@@ -494,14 +491,14 @@
       // Push monad
       // [parentAValue !== undefined || parentBValue !== undefined]
       *poll() {
-        const parentAValue = yield readSink(this._parentSinkA.deref());
-        const parentBValue = yield readSink(this._parentSinkB.deref());
+        const parentAValue = yield Push.readSink(this._parentSinkA.deref());
+        const parentBValue = yield Push.readSink(this._parentSinkB.deref());
         if (parentAValue === undefined) {
-          yield writeSink(this, parentBValue.value);
+          yield Push.writeSink(this, parentBValue.value);
         } else if (parentBValue === undefined) {
-          yield writeSink(this, parentAValue.value);
+          yield Push.writeSink(this, parentAValue.value);
         } else {
-          yield writeSink(
+          yield Push.writeSink(
             this,
             this._combine(parentAValue.value, parentBValue.value)
           );
@@ -597,11 +594,12 @@
 
       // Push monad
       *poll() {
-        const parentValue = yield readSink(this._parentSink);
+        const parentValue = yield Push.readSink(this._parentSink);
         if (parentValue === undefined) {
           return [];
         }
-        yield writeSink(this, this._mapParentValue(parentValue.value));
+        // TODO filter
+        yield Push.writeSink(this, this._mapParentValue(parentValue.value));
         return this._children;
       }
     }
