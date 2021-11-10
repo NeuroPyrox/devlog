@@ -163,6 +163,13 @@
       return {PriorityQueue, ChildList, weakRefUndefined, nullNumber};
     })();
     const Build = (() => {
+      // It's not obvious because the logic is distributed so widely,
+      // but this is a topological sort of sources.
+      // [source.isBuilt() && !(yield isVisited(source))] means a source is being visited.
+      // [yield isVisited(source)] means a source has been visited in the past.
+      // The results of the sort go in Context._sortedSinks.
+      // As a side effect, the visited sources have their sinks built.
+      
       class Context {
         constructor(graph) {
           this._graph = graph;
@@ -202,7 +209,6 @@
           yield* parentSinkSlot.buildRoot(parentSink);
         }
       }
-
       // TODO profile to see if [parentSink] should be made into a function argument
       function* buildVertex(parentSource) {
         const parentSink = parentSource.getSink();
@@ -440,8 +446,7 @@
     }
 
     const neverSource = {
-      isBuilt: () => false,
-      getRecursiveSelf: () => neverSource
+      isBuilt: () => false
     };
 
     class MergeSink {
