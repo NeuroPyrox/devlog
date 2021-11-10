@@ -641,6 +641,52 @@
       }
     }
     
+    class SwitchESink {
+      constructor() {
+        this._children = new Util.ChildList();
+        this._segmentSink = Util.weakRefUndefined;
+        this._childListNode = Util.weakRefUndefined;
+        // Any number would work, but we choose a high one to reduce
+        // the workload of [this.changeParent].
+        this._priority = 1000;
+      }
+
+      linkChild(childSink) {
+        return this._children.add(childSink);
+      }
+
+      // [this._priority !== null]
+      getPriority() {
+        return this._priority;
+      }
+      
+      // TODO use a surrounding monad.
+      setSegment(segmentEvent) {
+        // TODO unsubscribe from [this._segmentSink];
+        const segmentSource = runMonad(new Pull.Context(), segmentEvent());
+        const segmentSink = segmentSource.getSink();
+        if (segmentSink === undefined) {
+          this._segmentSink = Util.weakRefUndefined;
+          this._childListNode = Util.weakRefUndefined;
+          return;
+        }
+        this._segmentSink = new WeakRef(segmentSink);
+        this._childListNode = new WeakRef(segmentSink.linkChild(this));
+        // TODO decrement parent priority
+      }
+
+      // Push monad
+      *poll() {
+        const parentValue = yield Push.readSink(this._parentSink);
+        if (parentValue === undefined) {
+          return [];
+        }
+        // TODO filter
+        yield Push.writeSink(this, this._mapParentValue(parentValue.value));
+        return this._children;
+      }
+    }
+    
     class SwitchESource {
       constructor() {
         this._sink = null;
