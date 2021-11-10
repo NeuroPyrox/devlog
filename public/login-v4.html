@@ -204,6 +204,7 @@
       const markVisited = source => context => context.markVisited(source);
       const isVisited = source => context => context.isVisited(source);
 
+      // TODO rename
       function* buildRoots(roots) {
         for (const [parentSink, parentSinkSlot] of roots) {
           yield* parentSinkSlot.buildRoot(parentSink);
@@ -219,7 +220,7 @@
         yield pushSortedSink(parentSink);
       }
       
-      return {Context, pushSortedSink, markVisited, isVisited, buildRoots, buildVertex};
+      return {Context, getSourceChildren, pushSortedSink, markVisited, isVisited, buildRoots, buildVertex};
     })();
     const Pull = (() => {
       class Context {
@@ -639,6 +640,44 @@
         yield* this.buildEdge(parentSink);
       }
     }
+    
+    class SwitchESource {
+      constructor() {
+        this._sink = null;
+      }
+
+      // Easier than polymorphism
+      isBuilt() {
+        return this._sink !== null;
+      }
+
+      // [this.isBuilt()]
+      getSink() {
+        return this._sink.deref();
+      }
+
+      // Build monad
+      // [!this.isBuilt()]
+      *buildEdge(parentSink) {
+        const childSink = new SwitchESink();
+        this._sink = new WeakRef(childSink);
+        // TODO unsubscribe
+        yield* (new OutputPulse(segmentEvent => childSink.setSegment(segmentEvent))).buildEdge(parentSink);
+        
+        // [yield* Build.buildVertex(this)], but without the [Build.pushSortedSink]
+        // because we don't need to call [childSink.initPriority()].
+        const childSlots = yield getSourceChildren(this);
+        for (const childSlot of childSlots) {
+          yield* childSlot.buildEdge(childSink);
+        }
+      }
+
+      // Build monad
+      // [!this.isBuilt()]
+      *buildRoot(parentSink) {
+        yield* this.buildEdge(parentSink);
+      }
+    }
 
     ////////////////
     // Pull monad //
@@ -656,6 +695,7 @@
     };
 
     // TODO unsubscribe
+    // TODO rename makeAction
     const output = (event, makeAction) =>
       pull(function*() {
         const result = new OutputPulse(makeAction);
