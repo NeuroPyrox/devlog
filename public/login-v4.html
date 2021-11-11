@@ -160,7 +160,7 @@
         return graph;
       };
       
-      return {PriorityQueue, ChildList, weakRefUndefined, nullNumber};
+      return {PriorityQueue, ChildList, weakRefUndefined, nullNumber, weakMapFromEdges};
     })();
     const Build = (() => {
       // It's not obvious because the logic is distributed so widely,
@@ -252,7 +252,7 @@
         _endMonad() {
           runMonad(
             new Build.Context(
-              weakMapFromEdges(
+              Util.weakMapFromEdges(
                 this._graphEdges
               )
             ),
