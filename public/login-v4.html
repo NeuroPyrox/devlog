@@ -744,8 +744,8 @@
     // Pull monad //
     
     const assertIsEvent = event => {
-      if (parentEvent.constructor.name !== "GeneratorFunction") {
-        throw new Error("parentEvent is not a generator function!");
+      if (event.constructor.name !== "GeneratorFunction") {
+        throw new Error("event is not a generator function!");
       }
     }
 
@@ -760,6 +760,11 @@
       result.loop = setTo => (event = setTo);
       return result;
     };
+    
+    const input = subscribe => {
+      const source = new InputSource(subscribe);
+      return function*() {return source;};
+    }
 
     // TODO unsubscribe
     // TODO rename makeAction
@@ -777,6 +782,8 @@
 
     // TODO mergeWith
     const merge = (eventA, eventB, combine = (a, b) => a) => {
+      assertIsEvent(eventA);
+      assertIsEvent(eventB);
       let result = null;
       return function*() {
         if (result != null) {
@@ -820,10 +827,7 @@
       singleParentEvent(event, undefined);
     const tag = (event, latchGet) => singleParentEvent(event, undefined);
 
-    const getClicks = domNode => {
-      const source = new InputSource(push => domNode.addEventListener("click", push))
-      return function*() {return source;}
-    }
+    const getClicks = domNode => input(push => domNode.addEventListener("click", push));
 
     // TODO replace with behavior
     const getInputValues = domNode => () => domNode.value;
@@ -1209,7 +1213,7 @@
       };
 
       let publishStartPage;
-      const startPage = new InputSource(p => (publishStartPage = p));
+      const startPage = input(p => (publishStartPage = p));
       const start = _ => publishStartPage(createLoginDiv());
 
       const authPages = eventLoop();
