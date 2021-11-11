@@ -1027,7 +1027,7 @@
 
       // TODO make pure
       usernamesToRemove.loop(
-        yield mergeBind(createdUsers, ([index, user]) => {
+        yield* mergeBind(createdUsers, ([index, user]) => {
           const { root: rowElement, xButton } = tr(
             td.textContent(user.username),
             td.textContent(user.password),
@@ -1203,10 +1203,10 @@
       });
 
       signupAttempts.loop(
-        yield switchE(map(appPages, ([, , signupAttempts]) => signupAttempts))
+        yield* switchE(map(appPages, ([, , signupAttempts]) => signupAttempts))
       );
       authPages.loop(
-        yield switchE(map(appPages, ([, nextAuthPage]) => nextAuthPage))
+        yield* switchE(map(appPages, ([, nextAuthPage]) => nextAuthPage))
       );
 
       return start;
