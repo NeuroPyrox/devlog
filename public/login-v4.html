@@ -335,7 +335,13 @@
     const pull = monadicPullValue => context => context.pull(monadicPullValue);
 
     function* switchE(eventOfEvent) {
-      // TODO
+      const source = new SwitchESource();
+      yield pull(function*() {
+        const parentSource = yield* eventOfEvent();
+        yield Pull.addGraphEdge(parentSource, source);
+      });
+      // TODO fix memory leak
+      return function*() {return source;}
     }
 
     // TODO optimize with binary tree
