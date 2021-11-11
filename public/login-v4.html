@@ -742,6 +742,12 @@
 
     ////////////////
     // Pull monad //
+    
+    const assertIsEvent = event => {
+      if (parentEvent.constructor.name !== "GeneratorFunction") {
+        throw new Error("parentEvent is not a generator function!");
+      }
+    }
 
     const eventLoop = () => {
       let event = null;
@@ -794,6 +800,7 @@
     };
 
     const singleParentEvent = (parentEvent, mapParentValue) => {
+      assertIsEvent(parentEvent);
       let result = null;
       return function*() {
         if (result != null) {
@@ -813,8 +820,10 @@
       singleParentEvent(event, undefined);
     const tag = (event, latchGet) => singleParentEvent(event, undefined);
 
-    const getClicks = domNode =>
-      new InputSource(push => domNode.addEventListener("click", push));
+    const getClicks = domNode => {
+      const source = new InputSource(push => domNode.addEventListener("click", push))
+      return function*() {return source;}
+    }
 
     // TODO replace with behavior
     const getInputValues = domNode => () => domNode.value;
