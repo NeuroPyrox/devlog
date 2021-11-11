@@ -727,7 +727,7 @@
         
         // [yield* Build.buildVertex(this)], but without the [Build.pushSortedSink]
         // because we don't need to call [childSink.initPriority()].
-        const childSlots = yield getSourceChildren(this);
+        const childSlots = yield Build.getSourceChildren(this);
         for (const childSlot of childSlots) {
           yield* childSlot.buildEdge(childSink);
         }
