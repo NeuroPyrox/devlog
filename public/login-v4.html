@@ -321,11 +321,20 @@
 
     class MomentContext {
       constructor() {
-        // TODO
+        this._monadicPullValues = [];
       }
 
       pull(monadicPullValue) {
-        // TODO
+        this._monadicPullValues.push(monadicPullValue);
+      }
+      
+      _endMonad() {
+        const monadicPullValues = this._monadicPullValues;
+        runMonad(new Pull.Context(), (function*() {
+          for (const monadicPullValue of monadicPullValues) {
+            yield* monadicPullValue();
+          }
+        })());
       }
     }
 
