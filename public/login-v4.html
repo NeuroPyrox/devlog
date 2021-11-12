@@ -538,7 +538,7 @@
 
       // Easier than polymorphism
       isBuilt() {
-        this._sink.constructor === WeakRef;
+        return this._sink.constructor === WeakRef;
       }
 
       // [this.isBuilt()]
