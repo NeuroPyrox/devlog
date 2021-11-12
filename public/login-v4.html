@@ -1067,7 +1067,7 @@
       document.body.appendChild(userTableDiv);
       document.body.appendChild(document.createElement("p"));
 
-      const createLoginDiv = _ => {
+      function* createLoginDiv() {
         const {
           root,
           usernameInput,
@@ -1086,36 +1086,18 @@
           button.var("signupButton").textContent("Signup")
         ).build();
 
-        let loginAttempts = getClicks(loginButton)
-          .tag(getInputValues(usernameInput))
-          .mapTag(getInputValues(passwordInput), (username, password) => ({
+        let loginAttempts = mapTag(tag(getClicks(loginButton), getInputValues(usernameInput)), getInputValues(passwordInput), (username, password) => ({
             username,
             password
           }));
-        loginAttempts
-          .filter(({ username }) => username === "")
-          .map(_ => (statusText.textContent = "Username required!"));
-        loginAttempts
-          .filter(
-            ({ username, password }) => username !== "" && password === ""
-          )
-          .map(_ => (statusText.textContent = "Password required!"));
-        loginAttempts = tryLogins(
-          loginAttempts.filter(
-            ({ username, password }) => username !== "" && password !== ""
-          )
-        );
-        loginAttempts
-          .filter(success => !success)
-          .map(_ => (statusText.textContent = `Invalid login!`));
-
+        yield output(filter(loginAttempts, ({ username }) => username === ""), () => (statusText.textContent = "Username required!"));
+        yield output(filter(loginAttempts, ({ username, password }) => username !== "" && password === ""), () => (statusText.textContent = "Password required!"));
+        loginAttempts = tryLogins(filter(loginAttempts, ({ username, password }) => username !== "" && password !== ""));
+        yield output(filter(loginAttempts, success => !success), () => (statusText.textContent = `Invalid login!`));
+        
         return [
           root,
-          loginAttempts
-            .filter(success => success)
-            .tag(getInputValues(usernameInput))
-            .map(createLoggedInDiv)
-            .merge(getClicks(signupButton).map(createSignupDiv)),
+          merge(map(getClicks(signupButton), () => createSignupDiv), map(tag(filter(loginAttempts, success => success), getInputValues(usernameInput)), () => createLoggedInDiv)),
           never
         ];
       };
