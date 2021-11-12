@@ -318,51 +318,30 @@
       
       return {Context, writeSink, readSink, enqueueAction, push};
     })();
+    const Moment = (() => {
+      class Context {
+        constructor() {
+          this._monadicPullValues = [];
+        }
 
-    class MomentContext {
-      constructor() {
-        this._monadicPullValues = [];
+        pull(monadicPullValue) {
+          this._monadicPullValues.push(monadicPullValue);
+        }
+
+        _endMonad() {
+          const monadicPullValues = this._monadicPullValues;
+          runMonad(new Pull.Context(), (function*() {
+            for (const monadicPullValue of monadicPullValues) {
+              yield* monadicPullValue();
+            }
+          })());
+        }
       }
 
-      pull(monadicPullValue) {
-        this._monadicPullValues.push(monadicPullValue);
-      }
+      const pull = monadicPullValue => context => context.pull(monadicPullValue);
       
-      _endMonad() {
-        const monadicPullValues = this._monadicPullValues;
-        runMonad(new Pull.Context(), (function*() {
-          for (const monadicPullValue of monadicPullValues) {
-            yield* monadicPullValue();
-          }
-        })());
-      }
-    }
-
-    //////////////////
-    // Moment monad //
-
-    const pull = monadicPullValue => context => context.pull(monadicPullValue);
-
-    function* switchE(eventOfEvent) {
-      const source = new SwitchESource();
-      yield pull(function*() {
-        const parentSource = yield* eventOfEvent();
-        yield Pull.addGraphEdge(parentSource, source);
-      });
-      // TODO fix memory leak
-      return function*() {return source;}
-    }
-
-    // TODO optimize with binary tree
-    function* mergeBind(eventOfEvent, f) {
-      let current = never;
-      const next = map(eventOfEvent, event => merge(f(event), current));
-      yield output(next, event => (current = event));
-      return yield* switchE(next);
-    }
-
-    // Moment monad //
-    //////////////////
+      return {Context, pull};
+    })();
 
     // Mutable: context, generator
     const runMonad = (context, generator) => {
@@ -739,15 +718,15 @@
         yield* this.buildEdge(parentSink);
       }
     }
-
-    ////////////////
-    // Pull monad //
     
     const assertIsEvent = event => {
       if (event.constructor.name !== "GeneratorFunction") {
         throw new Error("event is not a generator function!");
       }
     }
+
+    ////////////////
+    // Pull monad //
 
     const eventLoop = () => {
       let event = null;
@@ -829,11 +808,35 @@
 
     const getClicks = domNode => input(push => domNode.addEventListener("click", push));
 
-    // TODO replace with behavior
-    const getInputValues = domNode => () => domNode.value;
-
     // Pull monad //
     ////////////////
+
+    //////////////////
+    // Moment monad //
+
+    function* switchE(eventOfEvent) {
+      const source = new SwitchESource();
+      yield pull(function*() {
+        const parentSource = yield* eventOfEvent();
+        yield Pull.addGraphEdge(parentSource, source);
+      });
+      // TODO fix memory leak
+      return function*() {return source;}
+    }
+
+    // TODO optimize with binary tree
+    function* mergeBind(eventOfEvent, f) {
+      let current = never;
+      const next = map(eventOfEvent, event => merge(f(event), current));
+      yield output(next, event => (current = event));
+      return yield* switchE(next);
+    }
+
+    // Moment monad //
+    //////////////////
+
+    // TODO replace with behavior
+    const getInputValues = domNode => () => domNode.value;
 
     function* userDatabase({
       insertions,
@@ -1215,7 +1218,7 @@
       let publishStartPage;
       const startPage = input(p => (publishStartPage = p));
       const start = _ => publishStartPage(createLoginDiv());
-
+      
       const authPages = eventLoop();
       const appPages = merge(authPages, startPage);
 
