@@ -565,7 +565,7 @@
           yield Build.markVisited(this._childSource);
         } else {
           // Child was visited
-          this.linkParent(parentSink, this._childSource.getSink());
+          this._linkParent(parentSink, this._childSource.getSink());
         }
       }
     }
@@ -1205,6 +1205,6 @@
       return start;
     }
 
-    runMonad(new MomentContext(), main())();
+    runMonad(new Moment.Context(), main())();
   </script>
 </html>
