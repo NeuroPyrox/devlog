@@ -638,10 +638,10 @@
     class SwitchESink {
       constructor() {
         this._children = new Util.ChildList();
-        this._segmentSink = Util.weakRefUndefined;
+        this._parentSink = Util.weakRefUndefined;
         this._childListNode = Util.weakRefUndefined;
         // Any number would work, but we choose a high one to reduce
-        // the workload of [this.changeParent].
+        // the workload of [this.setParent].
         this._priority = 1000;
       }
 
@@ -655,67 +655,37 @@
       }
       
       // TODO use a surrounding monad.
-      setSegment(segmentEvent) {
-        // TODO unsubscribe from [this._segmentSink];
-        const segmentSource = runMonad(new Pull.Context(), segmentEvent());
-        const segmentSink = segmentSource.getSink();
-        if (segmentSink === undefined) {
-          this._segmentSink = Util.weakRefUndefined;
+      setParent(parentEvent) {
+        // TODO unsubscribe from [this._parentSink];
+        const parentSource = runMonad(new Pull.Context(), parentEvent());
+        const parentSink = parentSource.getSink();
+        if (parentSink === undefined) {
+          this._parentSink = Util.weakRefUndefined;
           this._childListNode = Util.weakRefUndefined;
           return;
         }
-        this._segmentSink = new WeakRef(segmentSink);
-        this._childListNode = new WeakRef(segmentSink.linkChild(this));
+        this._parentSink = new WeakRef(parentSink);
+        this._childListNode = new WeakRef(parentSink.linkChild(this));
         // TODO decrement parent priority
       }
 
       // Push monad
       *poll() {
-        const parentValue = yield Push.readSink(this._parentSink);
-        if (parentValue === undefined) {
-          return [];
-        }
-        // TODO filter
-        yield Push.writeSink(this, this._mapParentValue(parentValue.value));
-        return this._children;
+        // TODO
       }
     }
     
     class SwitchESource {
-      constructor() {
-        this._sink = null;
+      constructor(sink) {
+        this._sink = new WeakRef(sink);
       }
 
-      // Easier than polymorphism
       isBuilt() {
-        return this._sink !== null;
+        return true;
       }
 
-      // [this.isBuilt()]
       getSink() {
         return this._sink.deref();
-      }
-
-      // Build monad
-      // [!this.isBuilt()]
-      *buildEdge(parentSink) {
-        const childSink = new SwitchESink();
-        this._sink = new WeakRef(childSink);
-        // TODO unsubscribe
-        yield* (new OutputPulse(segmentEvent => childSink.setSegment(segmentEvent))).buildEdge(parentSink);
-        
-        // [yield* Build.buildVertex(this)], but without the [Build.pushSortedSink]
-        // because we don't need to call [childSink.initPriority()].
-        const childSlots = yield Build.getSourceChildren(this);
-        for (const childSlot of childSlots) {
-          yield* childSlot.buildEdge(childSink);
-        }
-      }
-
-      // Build monad
-      // [!this.isBuilt()]
-      *buildRoot(parentSink) {
-        yield* this.buildEdge(parentSink);
       }
     }
     
@@ -744,16 +714,6 @@
       const source = new InputSource(subscribe);
       return function*() {return source;};
     }
-
-    // TODO unsubscribe
-    // TODO rename makeAction
-    const output = (event, makeAction) =>
-      Moment.pull(function*() {
-        const result = new OutputPulse(makeAction);
-        yield Pull.addGraphEdge(yield* event(), result);
-        const unsubscribe = undefined;
-        return unsubscribe;
-      });
 
     function* never() {
       return neverSource;
@@ -814,12 +774,20 @@
     //////////////////
     // Moment monad //
 
-    function* switchE(eventOfEvent) {
-      const source = new SwitchESource();
-      yield Moment.pull(function*() {
-        const parentSource = yield* eventOfEvent();
-        yield Pull.addGraphEdge(parentSource, source);
+    // TODO unsubscribe
+    // TODO rename makeAction
+    const output = (event, makeAction) =>
+      Moment.pull(function*() {
+        const result = new OutputPulse(makeAction);
+        yield Pull.addGraphEdge(yield* event(), result);
+        const unsubscribe = undefined;
+        return unsubscribe;
       });
+
+    function* switchE(eventOfEvent) {
+      const sink = new SwitchESink();
+      const source = new SwitchESource(sink);
+      yield output(eventOfEvent, event => sink.setParent(event));
       // TODO fix memory leak
       return function*() {return source;}
     }
