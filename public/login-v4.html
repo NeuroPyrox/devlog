@@ -748,7 +748,7 @@
     // TODO unsubscribe
     // TODO rename makeAction
     const output = (event, makeAction) =>
-      pull(function*() {
+      Moment.pull(function*() {
         const result = new OutputPulse(makeAction);
         yield Pull.addGraphEdge(yield* event(), result);
         const unsubscribe = undefined;
@@ -816,7 +816,7 @@
 
     function* switchE(eventOfEvent) {
       const source = new SwitchESource();
-      yield pull(function*() {
+      yield Moment.pull(function*() {
         const parentSource = yield* eventOfEvent();
         yield Pull.addGraphEdge(parentSource, source);
       });
