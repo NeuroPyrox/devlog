@@ -792,10 +792,9 @@
     // Moment monad //
 
     // TODO unsubscribe
-    // TODO rename makeAction
-    const output = (event, makeAction) =>
+    const output = (event, handle) =>
       Moment.pull(function*() {
-        const result = new OutputPulse(makeAction);
+        const result = new OutputPulse(handle);
         yield Pull.addGraphEdge(yield* event(), result);
         const unsubscribe = undefined;
         return unsubscribe;
