@@ -779,7 +779,7 @@
       };
     };
 
-    const filter = (event, predicate) => singleParentEvent(event, undefined);
+    const filter = (event, predicate) => singleParentEvent(event, value => predicate(value) ? {value} : undefined);
     const map = (event, f) => singleParentEvent(event, undefined);
     const mapTag = (event, latchGet, combine) =>
       singleParentEvent(event, undefined);
