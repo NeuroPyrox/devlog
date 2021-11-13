@@ -763,6 +763,9 @@
 
     const singleParentEvent = (parentEvent, mapParentValue) => {
       assertIsEvent(parentEvent);
+      if (!(mapParentValue instanceof Function)) {
+        throw new TypeError("mapParentValue is not a function");
+      }
       let result = null;
       return function*() {
         if (result != null) {
