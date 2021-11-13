@@ -783,10 +783,10 @@
     };
 
     const filter = (event, predicate) => singleParentEvent(event, value => predicate(value) ? {value} : undefined);
-    const map = (event, f) => singleParentEvent(event, undefined);
+    const map = (event, f) => singleParentEvent(event, x => ({value: f(x)}));
     const mapTag = (event, latchGet, combine) =>
-      singleParentEvent(event, undefined);
-    const tag = (event, latchGet) => singleParentEvent(event, undefined);
+      singleParentEvent(event, x => ({value: combine(x, latchGet())}));
+    const tag = (event, latchGet) => singleParentEvent(event, () => ({value: latchGet()}));
 
     const getClicks = domNode =>
       input(push => domNode.addEventListener("click", push));
