@@ -612,8 +612,11 @@
         if (parentValue === undefined) {
           return [];
         }
-        // TODO filter
-        yield Push.writeSink(this, this._mapParentValue(parentValue.value));
+        const value = this._mapParentValue(parentValue.value);
+        if (value === undefined) {
+          return [];
+        }
+        yield Push.writeSink(this, value.value);
         return this._children;
       }
     }
