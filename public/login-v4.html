@@ -159,8 +159,14 @@
         }
         return graph;
       };
-      
-      return {PriorityQueue, ChildList, weakRefUndefined, nullNumber, weakMapFromEdges};
+
+      return {
+        PriorityQueue,
+        ChildList,
+        weakRefUndefined,
+        nullNumber,
+        weakMapFromEdges
+      };
     })();
     const Build = (() => {
       // It's not obvious because the logic is distributed so widely,
@@ -169,7 +175,7 @@
       // [yield isVisited(source)] means a source has been visited in the past.
       // The results of the sort go in Context._sortedSinks.
       // As a side effect, the visited sources have their sinks built.
-      
+
       class Context {
         constructor(graph) {
           this._graph = graph;
@@ -219,8 +225,16 @@
         }
         yield pushSortedSink(parentSink);
       }
-      
-      return {Context, getSourceChildren, pushSortedSink, markVisited, isVisited, buildRoots, buildVertex};
+
+      return {
+        Context,
+        getSourceChildren,
+        pushSortedSink,
+        markVisited,
+        isVisited,
+        buildRoots,
+        buildVertex
+      };
     })();
     const Pull = (() => {
       class Context {
@@ -251,11 +265,7 @@
 
         _endMonad() {
           runMonad(
-            new Build.Context(
-              Util.weakMapFromEdges(
-                this._graphEdges
-              )
-            ),
+            new Build.Context(Util.weakMapFromEdges(this._graphEdges)),
             Build.buildRoots(this._graphRoots)
           );
         }
@@ -263,8 +273,8 @@
 
       const addGraphEdge = (parent, child) => context =>
         context.addGraphEdge(parent, child);
-      
-      return {Context, addGraphEdge}
+
+      return { Context, addGraphEdge };
     })();
     const Push = (() => {
       class Context {
@@ -315,8 +325,8 @@
           }
         }
       }
-      
-      return {Context, writeSink, readSink, enqueueAction, push};
+
+      return { Context, writeSink, readSink, enqueueAction, push };
     })();
     const Moment = (() => {
       class Context {
@@ -330,17 +340,21 @@
 
         _endMonad() {
           const monadicPullValues = this._monadicPullValues;
-          runMonad(new Pull.Context(), (function*() {
-            for (const monadicPullValue of monadicPullValues) {
-              yield* monadicPullValue();
-            }
-          })());
+          runMonad(
+            new Pull.Context(),
+            (function*() {
+              for (const monadicPullValue of monadicPullValues) {
+                yield* monadicPullValue();
+              }
+            })()
+          );
         }
       }
 
-      const pull = monadicPullValue => context => context.pull(monadicPullValue);
-      
-      return {Context, pull};
+      const pull = monadicPullValue => context =>
+        context.pull(monadicPullValue);
+
+      return { Context, pull };
     })();
 
     // Mutable: context, generator
@@ -634,7 +648,7 @@
         yield* this.buildEdge(parentSink);
       }
     }
-    
+
     class SwitchESink {
       constructor() {
         this._children = new Util.ChildList();
@@ -653,7 +667,7 @@
       getPriority() {
         return this._priority;
       }
-      
+
       // TODO use a surrounding monad.
       setParent(parentEvent) {
         // TODO unsubscribe from [this._parentSink];
@@ -674,7 +688,7 @@
         // TODO
       }
     }
-    
+
     class SwitchESource {
       constructor(sink) {
         this._sink = new WeakRef(sink);
@@ -688,12 +702,12 @@
         return this._sink.deref();
       }
     }
-    
+
     const assertIsEvent = event => {
       if (event.constructor.name !== "GeneratorFunction") {
         throw new Error("event is not a generator function!");
       }
-    }
+    };
 
     ////////////////
     // Pull monad //
@@ -709,11 +723,13 @@
       result.loop = setTo => (event = setTo);
       return result;
     };
-    
+
     const input = subscribe => {
       const source = new InputSource(subscribe);
-      return function*() {return source;};
-    }
+      return function*() {
+        return source;
+      };
+    };
 
     function* never() {
       return neverSource;
@@ -766,7 +782,8 @@
       singleParentEvent(event, undefined);
     const tag = (event, latchGet) => singleParentEvent(event, undefined);
 
-    const getClicks = domNode => input(push => domNode.addEventListener("click", push));
+    const getClicks = domNode =>
+      input(push => domNode.addEventListener("click", push));
 
     // Pull monad //
     ////////////////
@@ -775,10 +792,9 @@
     // Moment monad //
 
     // TODO unsubscribe
-    // TODO rename makeAction
-    const output = (event, makeAction) =>
+    const output = (event, handle) =>
       Moment.pull(function*() {
-        const result = new OutputPulse(makeAction);
+        const result = new OutputPulse(handle);
         yield Pull.addGraphEdge(yield* event(), result);
         const unsubscribe = undefined;
         return unsubscribe;
@@ -789,7 +805,9 @@
       const source = new SwitchESource(sink);
       yield output(eventOfEvent, event => sink.setParent(event));
       // TODO fix memory leak
-      return function*() {return source;}
+      return function*() {
+        return source;
+      };
     }
 
     // TODO optimize with binary tree
@@ -1086,21 +1104,51 @@
           button.var("signupButton").textContent("Signup")
         ).build();
 
-        let loginAttempts = mapTag(tag(getClicks(loginButton), getInputValues(usernameInput)), getInputValues(passwordInput), (username, password) => ({
+        let loginAttempts = mapTag(
+          tag(getClicks(loginButton), getInputValues(usernameInput)),
+          getInputValues(passwordInput),
+          (username, password) => ({
             username,
             password
-          }));
-        yield output(filter(loginAttempts, ({ username }) => username === ""), () => (statusText.textContent = "Username required!"));
-        yield output(filter(loginAttempts, ({ username, password }) => username !== "" && password === ""), () => (statusText.textContent = "Password required!"));
-        loginAttempts = tryLogins(filter(loginAttempts, ({ username, password }) => username !== "" && password !== ""));
-        yield output(filter(loginAttempts, success => !success), () => (statusText.textContent = `Invalid login!`));
-        
+          })
+        );
+        yield output(
+          filter(loginAttempts, ({ username }) => username === ""),
+          () => (statusText.textContent = "Username required!")
+        );
+        yield output(
+          filter(
+            loginAttempts,
+            ({ username, password }) => username !== "" && password === ""
+          ),
+          () => (statusText.textContent = "Password required!")
+        );
+        loginAttempts = tryLogins(
+          filter(
+            loginAttempts,
+            ({ username, password }) => username !== "" && password !== ""
+          )
+        );
+        yield output(
+          filter(loginAttempts, success => !success),
+          () => (statusText.textContent = `Invalid login!`)
+        );
+
         return [
           root,
-          merge(map(getClicks(signupButton), () => createSignupDiv), map(tag(filter(loginAttempts, success => success), getInputValues(usernameInput)), () => createLoggedInDiv)),
+          merge(
+            map(getClicks(signupButton), () => createSignupDiv),
+            map(
+              tag(
+                filter(loginAttempts, success => success),
+                getInputValues(usernameInput)
+              ),
+              () => createLoggedInDiv
+            )
+          ),
           never
         ];
-      };
+      }
 
       const createSignupDiv = _ => {
         const {
@@ -1168,7 +1216,7 @@
       let publishStartPage;
       const startPage = input(p => (publishStartPage = p));
       const start = _ => publishStartPage(createLoginDiv());
-      
+
       const authPages = eventLoop();
       const appPages = merge(authPages, startPage);
 
