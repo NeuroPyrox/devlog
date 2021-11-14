@@ -283,6 +283,7 @@
           // because the keys will be strongly referenced by a chain of parent pulsePushes.
           this._values = new WeakMap();
           this._actions = [];
+          this._momentContext = new Moment.Context();
         }
 
         writeSink(sink, value) {
@@ -299,8 +300,18 @@
         enqueueAction(handler, value) {
           this._actions.push([handler, value]);
         }
+        
+        pull(monadicMomentValue) {
+          const generator = monadicMomentValue();
+          let step = generator.next();
+          while (!step.done) {
+            step = generator.next(step.value(this._momentContext));
+          }
+          return step.value;
+        }
 
         _endMonad() {
+          this._pullContext._endMonad();
           for (const [handle, value] of this._actions) {
             handle(value);
           }
@@ -311,6 +322,7 @@
         context.writeSink(sink, value);
       const readSink = sink => context => context.readSink(sink);
       const enqueueAction = action => context => context.enqueueAction(action);
+      const pull = monadicMomentValue => context => context.pull(monadicMomentValue);
 
       // Mutable: queue
       function* push(sink, value) {
@@ -326,7 +338,7 @@
         }
       }
 
-      return { Context, writeSink, readSink, enqueueAction, push };
+      return { Context, writeSink, readSink, enqueueAction, pull, push };
     })();
     const Moment = (() => {
       class Context {
@@ -610,6 +622,7 @@
       *poll() {
         const parentValue = yield Push.readSink(this._parentSink);
         if (parentValue === undefined) {
+          // TODO is this check necessary?
           return [];
         }
         const value = this._mapParentValue(parentValue.value);
@@ -705,6 +718,36 @@
         return this._sink.deref();
       }
     }
+    
+    class ObserveESink {
+      constructor(parentSink) {
+        this._children = new Util.ChildList();
+        this._parentSink = parentSink;
+        this._childListNode = parentSink.linkChild(this);
+        this._priority = Util.nullNumber;
+      }
+
+      linkChild(childSink) {
+        return this._children.add(childSink);
+      }
+
+      initPriority() {
+        this._priority = this._parentSink.getPriority() + 1;
+      }
+
+      // [this._priority !== null]
+      getPriority() {
+        return this._priority;
+      }
+
+      // Push monad
+      *poll() {
+        const parentValue = yield Push.readSink(this._parentSink);
+        const value = yield Push.pull(parentValue.value);
+        yield Push.writeSink(this, value);
+        return this._children;
+      }
+    }
 
     const assertIsEvent = event => {
       if (event.constructor.name !== "GeneratorFunction") {
@@ -787,6 +830,20 @@
     const mapTag = (event, latchGet, combine) =>
       singleParentEvent(event, x => ({value: combine(x, latchGet())}));
     const tag = (event, latchGet) => singleParentEvent(event, () => ({value: latchGet()}));
+    
+    const observeE = event => {
+      let result = null;
+      return function*() {
+        if (result !== null) {
+          return result;
+        }
+        result = new SingleParentSource(
+          parentSink => new ObserveESink(parentSink)
+        );
+        yield Pull.addGraphEdge(yield* event(), result);
+        return result;
+      }
+    }
 
     const getClicks = domNode =>
       input(push => domNode.addEventListener("click", push));
@@ -1221,10 +1278,10 @@
 
       let publishStartPage;
       const startPage = input(p => (publishStartPage = p));
-      const start = _ => publishStartPage(createLoginDiv());
+      const start = _ => publishStartPage(createLoginDiv);
 
       const authPages = eventLoop();
-      const appPages = merge(authPages, startPage);
+      const appPages = observeE(merge(authPages, startPage));
 
       yield output(appPages, ([appDiv, ,]) => {
         document.body.lastElementChild.remove();
