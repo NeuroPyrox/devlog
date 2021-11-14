@@ -311,7 +311,7 @@
         }
 
         _endMonad() {
-          this._pullContext._endMonad();
+          this._momentContext._endMonad();
           for (const [handle, value] of this._actions) {
             handle(value);
           }
