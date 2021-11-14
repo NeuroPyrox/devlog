@@ -967,8 +967,8 @@
       clears = filter(clears, _ => internalTable.length !== 0);
       yield output(clears, _ => (internalTable = []));
 
-      const tryLogins = stream =>
-        stream.map(({ username, password }) => {
+      const tryLogins = event =>
+        map(event, ({ username, password }) => {
           const foundUser = internalTable[findUsername(username)];
           return (
             foundUser !== undefined &&
