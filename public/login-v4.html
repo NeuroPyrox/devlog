@@ -297,8 +297,8 @@
           return this._values.get(sink);
         }
 
-        enqueueAction(handler, value) {
-          this._actions.push([handler, value]);
+        enqueueAction(handle, value) {
+          this._actions.push([handle, value]);
         }
         
         pull(monadicMomentValue) {
@@ -321,7 +321,7 @@
       const writeSink = (sink, value) => context =>
         context.writeSink(sink, value);
       const readSink = sink => context => context.readSink(sink);
-      const enqueueAction = action => context => context.enqueueAction(action);
+      const enqueueAction = (handle, value) => context => context.enqueueAction(handle, value);
       const pull = monadicMomentValue => context => context.pull(monadicMomentValue);
 
       // Mutable: queue
