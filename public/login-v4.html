@@ -467,7 +467,8 @@
     }
 
     const neverSource = {
-      isBuilt: () => false
+      isBuilt: () => false,
+      getSink: () => undefined
     };
 
     class MergeSink {
