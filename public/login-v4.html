@@ -23,7 +23,7 @@
         }
 
         push(value) {
-          const index = this._array.length;
+          let index = this._array.length;
           // Special cases of the loop below, so we can avoid writing this._array.push(null)
           if (index === 0) {
             this._array.push(value);
@@ -1282,7 +1282,7 @@
 
       const authPages = eventLoop();
       const appPages = observeE(merge(authPages, startPage));
-
+      
       yield output(appPages, ([appDiv, ,]) => {
         document.body.lastElementChild.remove();
         document.body.appendChild(appDiv);
