@@ -687,7 +687,8 @@
 
       // TODO use a surrounding monad.
       setParent(parentEvent) {
-        // TODO unsubscribe from [this._parentSink];
+        // TODO unsubscribe properly from [this._parentSink];
+        this._childListNode.deref()?.remove();
         const parentSource = runMonad(new Pull.Context(), parentEvent());
         const parentSink = parentSource.getSink();
         if (parentSink === undefined) {
