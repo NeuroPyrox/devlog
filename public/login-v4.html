@@ -393,6 +393,7 @@
           runMonad(new Push.Context(), Push.push(this, x))
         );
         this._children = new Util.ChildList();
+        this._priority = 0;
       }
 
       linkChild(childSink) {
@@ -400,7 +401,13 @@
       }
 
       getPriority() {
-        return 0;
+        return this._priority;
+      }
+      
+      capPriority(childPriority) {
+        if (childPriority <= this._priority) {
+          this._priority = childPriority - 1;
+        }
       }
 
       // Push monad
@@ -454,6 +461,13 @@
 
       getPriority() {
         return this._priority;
+      }
+      
+      capPriority(childPriority) {
+        if (childPriority <= this._priority) {
+          this._priority = childPriority - 1;
+          this._parentSink.capPriority(this._priority);
+        }
       }
 
       // Push monad
@@ -513,6 +527,14 @@
       // [this._priority !== null]
       getPriority() {
         return this._priority;
+      }
+      
+      capPriority(childPriority) {
+        if (childPriority <= this._priority) {
+          this._priority = childPriority - 1;
+          this._parentSinkA.deref()?.capPriority(this._priority);
+          this._parentSinkB.deref()?.capPriority(this._priority);
+        }
       }
 
       // Push monad
@@ -618,6 +640,13 @@
       getPriority() {
         return this._priority;
       }
+      
+      capPriority(childPriority) {
+        if (childPriority <= this._priority) {
+          this._priority = childPriority - 1;
+          this._parentSink.capPriority(this._priority);
+        }
+      }
 
       // Push monad
       *poll() {
@@ -684,6 +713,13 @@
       getPriority() {
         return this._priority;
       }
+      
+      capPriority(childPriority) {
+        if (childPriority <= this._priority) {
+          this._priority = childPriority - 1;
+          this._parentSink.deref()?.capPriority(this._priority);
+        }
+      }
 
       // TODO use a surrounding monad.
       setParent(parentEvent) {
@@ -698,7 +734,7 @@
         }
         this._parentSink = new WeakRef(parentSink);
         this._childListNode = new WeakRef(parentSink.linkChild(this));
-        // TODO decrement parent priority
+        parentSink.capPriority(this._priority);
       }
 
       // Push monad
@@ -740,6 +776,13 @@
       // [this._priority !== null]
       getPriority() {
         return this._priority;
+      }
+      
+      capPriority(childPriority) {
+        if (childPriority <= this._priority) {
+          this._priority = childPriority - 1;
+          this._parentSink.capPriority(this._priority);
+        }
       }
 
       // Push monad
