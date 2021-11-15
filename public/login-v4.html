@@ -739,7 +739,9 @@
 
       // Push monad
       *poll() {
-        // TODO
+        const {value} = yield Push.readSink(this._parentSink.deref());
+        yield Push.writeSink(this, value);
+        return this._children;
       }
     }
 
