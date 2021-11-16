@@ -1259,7 +1259,7 @@
                 filter(loginAttempts, success => success),
                 getInputValues(usernameInput)
               ),
-              () => createLoggedInDiv
+              username => () => createLoggedInDiv(username)
             )
           ),
           never
@@ -1314,7 +1314,7 @@
         ];
       };
 
-      const createLoggedInDiv = username => {
+      function* createLoggedInDiv(username) {
         const { root: loggedInDiv, logoutButton } = div(
           text(`Hello ${username}`),
           button.var("logoutButton").textContent("Logout")
@@ -1322,14 +1322,13 @@
 
         return [
           loggedInDiv,
-          getClicks(logoutButton)
-            .merge(
-              passwordChanges
-                .merge(removedUsers)
-                .filter(x => x.username === username)
-            )
-            .merge(clears)
-            .map(createLoginDiv),
+          map(
+            merge(
+              filter(merge(passwordChanges, removedUsers), x => x.username === username),
+              merge(getClicks(logoutButton), clears)
+            ),
+            () => createLoginDiv
+          ),
           never
         ];
       };
