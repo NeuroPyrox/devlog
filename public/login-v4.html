@@ -300,7 +300,7 @@
         enqueueAction(handle, value) {
           this._actions.push([handle, value]);
         }
-        
+
         pull(monadicMomentValue) {
           const generator = monadicMomentValue();
           let step = generator.next();
@@ -321,8 +321,10 @@
       const writeSink = (sink, value) => context =>
         context.writeSink(sink, value);
       const readSink = sink => context => context.readSink(sink);
-      const enqueueAction = (handle, value) => context => context.enqueueAction(handle, value);
-      const pull = monadicMomentValue => context => context.pull(monadicMomentValue);
+      const enqueueAction = (handle, value) => context =>
+        context.enqueueAction(handle, value);
+      const pull = monadicMomentValue => context =>
+        context.pull(monadicMomentValue);
 
       // Mutable: queue
       function* push(sink, value) {
@@ -403,7 +405,7 @@
       getPriority() {
         return this._priority;
       }
-      
+
       capPriority(childPriority) {
         if (childPriority <= this._priority) {
           this._priority = childPriority - 1;
@@ -462,7 +464,7 @@
       getPriority() {
         return this._priority;
       }
-      
+
       capPriority(childPriority) {
         if (childPriority <= this._priority) {
           this._priority = childPriority - 1;
@@ -528,7 +530,7 @@
       getPriority() {
         return this._priority;
       }
-      
+
       capPriority(childPriority) {
         if (childPriority <= this._priority) {
           this._priority = childPriority - 1;
@@ -640,7 +642,7 @@
       getPriority() {
         return this._priority;
       }
-      
+
       capPriority(childPriority) {
         if (childPriority <= this._priority) {
           this._priority = childPriority - 1;
@@ -713,7 +715,7 @@
       getPriority() {
         return this._priority;
       }
-      
+
       capPriority(childPriority) {
         if (childPriority <= this._priority) {
           this._priority = childPriority - 1;
@@ -739,7 +741,7 @@
 
       // Push monad
       *poll() {
-        const {value} = yield Push.readSink(this._parentSink.deref());
+        const { value } = yield Push.readSink(this._parentSink.deref());
         yield Push.writeSink(this, value);
         return this._children;
       }
@@ -758,7 +760,7 @@
         return this._sink.deref();
       }
     }
-    
+
     class ObserveESink {
       constructor(parentSink) {
         this._children = new Util.ChildList();
@@ -779,7 +781,7 @@
       getPriority() {
         return this._priority;
       }
-      
+
       capPriority(childPriority) {
         if (childPriority <= this._priority) {
           this._priority = childPriority - 1;
@@ -872,12 +874,16 @@
       };
     };
 
-    const filter = (event, predicate) => singleParentEvent(event, value => predicate(value) ? {value} : undefined);
-    const map = (event, f) => singleParentEvent(event, x => ({value: f(x)}));
+    const filter = (event, predicate) =>
+      singleParentEvent(event, value =>
+        predicate(value) ? { value } : undefined
+      );
+    const map = (event, f) => singleParentEvent(event, x => ({ value: f(x) }));
     const mapTag = (event, latchGet, combine) =>
-      singleParentEvent(event, x => ({value: combine(x, latchGet())}));
-    const tag = (event, latchGet) => singleParentEvent(event, () => ({value: latchGet()}));
-    
+      singleParentEvent(event, x => ({ value: combine(x, latchGet()) }));
+    const tag = (event, latchGet) =>
+      singleParentEvent(event, () => ({ value: latchGet() }));
+
     const observeE = event => {
       let result = null;
       return function*() {
@@ -889,8 +895,8 @@
         );
         yield Pull.addGraphEdge(yield* event(), result);
         return result;
-      }
-    }
+      };
+    };
 
     const getClicks = domNode =>
       input(push => domNode.addEventListener("click", push));
@@ -1329,7 +1335,7 @@
 
       const authPages = eventLoop();
       const appPages = observeE(merge(authPages, startPage));
-      
+
       yield output(appPages, ([appDiv, ,]) => {
         document.body.lastElementChild.remove();
         document.body.appendChild(appDiv);
