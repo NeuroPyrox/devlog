@@ -1266,7 +1266,7 @@
         ];
       }
 
-      const createSignupDiv = _ => {
+      function* createSignupDiv() {
         const {
           root,
           usernameInput,
@@ -1285,25 +1285,30 @@
           button.var("loginButton").textContent("Login")
         ).build();
 
-        const signupAttempts = getClicks(signupButton)
-          .tag(getInputValues(usernameInput))
-          .mapTag(getInputValues(passwordInput), (username, password) => ({
+        let signupAttempts = mapTag(
+          tag(getClicks(signupButton), getInputValues(usernameInput)),
+          getInputValues(passwordInput),
+          (username, password) => ({
             username,
             password
-          }));
-        signupAttempts
-          .filter(({ username }) => username === "")
-          .map(_ => (statusText.textContent = "Username required!"));
-        signupAttempts
-          .filter(
+          })
+        );
+        yield output(
+          filter(signupAttempts, ({ username }) => username === ""),
+          () => (statusText.textContent = "Username required!")
+        );
+        yield output(
+          filter(
+            signupAttempts,
             ({ username, password }) => username !== "" && password === ""
-          )
-          .map(_ => (statusText.textContent = "Password required!"));
+          ),
+          () => (statusText.textContent = "Password required!")
+        );
 
         return [
           root,
-          getClicks(loginButton).map(createLoginDiv),
-          signupAttempts.filter(
+          map(getClicks(loginButton), () => createLoginDiv),
+          filter(signupAttempts,
             ({ username, password }) => username !== "" && password !== ""
           )
         ];
