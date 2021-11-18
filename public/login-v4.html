@@ -1308,11 +1308,12 @@
         return [
           root,
           map(getClicks(loginButton), () => createLoginDiv),
-          filter(signupAttempts,
+          filter(
+            signupAttempts,
             ({ username, password }) => username !== "" && password !== ""
           )
         ];
-      };
+      }
 
       function* createLoggedInDiv(username) {
         const { root: loggedInDiv, logoutButton } = div(
@@ -1324,14 +1325,17 @@
           loggedInDiv,
           map(
             merge(
-              filter(merge(passwordChanges, removedUsers), x => x.username === username),
+              filter(
+                merge(passwordChanges, removedUsers),
+                x => x.username === username
+              ),
               merge(getClicks(logoutButton), clears)
             ),
             () => createLoginDiv
           ),
           never
         ];
-      };
+      }
 
       let publishStartPage;
       const startPage = input(p => (publishStartPage = p));
