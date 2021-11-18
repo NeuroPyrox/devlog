@@ -390,7 +390,6 @@
       // pull monad finishes. If this assumption turns out false,
       // we can just defer subscriptions until the end of the monad.
       constructor(subscribe) {
-        // TODO check if it captures the right "this"
         this._unsubscribe = subscribe(x =>
           runMonad(new Push.Context(), Push.push(this, x))
         );
