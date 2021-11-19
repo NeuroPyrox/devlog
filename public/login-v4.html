@@ -160,6 +160,8 @@
         return graph;
       };
 
+      // TODO evaluate between pushes
+      // TODO detect loops
       const lazy = thunk => () => {
         if (!thunk.done) {
           thunk = {done: true, value: thunk()};
@@ -433,10 +435,6 @@
         this._sink = new WeakRef(new InputSink(subscribe));
       }
 
-      isBuilt() {
-        return true;
-      }
-
       getSink() {
         return this._sink.deref();
       }
@@ -490,50 +488,47 @@
     }
 
     const neverSource = {
-      isBuilt: () => false,
       getSink: () => undefined
     };
 
     class MergeSink {
-      constructor(combine) {
+      constructor(sourceA, sourceB, combine) {
         this._combine = combine;
         this._children = new Util.ChildList();
-        this._parentSinkA = Util.weakRefUndefined;
-        this._parentSinkB = Util.weakRefUndefined;
-        this._childListNodeA = Util.weakRefUndefined;
-        this._childListNodeB = Util.weakRefUndefined;
-        this._priority = Util.nullNumber;
+        const sinkA = sourceA.getSink();
+        const sinkB = sourceB.getSink();
+        // TODO refactor
+        if (sinkA === undefined) {
+          this._parentSinkA = Util.weakRefUndefined;
+          this._childListNodeA = Util.weakRefUndefined;
+          if (sinkB === undefined) {
+            this._parentSinkB = Util.weakRefUndefined;
+            this._childListNodeB = Util.weakRefUndefined;
+            this._priority = 0;
+          } else {
+            this._parentSinkB = new WeakRef(sinkB);
+            this._childListNodeB = new WeakRef(sinkB.linkChild(this));
+            this._priority = sinkB.getPriority() + 1;
+          }
+        } else {
+          this._parentSinkA = new WeakRef(sinkA);
+          this._childListNodeA = new WeakRef(sinkA.linkChild(this));
+          if (sinkB === undefined) {
+            this._parentSinkB = Util.weakRefUndefined;
+            this._childListNodeB = Util.weakRefUndefined;
+            this._prioriy = sinkA.getPriority() + 1;
+          } else {
+            this._parentSinkB = new WeakRef(sinkB);
+            this._childListNodeB = new WeakRef(sinkB.linkChild(this));
+            this._priority = Math.max(sinkA.getPriority(), sinkB.getPriority()) + 1;
+          }
+        }
       }
 
       linkChild(childSink) {
         return this._children.add(childSink);
       }
 
-      linkParentA(parentSink) {
-        this._parentSinkA = new WeakRef(parentSink);
-        this._childListNodeA = new WeakRef(parentSink.linkChild(this));
-      }
-
-      linkParentB(parentSink) {
-        this._parentSinkB = new WeakRef(parentSink);
-        this._childListNodeB = new WeakRef(parentSink.linkChild(this));
-      }
-
-      // [parentA !== undefined || parentB !== undefined]
-      initPriority() {
-        const parentA = this._parentSinkA.deref();
-        const parentB = this._parentSinkB.deref();
-        if (parentA === undefined) {
-          this._priority = parentB.getPriority() + 1;
-        } else if (parentB === undefined) {
-          this._priority = parentA.getPriority() + 1;
-        } else {
-          this._priority =
-            Math.max(parentA.getPriority() + parentB.getPriority()) + 1;
-        }
-      }
-
-      // [this._priority !== null]
       getPriority() {
         return this._priority;
       }
@@ -565,66 +560,14 @@
       }
     }
 
-    // Promiscuous state sharing with [MergeParentSlot]
     class MergeSource {
-      // [sinkBuilder] is a function that makes this source's sink.
-      // [this._sink] has a different interface depending on [this.isBuilt()]
-      constructor(sinkBuilder) {
-        this._sink = sinkBuilder;
+      // TODO optimize based on which sources have live sinks
+      constructor(sourceA, sourceB, combine) {
+        this._sink = new WeakRef(new MergeSink(sourceA, sourceB, combine));
       }
 
-      // Easier than polymorphism
-      isBuilt() {
-        return this._sink.constructor === WeakRef;
-      }
-
-      // [this.isBuilt()]
       getSink() {
         return this._sink.deref();
-      }
-    }
-
-    // Promiscious state sharing with [MergeSource]
-    class MergeParentSlot {
-      constructor(childSource, linkParent) {
-        this._childSource = childSource;
-        this._linkParent = linkParent;
-      }
-
-      // Build monad
-      // Mutable: parentSink, this._childSource._sink
-      *buildEdge(parentSink) {
-        if (!this._childSource.isBuilt()) {
-          // Child not visited
-          const childSink = this._childSource._sink();
-          this._linkParent(parentSink, childSink);
-          this._childSource._sink = new WeakRef(childSink);
-          yield* Build.buildVertex(this._childSource);
-          yield Build.markVisited(this._childSource);
-        } else if (!(yield Build.isVisited(this._childSource))) {
-          // Child being visited
-          throw new Error("Illegal pulse recursion!");
-        } else {
-          // Child was visited
-          this._linkParent(parentSink, this._childSource.getSink());
-        }
-      }
-
-      // Build monad
-      // Mutable: parentSink, this._childSource._sink
-      // The same as [this.buildEdge] but without checking for illegal pulse recursion.
-      *buildRoot(parentSink) {
-        if (!this._childSource.isBuilt()) {
-          // Child not visited
-          const childSink = this._childSource._sink();
-          this._linkParent(parentSink, childSink);
-          this._childSource._sink = new WeakRef(childSink);
-          yield* Build.buildVertex(this._childSource);
-          yield Build.markVisited(this._childSource);
-        } else {
-          // Child was visited
-          this._linkParent(parentSink, this._childSource.getSink());
-        }
       }
     }
 
@@ -674,33 +617,14 @@
     }
 
     class SingleParentSource {
-      // [sinkBuilder] is a function that takes a parent sink to make this source's sink.
-      // [this._sink] has a different interface depending on [this.isBuilt()]
-      constructor(sinkBuilder) {
-        this._sink = sinkBuilder;
+      // TODO consider moving the sink liveness check higher up in the call stack.
+      constructor(parentSource, mapParentValue) {
+        const parentSink = parentSource.getSink();
+        this._sink = parentSink === undefined ? Util.weakRefUndefined : new WeakRef(new SingleParentSink(parentSink, mapParentValue));
       }
-
-      // Easier than polymorphism
-      isBuilt() {
-        return this._sink.constructor === WeakRef;
-      }
-
-      // [this.isBuilt()]
+      
       getSink() {
         return this._sink.deref();
-      }
-
-      // Build monad
-      // [!this.isBuilt()]
-      *buildEdge(parentSink) {
-        this._sink = new WeakRef(this._sink(parentSink));
-        yield* Build.buildVertex(this);
-      }
-
-      // Build monad
-      // [!this.isBuilt()]
-      *buildRoot(parentSink) {
-        yield* this.buildEdge(parentSink);
       }
     }
 
@@ -773,15 +697,11 @@
         this._children = new Util.ChildList();
         this._parentSink = parentSink;
         this._childListNode = parentSink.linkChild(this);
-        this._priority = Util.nullNumber;
+        this._priority = parentSink.getPriority() + 1;
       }
 
       linkChild(childSink) {
         return this._children.add(childSink);
-      }
-
-      initPriority() {
-        this._priority = this._parentSink.getPriority() + 1;
       }
 
       // [this._priority !== null]
@@ -805,6 +725,17 @@
       }
     }
 
+    class ObserveESource {
+      constructor(parentSource) {
+        const parentSink = parentSource.getSink();
+        this._sink = parentSink === undefined ? Util.weakRefUndefined : new WeakRef(new ObserveESink(parentSink));
+      }
+      
+      getSink() {
+        return this._sink.deref();
+      }
+    }
+    
     const assertIsEvent = event => {
       if (event.constructor.name !== "GeneratorFunction") {
         throw new Error("event is not a generator function!");
@@ -815,6 +746,7 @@
     ////////////////
     // Pull monad //
 
+    // TODO update
     const eventLoop = () => {
       let event = null;
       const result = function*() {
@@ -851,6 +783,7 @@
     // Pull monad //
     ////////////////
 
+    // TODO use Util.lazy
     //////////////////
     // Moment monad //
 
