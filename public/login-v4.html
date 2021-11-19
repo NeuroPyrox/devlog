@@ -161,10 +161,15 @@
       };
 
       // TODO evaluate between pushes
-      // TODO detect loops
       const lazy = thunk => () => {
+        if (thunk.processing) {
+          throw new Error("Illegal circular lazy evaluation");
+        }
         if (!thunk.done) {
-          thunk = {done: true, value: thunk()};
+          const temp = thunk;
+          thunk = {processing: true};
+          const value = temp();
+          thunk = {done: true, value};
         }
         return thunk.value;
       }
