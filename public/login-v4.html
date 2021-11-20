@@ -769,7 +769,6 @@
     ////////////////
 
     // TODO move to pull monad
-    // TODO use Util.lazy
     //////////////////
     // Moment monad //
 
@@ -793,11 +792,11 @@
     }
 
     // TODO optimize with binary tree
-    function* mergeBind(eventOfEvent, f) {
+    const mergeBind = (eventOfEvent, f) => {
       let current = never;
       const next = map(eventOfEvent, event => merge(f(event), current));
-      yield output(next, event => (current = event));
-      return yield* switchE(next);
+      output(next, event => (current = event));
+      return switchE(next);
     }
 
     // Moment monad //
