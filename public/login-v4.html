@@ -445,8 +445,7 @@
       }
     }
 
-    // Both a source and a sink
-    class OutputPulse {
+    class OutputSink {
       constructor(parentSink, handle) {
         this._handle = handle;
         this._parentSink = parentSink;
@@ -785,7 +784,7 @@
         if (parentSink === undefined) {
           return () => {};
         }
-        const pulse = new OutputPulse(parentSink, handle);
+        const pulse = new OutputSink(parentSink, handle);
         const unsubscribe = undefined; // TODO
         return unsubscribe;
       });
