@@ -706,14 +706,13 @@
     ////////////////
     // Pull monad //
 
-    // TODO update
     const eventLoop = () => {
       let event = null;
-      const result = function*() {
+      const result = () => {
         if (event === null) {
           throw new Error("Must call [loop] on every [eventLoop]!");
         }
-        return yield* event();
+        return event();
       };
       result.loop = setTo => (event = setTo);
       return result;
