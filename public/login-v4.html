@@ -447,28 +447,11 @@
 
     // Both a source and a sink
     class OutputPulse {
-      constructor(handle) {
+      constructor(parentSink, handle) {
         this._handle = handle;
-        this._parentSink = null;
-        this._childListNode = null;
-        this._priority = Util.nullNumber;
-      }
-
-      // Build monad
-      *buildEdge(parentSink) {
         this._parentSink = parentSink;
         this._childListNode = parentSink.linkChild(this);
-        yield Build.pushSortedSink(this); // Equivalent to [yield* buildVertex(this)]
-      }
-
-      // Build monad
-      *buildRoot(parentSink) {
-        yield* this.buildEdge(parentSink);
-      }
-
-      // [this._parentSink !== null]
-      initPriority() {
-        this._priority = this._parentSink.getPriority() + 1;
+        this._priority = parentSink.getPriority() + 1;
       }
 
       getPriority() {
@@ -788,18 +771,20 @@
     // Pull monad //
     ////////////////
 
+    // TODO move to pull monad
     // TODO use Util.lazy
     //////////////////
     // Moment monad //
 
-    // TODO unsubscribe
-    const output = (event, handle) =>
-      Moment.pull(function*() {
-        const result = new OutputPulse(handle);
-        yield Pull.addGraphEdge(yield* event(), result);
-        const unsubscribe = undefined;
-        return unsubscribe;
-      });
+    const output = (parentEvent, handle) => Util.lazy(() => {
+      const parentSink = parentEvent().getSink();
+      if (parentSink === undefined) {
+        return () => {};
+      }
+      const pulse = new OutputPulse(parentSink, handle);
+      const unsubscribe = undefined; // TODO
+      return unsubscribe;
+    });
 
     function* switchE(eventOfEvent) {
       const sink = new SwitchESink();
