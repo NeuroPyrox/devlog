@@ -620,11 +620,10 @@
         }
       }
 
-      // TODO use a surrounding monad.
       setParent(parentEvent) {
         // TODO unsubscribe properly from [this._parentSink];
         this._childListNode.deref()?.remove();
-        const parentSource = runMonad(new Pull.Context(), parentEvent());
+        const parentSource = parentEvent();
         const parentSink = parentSource.getSink();
         if (parentSink === undefined) {
           this._parentSink = Util.weakRefUndefined;
@@ -647,10 +646,6 @@
     class SwitchESource {
       constructor(sink) {
         this._sink = new WeakRef(sink);
-      }
-
-      isBuilt() {
-        return true;
       }
 
       getSink() {
@@ -789,14 +784,12 @@
         return unsubscribe;
       });
 
-    function* switchE(eventOfEvent) {
+    const switchE = eventOfEvent => {
       const sink = new SwitchESink();
       const source = new SwitchESource(sink);
-      yield output(eventOfEvent, event => sink.setParent(event));
+      output(eventOfEvent, event => sink.setParent(event));
       // TODO fix memory leak
-      return function*() {
-        return source;
-      };
+      return () => source;
     }
 
     // TODO optimize with binary tree
