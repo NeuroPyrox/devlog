@@ -763,7 +763,7 @@
     const tag = (event, latchGet) =>
       singleParentEvent(event, () => ({ value: latchGet() }));
 
-    const observeE = event => Util.lazy(() => new ObserveESource(event));
+    const observeE = event => Util.lazy(() => new ObserveESource(event()));
 
     const getClicks = domNode =>
       input(push => domNode.addEventListener("click", push));
