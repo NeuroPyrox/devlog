@@ -605,10 +605,8 @@
     }
 
     class SingleParentSource {
-      // TODO consider moving the sink liveness check higher up in the call stack.
-      constructor(parentSource, mapParentValue) {
-        const parentSink = parentSource.getSink();
-        this._sink = parentSink === undefined ? Util.weakRefUndefined : new WeakRef(new SingleParentSink(parentSink, mapParentValue));
+      constructor(parentSink, mapParentValue) {
+        this._sink = new WeakRef(new SingleParentSink(parentSink, mapParentValue));
       }
       
       getSink() {
@@ -750,8 +748,14 @@
     const never = () => neverSource;
     // TODO mergeWith
     const merge = (eventA, eventB, combine = (a, b) => a) => Util.lazy(() => new MergeSource(eventA(), eventB(), combine));
-    const singleParentEvent = (parentEvent, mapParentValue) => Util.lazy(() => new SingleParentSource(parentEvent(), mapParentValue));
     
+    const singleParentEvent = (parentEvent, mapParentValue) => Util.lazy(() => {
+      const parentSink = parentEvent().getSink();
+      if (parentSink === undefined) {
+        return neverSource;
+      }
+      new SingleParentSource(parentSink, mapParentValue);
+    });
     const filter = (event, predicate) =>
       singleParentEvent(event, value =>
         predicate(value) ? { value } : undefined
