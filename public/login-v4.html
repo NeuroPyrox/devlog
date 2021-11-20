@@ -714,9 +714,8 @@
     }
 
     class ObserveESource {
-      constructor(parentSource) {
-        const parentSink = parentSource.getSink();
-        this._sink = parentSink === undefined ? Util.weakRefUndefined : new WeakRef(new ObserveESink(parentSink));
+      constructor(parentSink) {
+        this._sink = new WeakRef(new ObserveESink(parentSink));
       }
       
       getSink() {
@@ -763,7 +762,13 @@
     const tag = (event, latchGet) =>
       singleParentEvent(event, () => ({ value: latchGet() }));
 
-    const observeE = event => Util.lazy(() => new ObserveESource(event()));
+    const observeE = parentEvent => Util.lazy(() => {
+      const parentSink = parentEvent().getSink();
+      if (parentSink === undefined) {
+        return neverSource;
+      }
+      return new ObserveESource(parentSink);
+    });
 
     const getClicks = domNode =>
       input(push => domNode.addEventListener("click", push));
