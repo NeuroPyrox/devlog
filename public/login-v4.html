@@ -480,37 +480,14 @@
     };
 
     class MergeSink {
-      constructor(sourceA, sourceB, combine) {
+      constructor(parentSinkA, parentSinkB, combine) {
         this._combine = combine;
         this._children = new Util.ChildList();
-        const sinkA = sourceA.getSink();
-        const sinkB = sourceB.getSink();
-        // TODO refactor
-        if (sinkA === undefined) {
-          this._parentSinkA = Util.weakRefUndefined;
-          this._childListNodeA = Util.weakRefUndefined;
-          if (sinkB === undefined) {
-            this._parentSinkB = Util.weakRefUndefined;
-            this._childListNodeB = Util.weakRefUndefined;
-            this._priority = 0;
-          } else {
-            this._parentSinkB = new WeakRef(sinkB);
-            this._childListNodeB = new WeakRef(sinkB.linkChild(this));
-            this._priority = sinkB.getPriority() + 1;
-          }
-        } else {
-          this._parentSinkA = new WeakRef(sinkA);
-          this._childListNodeA = new WeakRef(sinkA.linkChild(this));
-          if (sinkB === undefined) {
-            this._parentSinkB = Util.weakRefUndefined;
-            this._childListNodeB = Util.weakRefUndefined;
-            this._prioriy = sinkA.getPriority() + 1;
-          } else {
-            this._parentSinkB = new WeakRef(sinkB);
-            this._childListNodeB = new WeakRef(sinkB.linkChild(this));
-            this._priority = Math.max(sinkA.getPriority(), sinkB.getPriority()) + 1;
-          }
-        }
+        this._parentSinkA = new WeakRef(parentSinkA);
+        this._parentSinkB = new WeakRef(parentSinkB);
+        this._childListNodeA = new WeakRef(parentSinkA.linkChild(this));
+        this._childListNodeB = new WeakRef(parentSinkB.linkChild(this));
+        this._priority = Math.max(parentSinkA.getPriority(), parentSinkB.getPriority()) + 1;
       }
 
       linkChild(childSink) {
@@ -549,9 +526,8 @@
     }
 
     class MergeSource {
-      // TODO optimize based on which sources have live sinks
-      constructor(sourceA, sourceB, combine) {
-        this._sink = new WeakRef(new MergeSink(sourceA, sourceB, combine));
+      constructor(parentSinkA, parentSinkB, combine) {
+        this._sink = new WeakRef(new MergeSink(parentSinkA, parentSinkB, combine));
       }
 
       getSink() {
@@ -747,7 +723,15 @@
     const input = subscribe => Util.lazy(() => new InputSource(subscribe));
     const never = () => neverSource;
     // TODO mergeWith
-    const merge = (eventA, eventB, combine = (a, b) => a) => Util.lazy(() => new MergeSource(eventA(), eventB(), combine));
+    const merge = (parentEventA, parentEventB, combine = (a, b) => a) => Util.lazy(() => {
+      const parentSourceA = parentEventA();
+      const parentSourceB = parentEventB();
+      const parentSinkA = parentSourceA.getSink();
+      const parentSinkB = parentSourceB.getSink();
+      return (parentSinkA === undefined) ?
+        (parentSinkB === undefined ? neverSource : parentSourceB) :
+        (parentSinkB === parentSourceA ? neverSource : new MergeSource(parentSinkA, parentSinkB, combine));
+    });
     
     const singleParentEvent = (parentEvent, mapParentValue) => Util.lazy(() => {
       const parentSink = parentEvent().getSink();
