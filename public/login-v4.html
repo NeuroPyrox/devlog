@@ -167,13 +167,13 @@
         }
         if (!thunk.done) {
           const temp = thunk;
-          thunk = {processing: true};
+          thunk = { processing: true };
           const value = temp();
-          thunk = {done: true, value};
+          thunk = { done: true, value };
         }
         return thunk.value;
-      }
-      
+      };
+
       return {
         PriorityQueue,
         ChildList,
@@ -487,7 +487,8 @@
         this._parentSinkB = new WeakRef(parentSinkB);
         this._childListNodeA = new WeakRef(parentSinkA.linkChild(this));
         this._childListNodeB = new WeakRef(parentSinkB.linkChild(this));
-        this._priority = Math.max(parentSinkA.getPriority(), parentSinkB.getPriority()) + 1;
+        this._priority =
+          Math.max(parentSinkA.getPriority(), parentSinkB.getPriority()) + 1;
       }
 
       linkChild(childSink) {
@@ -527,7 +528,9 @@
 
     class MergeSource {
       constructor(parentSinkA, parentSinkB, combine) {
-        this._sink = new WeakRef(new MergeSink(parentSinkA, parentSinkB, combine));
+        this._sink = new WeakRef(
+          new MergeSink(parentSinkA, parentSinkB, combine)
+        );
       }
 
       getSink() {
@@ -582,9 +585,11 @@
 
     class SingleParentSource {
       constructor(parentSink, mapParentValue) {
-        this._sink = new WeakRef(new SingleParentSink(parentSink, mapParentValue));
+        this._sink = new WeakRef(
+          new SingleParentSink(parentSink, mapParentValue)
+        );
       }
-      
+
       getSink() {
         return this._sink.deref();
       }
@@ -691,12 +696,12 @@
       constructor(parentSink) {
         this._sink = new WeakRef(new ObserveESink(parentSink));
       }
-      
+
       getSink() {
         return this._sink.deref();
       }
     }
-    
+
     const assertIsEvent = event => {
       if (event.constructor.name !== "GeneratorFunction") {
         throw new Error("event is not a generator function!");
@@ -723,20 +728,28 @@
     const input = subscribe => Util.lazy(() => new InputSource(subscribe));
     const never = () => neverSource;
     // TODO mergeWith
-    const merge = (parentEventA, parentEventB, combine = (a, b) => a) => Util.lazy(() => {
-      const parentSourceA = parentEventA();
-      const parentSourceB = parentEventB();
-      const parentSinkA = parentSourceA.getSink();
-      const parentSinkB = parentSourceB.getSink();
-      return (parentSinkA === undefined) ?
-        (parentSinkB === undefined ? neverSource : parentSourceB) :
-        (parentSinkB === parentSourceA ? neverSource : new MergeSource(parentSinkA, parentSinkB, combine));
-    });
-    
-    const singleParentEvent = (parentEvent, mapParentValue) => Util.lazy(() => {
-      const parentSink = parentEvent().getSink();
-      return parentSink === undefined ? neverSource : new SingleParentSource(parentSink, mapParentValue);
-    });
+    const merge = (parentEventA, parentEventB, combine = (a, b) => a) =>
+      Util.lazy(() => {
+        const parentSourceA = parentEventA();
+        const parentSourceB = parentEventB();
+        const parentSinkA = parentSourceA.getSink();
+        const parentSinkB = parentSourceB.getSink();
+        return parentSinkA === undefined
+          ? parentSinkB === undefined
+            ? neverSource
+            : parentSourceB
+          : parentSinkB === parentSourceA
+          ? neverSource
+          : new MergeSource(parentSinkA, parentSinkB, combine);
+      });
+
+    const singleParentEvent = (parentEvent, mapParentValue) =>
+      Util.lazy(() => {
+        const parentSink = parentEvent().getSink();
+        return parentSink === undefined
+          ? neverSource
+          : new SingleParentSource(parentSink, mapParentValue);
+      });
     const filter = (event, predicate) =>
       singleParentEvent(event, value =>
         predicate(value) ? { value } : undefined
@@ -747,10 +760,13 @@
     const tag = (event, latchGet) =>
       singleParentEvent(event, () => ({ value: latchGet() }));
 
-    const observeE = parentEvent => Util.lazy(() => {
-      const parentSink = parentEvent().getSink();
-      return parentSink === undefined ? neverSource : new ObserveESource(parentSink);
-    });
+    const observeE = parentEvent =>
+      Util.lazy(() => {
+        const parentSink = parentEvent().getSink();
+        return parentSink === undefined
+          ? neverSource
+          : new ObserveESource(parentSink);
+      });
 
     const getClicks = domNode =>
       input(push => domNode.addEventListener("click", push));
@@ -763,15 +779,16 @@
     //////////////////
     // Moment monad //
 
-    const output = (parentEvent, handle) => Util.lazy(() => {
-      const parentSink = parentEvent().getSink();
-      if (parentSink === undefined) {
-        return () => {};
-      }
-      const pulse = new OutputPulse(parentSink, handle);
-      const unsubscribe = undefined; // TODO
-      return unsubscribe;
-    });
+    const output = (parentEvent, handle) =>
+      Util.lazy(() => {
+        const parentSink = parentEvent().getSink();
+        if (parentSink === undefined) {
+          return () => {};
+        }
+        const pulse = new OutputPulse(parentSink, handle);
+        const unsubscribe = undefined; // TODO
+        return unsubscribe;
+      });
 
     function* switchE(eventOfEvent) {
       const sink = new SwitchESink();
