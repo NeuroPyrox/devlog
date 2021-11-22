@@ -760,7 +760,7 @@
       output(eventOfEvent, event => sink.setParent(event));
       // TODO fix memory leak
       return () => source;
-    }
+    };
 
     // TODO optimize with binary tree
     const mergeBind = (eventOfEvent, f) => {
@@ -768,7 +768,7 @@
       const next = map(eventOfEvent, event => merge(f(event), current));
       output(next, event => (current = event));
       return switchE(next);
-    }
+    };
 
     // Moment monad //
     //////////////////
