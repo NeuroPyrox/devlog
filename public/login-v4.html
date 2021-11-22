@@ -357,34 +357,6 @@
 
       return { Context, writeSink, readSink, enqueueAction, pull, push };
     })();
-    const Moment = (() => {
-      class Context {
-        constructor() {
-          this._monadicPullValues = [];
-        }
-
-        pull(monadicPullValue) {
-          this._monadicPullValues.push(monadicPullValue);
-        }
-
-        _endMonad() {
-          const monadicPullValues = this._monadicPullValues;
-          runMonad(
-            new Pull.Context(),
-            (function*() {
-              for (const monadicPullValue of monadicPullValues) {
-                yield* monadicPullValue();
-              }
-            })()
-          );
-        }
-      }
-
-      const pull = monadicPullValue => context =>
-        context.pull(monadicPullValue);
-
-      return { Context, pull };
-    })();
 
     // Mutable: context, generator
     const runMonad = (context, generator) => {
