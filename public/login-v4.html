@@ -357,7 +357,7 @@
 
       return { Context, writeSink, readSink, enqueueAction, pull, push };
     })();
-
+    
     // Mutable: context, generator
     const runMonad = (context, generator) => {
       let step = generator.next();
@@ -738,29 +738,35 @@
 
     // Pull monad //
     ////////////////
+    
+    class PullContext {
+      constructor() {
+        
+      }
+      
+      // TODO unsubscribe
+      output(parentEvent, handle) {
+        defer(() => {
+          const parentSink = parentEvent().getSink();
+          if (parentSink !== undefined) {
+            new OutputSink(parentSink, handle);
+          }
+        })
+      }
+      
+      switchE(eventOfEvent) {
+        const sink = new SwitchESink();
+        const source = new SwitchESource(sink);
+        this.output(eventOfEvent, event => sink.setParent(event));
+        // TODO fix memory leak
+        return () => source;
+      }
+    }
+    const output = (parentEvent, handle) => context => context.output(parentEvent, handle);
+    const switchE = eventOfEvent => context => context.switchE(eventOfEvent);
 
-    // TODO move to pull monad
     //////////////////
     // Moment monad //
-
-    const output = (parentEvent, handle) =>
-      Util.lazy(() => {
-        const parentSink = parentEvent().getSink();
-        if (parentSink === undefined) {
-          return () => {};
-        }
-        const pulse = new OutputSink(parentSink, handle);
-        const unsubscribe = undefined; // TODO
-        return unsubscribe;
-      });
-
-    const switchE = eventOfEvent => {
-      const sink = new SwitchESink();
-      const source = new SwitchESource(sink);
-      output(eventOfEvent, event => sink.setParent(event));
-      // TODO fix memory leak
-      return () => source;
-    };
 
     // TODO optimize with binary tree
     const mergeBind = (eventOfEvent, f) => {
