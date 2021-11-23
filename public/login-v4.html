@@ -668,12 +668,6 @@
       }
     }
 
-    const assertIsEvent = event => {
-      if (event.constructor.name !== "GeneratorFunction") {
-        throw new Error("event is not a generator function!");
-      }
-    };
-
     // TODO rename this section
     ////////////////
     // Pull monad //
