@@ -388,18 +388,6 @@
       }
     }
 
-    class InputSource {
-      // Impure: subscribe
-      constructor(subscribe) {
-        // TODO check if sink gets GC'd
-        this._sink = new WeakRef(new InputSink(subscribe));
-      }
-
-      getSink() {
-        return this._sink.deref();
-      }
-    }
-
     class OutputSink {
       constructor(parentSink, handle) {
         this._handle = handle;
@@ -428,10 +416,6 @@
         return [];
       }
     }
-
-    const neverSource = {
-      getSink: () => undefined
-    };
 
     class MergeSink {
       constructor(parentSinkA, parentSinkB, combine) {
@@ -480,18 +464,6 @@
       }
     }
 
-    class MergeSource {
-      constructor(parentSinkA, parentSinkB, combine) {
-        this._sink = new WeakRef(
-          new MergeSink(parentSinkA, parentSinkB, combine)
-        );
-      }
-
-      getSink() {
-        return this._sink.deref();
-      }
-    }
-
     class SingleParentSink {
       constructor(parentSink, mapParentValue) {
         this._children = new Util.ChildList();
@@ -534,18 +506,6 @@
         }
         yield Push.writeSink(this, value.value);
         return this._children;
-      }
-    }
-
-    class SingleParentSource {
-      constructor(parentSink, mapParentValue) {
-        this._sink = new WeakRef(
-          new SingleParentSink(parentSink, mapParentValue)
-        );
-      }
-
-      getSink() {
-        return this._sink.deref();
       }
     }
 
@@ -598,16 +558,6 @@
       }
     }
 
-    class SwitchESource {
-      constructor(sink) {
-        this._sink = new WeakRef(sink);
-      }
-
-      getSink() {
-        return this._sink.deref();
-      }
-    }
-
     class ObserveESink {
       constructor(parentSink) {
         this._children = new Util.ChildList();
@@ -641,11 +591,16 @@
       }
     }
 
-    class ObserveESource {
-      constructor(parentSink) {
-        this._sink = new WeakRef(new ObserveESink(parentSink));
+    const neverSource = {
+      getSink: () => undefined
+    };
+
+    class Source {
+      constructor(sink) {
+        this._sink = new WeakRef(sink);
       }
 
+      // TODO rename to reflect nullability
       getSink() {
         return this._sink.deref();
       }
@@ -681,7 +636,7 @@
       return result;
     };
 
-    const input = subscribe => defer(() => new InputSource(subscribe));
+    const input = subscribe => defer(() => new Source(new InputSink(subscribe)));
     const never = () => neverSource;
     // TODO mergeWith
     const merge = (parentEventA, parentEventB, combine = (a, b) => a) =>
@@ -696,7 +651,7 @@
             : parentSourceB
           : parentSinkB === parentSourceA
           ? neverSource
-          : new MergeSource(parentSinkA, parentSinkB, combine);
+          : new Source(new MergeSink(parentSinkA, parentSinkB, combine));
       });
 
     const singleParentEvent = (parentEvent, mapParentValue) =>
@@ -704,7 +659,7 @@
         const parentSink = parentEvent().getSink();
         return parentSink === undefined
           ? neverSource
-          : new SingleParentSource(parentSink, mapParentValue);
+          : new Source(new SingleParentSink(parentSink, mapParentValue));
       });
     const filter = (event, predicate) =>
       singleParentEvent(event, value =>
@@ -721,7 +676,7 @@
         const parentSink = parentEvent().getSink();
         return parentSink === undefined
           ? neverSource
-          : new ObserveESource(parentSink);
+          : new Source(new ObserveESink(parentSink));
       });
 
     const getClicks = domNode =>
@@ -743,7 +698,7 @@
     
     function* switchE(eventOfEvent) {
       const sink = new SwitchESink();
-      const source = new SwitchESource(sink);
+      const source = new Source(sink);
       yield output(eventOfEvent, event => sink.setParent(event));
       // TODO fix memory leak
       return () => source;
