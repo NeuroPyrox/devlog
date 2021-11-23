@@ -159,13 +159,16 @@
         }
         return graph;
       };
+
+      const callMethod = field => (...args) => object => object[field](...args);
       
       return {
         PriorityQueue,
         ChildList,
         weakRefUndefined,
         nullNumber,
-        weakMapFromEdges
+        weakMapFromEdges,
+        callMethod
       };
     })();
     const Build = (() => {
@@ -204,11 +207,10 @@
         }
       }
 
-      const getSourceChildren = source => context =>
-        context.getSourceChildren(source);
-      const pushSortedSink = sink => context => context.pushSortedSink(sink);
-      const markVisited = source => context => context.markVisited(source);
-      const isVisited = source => context => context.isVisited(source);
+      const getSourceChildren = Util.callMethod("getSourceChildren");
+      const pushSortedSink = Util.callMethod("pushSortedSink");
+      const markVisited = Util.callMethod("markVisited");
+      const isVisited = Util.callMethod("isVisited");
 
       // TODO rename
       function* buildRoots(roots) {
@@ -271,8 +273,7 @@
         }
       }
 
-      const addGraphEdge = (parent, child) => context =>
-        context.addGraphEdge(parent, child);
+      const addGraphEdge = Util.callMethod("addGraphEdge");
 
       return { Context, addGraphEdge };
     })();
@@ -318,13 +319,10 @@
         }
       }
 
-      const writeSink = (sink, value) => context =>
-        context.writeSink(sink, value);
-      const readSink = sink => context => context.readSink(sink);
-      const enqueueAction = (handle, value) => context =>
-        context.enqueueAction(handle, value);
-      const pull = monadicMomentValue => context =>
-        context.pull(monadicMomentValue);
+      const writeSink = Util.callMethod("writeSink");
+      const readSink = Util.callMethod("readSink");
+      const enqueueAction = Util.callMethod("enqueueAction");
+      const pull = Util.callMethod("pull");
 
       // Mutable: queue
       function* push(sink, value) {
@@ -741,7 +739,7 @@
         }
       })
     }
-    const output = (parentEvent, handle) => context => context.output(parentEvent, handle);
+    const output = Util.callMethod("output");
     
     function* switchE(eventOfEvent) {
       const sink = new SwitchESink();
