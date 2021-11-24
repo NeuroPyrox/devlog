@@ -284,7 +284,6 @@
           // because the keys will be strongly referenced by a chain of parent pulsePushes.
           this._values = new WeakMap();
           this._actions = [];
-          this._momentContext = new Moment.Context();
         }
 
         writeSink(sink, value) {
@@ -302,17 +301,11 @@
           this._actions.push([handle, value]);
         }
 
-        pull(monadicMomentValue) {
-          const generator = monadicMomentValue();
-          let step = generator.next();
-          while (!step.done) {
-            step = generator.next(step.value(this._momentContext));
-          }
-          return step.value;
+        liftPull(monadicValue) {
+          return runMonad(PullContext, monadicValue());
         }
 
         _endMonad() {
-          this._momentContext._endMonad();
           for (const [handle, value] of this._actions) {
             handle(value);
           }
@@ -322,7 +315,7 @@
       const writeSink = Util.callMethod("writeSink");
       const readSink = Util.callMethod("readSink");
       const enqueueAction = Util.callMethod("enqueueAction");
-      const pull = Util.callMethod("pull");
+      const liftPull = Util.callMethod("liftPull");
 
       // Mutable: queue
       function* push(sink, value) {
@@ -338,7 +331,7 @@
         }
       }
 
-      return { Context, writeSink, readSink, enqueueAction, pull, push };
+      return { Context, writeSink, readSink, enqueueAction, liftPull, push };
     })();
     
     // Mutable: context, generator
@@ -348,7 +341,6 @@
         step = generator.next(step.value(context));
       }
       context._endMonad();
-      // TODO do we really need to return?
       return step.value;
     };
 
@@ -585,7 +577,7 @@
       // Push monad
       *poll() {
         const parentValue = yield Push.readSink(this._parentSink);
-        const value = yield Push.pull(parentValue.value);
+        const value = yield Push.liftPull(parentValue.value);
         yield Push.writeSink(this, value);
         return this._children;
       }
@@ -692,7 +684,8 @@
         if (parentSink !== undefined) {
           new OutputSink(parentSink, handle);
         }
-      })
+      }),
+      _endMonad: () => {}
     }
     const output = Util.callMethod("output");
     
