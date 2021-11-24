@@ -304,245 +304,249 @@
       context._endMonad();
       return step.value;
     };
-
-    class InputSink {
-      // Impure: subscribe, runMonad
-      // Subscribe takes a push function, attaches it as an event listener,
-      // and returns an unsubscribe function.
-      // We assume that this won't be pushed until the surrounding
-      // pull monad finishes. If this assumption turns out false,
-      // we can just defer subscriptions until the end of the monad.
-      constructor(subscribe) {
-        this._unsubscribe = subscribe(x =>
-          runMonad(new Push.Context(), Push.push(this, x))
-        );
-        this._children = new Util.ChildList();
-        this._priority = 0;
-      }
-
-      linkChild(childSink) {
-        return this._children.add(childSink);
-      }
-
-      getPriority() {
-        return this._priority;
-      }
-
-      capPriority(childPriority) {
-        if (childPriority <= this._priority) {
-          this._priority = childPriority - 1;
-        }
-      }
-
-      // Push monad
-      // Don't write because it's assumed that was already done in [Push.push].
-      *poll() {
-        return this._children;
-      }
-    }
-
-    class OutputSink {
-      constructor(parentSink, handle) {
-        this._handle = handle;
-        this._parentSink = parentSink;
-        this._childListNode = parentSink.linkChild(this);
-        this._priority = parentSink.getPriority() + 1;
-      }
-
-      getPriority() {
-        return this._priority;
-      }
-
-      capPriority(childPriority) {
-        if (childPriority <= this._priority) {
-          this._priority = childPriority - 1;
-          this._parentSink.capPriority(this._priority);
-        }
-      }
-
-      // Push monad
-      *poll() {
-        const parentValue = yield Push.readSink(this._parentSink);
-        if (parentValue !== undefined) {
-          yield Push.enqueueAction(this._handle, parentValue.value);
-        }
-        return [];
-      }
-    }
-
-    class MergeSink {
-      constructor(parentSinkA, parentSinkB, combine) {
-        this._combine = combine;
-        this._children = new Util.ChildList();
-        this._parentSinkA = new WeakRef(parentSinkA);
-        this._parentSinkB = new WeakRef(parentSinkB);
-        this._childListNodeA = new WeakRef(parentSinkA.linkChild(this));
-        this._childListNodeB = new WeakRef(parentSinkB.linkChild(this));
-        this._priority =
-          Math.max(parentSinkA.getPriority(), parentSinkB.getPriority()) + 1;
-      }
-
-      linkChild(childSink) {
-        return this._children.add(childSink);
-      }
-
-      getPriority() {
-        return this._priority;
-      }
-
-      capPriority(childPriority) {
-        if (childPriority <= this._priority) {
-          this._priority = childPriority - 1;
-          this._parentSinkA.deref()?.capPriority(this._priority);
-          this._parentSinkB.deref()?.capPriority(this._priority);
-        }
-      }
-
-      // Push monad
-      // [parentAValue !== undefined || parentBValue !== undefined]
-      *poll() {
-        const parentAValue = yield Push.readSink(this._parentSinkA.deref());
-        const parentBValue = yield Push.readSink(this._parentSinkB.deref());
-        if (parentAValue === undefined) {
-          yield Push.writeSink(this, parentBValue.value);
-        } else if (parentBValue === undefined) {
-          yield Push.writeSink(this, parentAValue.value);
-        } else {
-          yield Push.writeSink(
-            this,
-            this._combine(parentAValue.value, parentBValue.value)
+    
+    const Sink = (() => {
+      class Input {
+        // Impure: subscribe, runMonad
+        // Subscribe takes a push function, attaches it as an event listener,
+        // and returns an unsubscribe function.
+        // We assume that this won't be pushed until the surrounding
+        // pull monad finishes. If this assumption turns out false,
+        // we can just defer subscriptions until the end of the monad.
+        constructor(subscribe) {
+          this._unsubscribe = subscribe(x =>
+            runMonad(new Push.Context(), Push.push(this, x))
           );
+          this._children = new Util.ChildList();
+          this._priority = 0;
         }
-        return this._children;
-      }
-    }
 
-    class SingleParentSink {
-      constructor(parentSink, mapParentValue) {
-        this._children = new Util.ChildList();
-        this._parentSink = parentSink;
-        this._childListNode = parentSink.linkChild(this);
-        this._priority = Util.nullNumber;
-        this._mapParentValue = mapParentValue;
-      }
+        linkChild(childSink) {
+          return this._children.add(childSink);
+        }
 
-      linkChild(childSink) {
-        return this._children.add(childSink);
-      }
+        getPriority() {
+          return this._priority;
+        }
 
-      initPriority() {
-        this._priority = this._parentSink.getPriority() + 1;
-      }
+        capPriority(childPriority) {
+          if (childPriority <= this._priority) {
+            this._priority = childPriority - 1;
+          }
+        }
 
-      // [this._priority !== null]
-      getPriority() {
-        return this._priority;
-      }
-
-      capPriority(childPriority) {
-        if (childPriority <= this._priority) {
-          this._priority = childPriority - 1;
-          this._parentSink.capPriority(this._priority);
+        // Push monad
+        // Don't write because it's assumed that was already done in [Push.push].
+        *poll() {
+          return this._children;
         }
       }
 
-      // Push monad
-      *poll() {
-        const parentValue = yield Push.readSink(this._parentSink);
-        if (parentValue === undefined) {
-          // TODO is this check necessary?
+      class Output {
+        constructor(parentSink, handle) {
+          this._handle = handle;
+          this._parentSink = parentSink;
+          this._childListNode = parentSink.linkChild(this);
+          this._priority = parentSink.getPriority() + 1;
+        }
+
+        getPriority() {
+          return this._priority;
+        }
+
+        capPriority(childPriority) {
+          if (childPriority <= this._priority) {
+            this._priority = childPriority - 1;
+            this._parentSink.capPriority(this._priority);
+          }
+        }
+
+        // Push monad
+        *poll() {
+          const parentValue = yield Push.readSink(this._parentSink);
+          if (parentValue !== undefined) {
+            yield Push.enqueueAction(this._handle, parentValue.value);
+          }
           return [];
         }
-        const value = this._mapParentValue(parentValue.value);
-        if (value === undefined) {
-          return [];
+      }
+
+      class Merge {
+        constructor(parentSinkA, parentSinkB, combine) {
+          this._combine = combine;
+          this._children = new Util.ChildList();
+          this._parentSinkA = new WeakRef(parentSinkA);
+          this._parentSinkB = new WeakRef(parentSinkB);
+          this._childListNodeA = new WeakRef(parentSinkA.linkChild(this));
+          this._childListNodeB = new WeakRef(parentSinkB.linkChild(this));
+          this._priority =
+            Math.max(parentSinkA.getPriority(), parentSinkB.getPriority()) + 1;
         }
-        yield Push.writeSink(this, value.value);
-        return this._children;
-      }
-    }
 
-    class SwitchESink {
-      constructor() {
-        this._children = new Util.ChildList();
-        this._parentSink = Util.weakRefUndefined;
-        this._childListNode = Util.weakRefUndefined;
-        // Any number would work, but we choose a high one to reduce
-        // the workload of [this.setParent].
-        this._priority = 1000;
-      }
+        linkChild(childSink) {
+          return this._children.add(childSink);
+        }
 
-      linkChild(childSink) {
-        return this._children.add(childSink);
-      }
+        getPriority() {
+          return this._priority;
+        }
 
-      // [this._priority !== null]
-      getPriority() {
-        return this._priority;
-      }
+        capPriority(childPriority) {
+          if (childPriority <= this._priority) {
+            this._priority = childPriority - 1;
+            this._parentSinkA.deref()?.capPriority(this._priority);
+            this._parentSinkB.deref()?.capPriority(this._priority);
+          }
+        }
 
-      capPriority(childPriority) {
-        if (childPriority <= this._priority) {
-          this._priority = childPriority - 1;
-          this._parentSink.deref()?.capPriority(this._priority);
+        // Push monad
+        // [parentAValue !== undefined || parentBValue !== undefined]
+        *poll() {
+          const parentAValue = yield Push.readSink(this._parentSinkA.deref());
+          const parentBValue = yield Push.readSink(this._parentSinkB.deref());
+          if (parentAValue === undefined) {
+            yield Push.writeSink(this, parentBValue.value);
+          } else if (parentBValue === undefined) {
+            yield Push.writeSink(this, parentAValue.value);
+          } else {
+            yield Push.writeSink(
+              this,
+              this._combine(parentAValue.value, parentBValue.value)
+            );
+          }
+          return this._children;
         }
       }
 
-      setParent(parentEvent) {
-        // TODO unsubscribe properly from [this._parentSink];
-        this._childListNode.deref()?.remove();
-        const parentSource = parentEvent();
-        const parentSink = parentSource.getSink();
-        if (parentSink === undefined) {
+      class SingleParent {
+        constructor(parentSink, mapParentValue) {
+          this._children = new Util.ChildList();
+          this._parentSink = parentSink;
+          this._childListNode = parentSink.linkChild(this);
+          this._priority = Util.nullNumber;
+          this._mapParentValue = mapParentValue;
+        }
+
+        linkChild(childSink) {
+          return this._children.add(childSink);
+        }
+
+        initPriority() {
+          this._priority = this._parentSink.getPriority() + 1;
+        }
+
+        // [this._priority !== null]
+        getPriority() {
+          return this._priority;
+        }
+
+        capPriority(childPriority) {
+          if (childPriority <= this._priority) {
+            this._priority = childPriority - 1;
+            this._parentSink.capPriority(this._priority);
+          }
+        }
+
+        // Push monad
+        *poll() {
+          const parentValue = yield Push.readSink(this._parentSink);
+          if (parentValue === undefined) {
+            // TODO is this check necessary?
+            return [];
+          }
+          const value = this._mapParentValue(parentValue.value);
+          if (value === undefined) {
+            return [];
+          }
+          yield Push.writeSink(this, value.value);
+          return this._children;
+        }
+      }
+
+      class SwitchE {
+        constructor() {
+          this._children = new Util.ChildList();
           this._parentSink = Util.weakRefUndefined;
           this._childListNode = Util.weakRefUndefined;
-          return;
+          // Any number would work, but we choose a high one to reduce
+          // the workload of [this.setParent].
+          this._priority = 1000;
         }
-        this._parentSink = new WeakRef(parentSink);
-        this._childListNode = new WeakRef(parentSink.linkChild(this));
-        parentSink.capPriority(this._priority);
-      }
 
-      // Push monad
-      *poll() {
-        const { value } = yield Push.readSink(this._parentSink.deref());
-        yield Push.writeSink(this, value);
-        return this._children;
-      }
-    }
+        linkChild(childSink) {
+          return this._children.add(childSink);
+        }
 
-    class ObserveESink {
-      constructor(parentSink) {
-        this._children = new Util.ChildList();
-        this._parentSink = parentSink;
-        this._childListNode = parentSink.linkChild(this);
-        this._priority = parentSink.getPriority() + 1;
-      }
+        // [this._priority !== null]
+        getPriority() {
+          return this._priority;
+        }
 
-      linkChild(childSink) {
-        return this._children.add(childSink);
-      }
+        capPriority(childPriority) {
+          if (childPriority <= this._priority) {
+            this._priority = childPriority - 1;
+            this._parentSink.deref()?.capPriority(this._priority);
+          }
+        }
 
-      // [this._priority !== null]
-      getPriority() {
-        return this._priority;
-      }
+        setParent(parentEvent) {
+          // TODO unsubscribe properly from [this._parentSink];
+          this._childListNode.deref()?.remove();
+          const parentSource = parentEvent();
+          const parentSink = parentSource.getSink();
+          if (parentSink === undefined) {
+            this._parentSink = Util.weakRefUndefined;
+            this._childListNode = Util.weakRefUndefined;
+            return;
+          }
+          this._parentSink = new WeakRef(parentSink);
+          this._childListNode = new WeakRef(parentSink.linkChild(this));
+          parentSink.capPriority(this._priority);
+        }
 
-      capPriority(childPriority) {
-        if (childPriority <= this._priority) {
-          this._priority = childPriority - 1;
-          this._parentSink.capPriority(this._priority);
+        // Push monad
+        *poll() {
+          const { value } = yield Push.readSink(this._parentSink.deref());
+          yield Push.writeSink(this, value);
+          return this._children;
         }
       }
 
-      // Push monad
-      *poll() {
-        const parentValue = yield Push.readSink(this._parentSink);
-        const value = yield Push.liftPull(parentValue.value);
-        yield Push.writeSink(this, value);
-        return this._children;
+      class ObserveE {
+        constructor(parentSink) {
+          this._children = new Util.ChildList();
+          this._parentSink = parentSink;
+          this._childListNode = parentSink.linkChild(this);
+          this._priority = parentSink.getPriority() + 1;
+        }
+
+        linkChild(childSink) {
+          return this._children.add(childSink);
+        }
+
+        // [this._priority !== null]
+        getPriority() {
+          return this._priority;
+        }
+
+        capPriority(childPriority) {
+          if (childPriority <= this._priority) {
+            this._priority = childPriority - 1;
+            this._parentSink.capPriority(this._priority);
+          }
+        }
+
+        // Push monad
+        *poll() {
+          const parentValue = yield Push.readSink(this._parentSink);
+          const value = yield Push.liftPull(parentValue.value);
+          yield Push.writeSink(this, value);
+          return this._children;
+        }
       }
-    }
+      
+      return {Input, Output, Merge, SingleParent, SwitchE, ObserveE}
+    })();
 
     const neverSource = {
       getSink: () => undefined
@@ -589,7 +593,7 @@
       return result;
     };
 
-    const input = subscribe => defer(() => new Source(new InputSink(subscribe)));
+    const input = subscribe => defer(() => new Source(new Sink.Input(subscribe)));
     const never = () => neverSource;
     // TODO mergeWith
     const merge = (parentEventA, parentEventB, combine = (a, b) => a) =>
@@ -604,7 +608,7 @@
             : parentSourceB
           : parentSinkB === parentSourceA
           ? neverSource
-          : new Source(new MergeSink(parentSinkA, parentSinkB, combine));
+          : new Source(new Sink.Merge(parentSinkA, parentSinkB, combine));
       });
 
     const singleParentEvent = (parentEvent, mapParentValue) =>
@@ -612,7 +616,7 @@
         const parentSink = parentEvent().getSink();
         return parentSink === undefined
           ? neverSource
-          : new Source(new SingleParentSink(parentSink, mapParentValue));
+          : new Source(new Sink.SingleParent(parentSink, mapParentValue));
       });
     const filter = (event, predicate) =>
       singleParentEvent(event, value =>
@@ -629,7 +633,7 @@
         const parentSink = parentEvent().getSink();
         return parentSink === undefined
           ? neverSource
-          : new Source(new ObserveESink(parentSink));
+          : new Source(new Sink.ObserveE(parentSink));
       });
 
     const getClicks = domNode =>
@@ -643,7 +647,7 @@
         // TODO unsubscribe
         const parentSink = parentEvent().getSink();
         if (parentSink !== undefined) {
-          new OutputSink(parentSink, handle);
+          new Sink.Output(parentSink, handle);
         }
       }),
       _endMonad: () => {}
@@ -651,7 +655,7 @@
     const output = Util.callMethod("output");
     
     function* switchE(eventOfEvent) {
-      const sink = new SwitchESink();
+      const sink = new Sink.SwitchE();
       const source = new Source(sink);
       yield output(eventOfEvent, event => sink.setParent(event));
       // TODO fix memory leak
