@@ -564,18 +564,22 @@
     }
 
     let deferred = [];
-    const defer = thunk => deferred.push(() => {
-      if (thunk.processing) {
-        throw new Error("Illegal circular lazy evaluation");
+    const defer = thunk => {
+      const result = () => {
+        if (thunk.processing) {
+          throw new Error("Illegal circular lazy evaluation");
+        }
+        if (!thunk.done) {
+          const temp = thunk;
+          thunk = { processing: true };
+          const value = temp();
+          thunk = { done: true, value };
+        }
+        return thunk.value;
       }
-      if (!thunk.done) {
-        const temp = thunk;
-        thunk = { processing: true };
-        const value = temp();
-        thunk = { done: true, value };
-      }
-      return thunk.value;
-    });
+      deferred.push(result);
+      return result;
+    }
     
     // TODO rename this section
     ////////////////
