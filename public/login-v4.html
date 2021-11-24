@@ -238,45 +238,6 @@
         buildVertex
       };
     })();
-    const Pull = (() => {
-      class Context {
-        constructor() {
-          this._graphEdges = [];
-          this._graphRoots = [];
-        }
-
-        // The [parentSinkSlot] is a wrapper around the child.
-        addGraphEdge(parentSource, parentSinkSlot) {
-          if (!parentSource.isBuilt()) {
-            this._graphEdges.push([parentSource, parentSinkSlot]);
-            return;
-          }
-          const parentSink = parentSource.getSink();
-          if (parentSink !== undefined) {
-            this._graphRoots.push([parentSink, parentSinkSlot]);
-          }
-          // TODO use profiler to tell which implementation to use.
-          // Alternate implementation:
-          //   const parentSink = parentSource.getSink();
-          //   if (parentSink !== undefined) {
-          //     this._graphRoots.push([parentSink, parentSinkSlot]);
-          //   } else {
-          //     this._graphEdges.push([parentSource, parentSinkSlot]);
-          //   }
-        }
-
-        _endMonad() {
-          runMonad(
-            new Build.Context(Util.weakMapFromEdges(this._graphEdges)),
-            Build.buildRoots(this._graphRoots)
-          );
-        }
-      }
-
-      const addGraphEdge = Util.callMethod("addGraphEdge");
-
-      return { Context, addGraphEdge };
-    })();
     const Push = (() => {
       class Context {
         constructor() {
