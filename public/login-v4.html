@@ -548,7 +548,12 @@
         }
         return event();
       };
-      result.loop = setTo => (event = setTo);
+      result.loop = setTo => {
+        if (typeof setTo !== "function") {
+          throw new TypeError("setTo is not a function");
+        }
+        event = setTo;
+      };
       return result;
     };
 
@@ -628,7 +633,7 @@
       let current = never;
       const next = map(eventOfEvent, event => merge(f(event), current));
       yield output(next, event => (current = event));
-      return switchE(next);
+      return yield* switchE(next);
     }
 
     // TODO replace with behavior
