@@ -161,7 +161,7 @@
       };
 
       const callMethod = field => (...args) => object => object[field](...args);
-      
+
       return {
         PriorityQueue,
         ChildList,
@@ -227,7 +227,7 @@
 
       return { Context, writeSink, readSink, enqueueAction, liftPull, push };
     })();
-    
+
     // Mutable: context, generator
     const runMonad = (context, generator) => {
       let step = generator.next();
@@ -237,7 +237,7 @@
       context._endMonad();
       return step.value;
     };
-    
+
     const Sink = (() => {
       class Input {
         // Impure: subscribe, runMonad
@@ -477,8 +477,8 @@
           return this._children;
         }
       }
-      
-      return {Input, Output, Merge, SingleParent, SwitchE, ObserveE}
+
+      return { Input, Output, Merge, SingleParent, SwitchE, ObserveE };
     })();
 
     const neverSource = {
@@ -509,11 +509,11 @@
           thunk = { done: true, value };
         }
         return thunk.value;
-      }
+      };
       deferred.push(result);
       return result;
-    }
-    
+    };
+
     // TODO rename this section
     ////////////////
     // Pull monad //
@@ -530,7 +530,8 @@
       return result;
     };
 
-    const input = subscribe => defer(() => new Source(new Sink.Input(subscribe)));
+    const input = subscribe =>
+      defer(() => new Source(new Sink.Input(subscribe)));
     const never = () => neverSource;
     // TODO mergeWith
     const merge = (parentEventA, parentEventB, combine = (a, b) => a) =>
@@ -578,19 +579,20 @@
 
     // Pull monad //
     ////////////////
-    
+
     const PullContext = {
-      output: (parentEvent, handle) => defer(() => {
-        // TODO unsubscribe
-        const parentSink = parentEvent().getSink();
-        if (parentSink !== undefined) {
-          new Sink.Output(parentSink, handle);
-        }
-      }),
+      output: (parentEvent, handle) =>
+        defer(() => {
+          // TODO unsubscribe
+          const parentSink = parentEvent().getSink();
+          if (parentSink !== undefined) {
+            new Sink.Output(parentSink, handle);
+          }
+        }),
       _endMonad: () => {}
-    }
+    };
     const output = Util.callMethod("output");
-    
+
     function* switchE(eventOfEvent) {
       const sink = new Sink.SwitchE();
       const source = new Source(sink);
@@ -598,14 +600,14 @@
       // TODO fix memory leak
       return () => source;
     }
-    
+
     // TODO optimize with binary tree
     function* mergeBind(eventOfEvent, f) {
       let current = never;
       const next = map(eventOfEvent, event => merge(f(event), current));
       yield output(next, event => (current = event));
       return switchE(next);
-    };
+    }
 
     // TODO replace with behavior
     const getInputValues = domNode => () => domNode.value;
