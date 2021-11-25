@@ -368,7 +368,6 @@
           this._priority = this._parentSink.getPriority() + 1;
         }
 
-        // [this._priority !== null]
         getPriority() {
           return this._priority;
         }
@@ -384,10 +383,46 @@
         *poll() {
           const parentValue = yield Push.readSink(this._parentSink);
           const value = this._mapParentValue(parentValue.value);
-          if (value === undefined) {
+          yield Push.writeSink(this, value);
+          return this._children;
+        }
+      }
+
+      class Filter {
+        constructor(parentSink, predicate) {
+          this._children = new Util.ChildList();
+          this._parentSink = parentSink;
+          this._childListNode = parentSink.linkChild(this);
+          this._priority = Util.nullNumber;
+          this._predicate = predicate;
+        }
+
+        linkChild(childSink) {
+          return this._children.add(childSink);
+        }
+
+        initPriority() {
+          this._priority = this._parentSink.getPriority() + 1;
+        }
+
+        getPriority() {
+          return this._priority;
+        }
+
+        capPriority(childPriority) {
+          if (childPriority <= this._priority) {
+            this._priority = childPriority - 1;
+            this._parentSink.capPriority(this._priority);
+          }
+        }
+
+        // Push monad
+        *poll() {
+          const { value } = yield Push.readSink(this._parentSink);
+          if (!this._predicate(value)) {
             return [];
           }
-          yield Push.writeSink(this, value.value);
+          yield Push.writeSink(this, value);
           return this._children;
         }
       }
@@ -474,7 +509,7 @@
         }
       }
 
-      return { Input, Output, Merge, SingleParent, SwitchE, ObserveE };
+      return { Input, Output, Merge, SingleParent, Filter, SwitchE, ObserveE };
     })();
 
     const neverSource = {
@@ -510,10 +545,6 @@
       return result;
     };
 
-    // TODO rename this section
-    ////////////////
-    // Pull monad //
-
     const eventLoop = () => {
       let event = null;
       const result = () => {
@@ -544,6 +575,13 @@
           ? neverSource
           : new Source(new Sink.Merge(parentSinkA, parentSinkB, combine));
       });
+    const filter = (parentEvent, predicate) =>
+      defer(() => {
+        const parentSink = parentEvent().getSink();
+        return parentSink === undefined
+          ? neverSource
+          : new Source(new Sink.Filter(parentSink, predicate));
+      });
 
     const singleParentEvent = (parentEvent, mapParentValue) =>
       defer(() => {
@@ -552,15 +590,11 @@
           ? neverSource
           : new Source(new Sink.SingleParent(parentSink, mapParentValue));
       });
-    const filter = (event, predicate) =>
-      singleParentEvent(event, value =>
-        predicate(value) ? { value } : undefined
-      );
-    const map = (event, f) => singleParentEvent(event, x => ({ value: f(x) }));
+    const map = (event, f) => singleParentEvent(event, f);
     const mapTag = (event, latchGet, combine) =>
-      singleParentEvent(event, x => ({ value: combine(x, latchGet()) }));
+      singleParentEvent(event, x => combine(x, latchGet()));
     const tag = (event, latchGet) =>
-      singleParentEvent(event, () => ({ value: latchGet() }));
+      singleParentEvent(event, () => latchGet());
 
     const observeE = parentEvent =>
       defer(() => {
@@ -572,9 +606,6 @@
 
     const getClicks = domNode =>
       input(push => domNode.addEventListener("click", push));
-
-    // Pull monad //
-    ////////////////
 
     const PullContext = {
       output: (parentEvent, handle) =>
