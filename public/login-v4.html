@@ -470,7 +470,7 @@
           // TODO unsubscribe properly from [this._parentSink];
           this._childListNode.deref()?.remove();
           const parentSource = parentEvent();
-          const parentSink = parentSource.getSink();
+          const parentSink = parentSource.derefSink();
           if (parentSink === undefined) {
             this._parentSink = Util.weakRefUndefined;
             this._childListNode = Util.weakRefUndefined;
@@ -526,7 +526,7 @@
     })();
 
     const neverSource = {
-      getSink: () => undefined
+      derefSink: () => undefined
     };
 
     class Source {
@@ -534,8 +534,7 @@
         this._sink = new WeakRef(sink);
       }
 
-      // TODO rename to reflect nullability
-      getSink() {
+      derefSink() {
         return this._sink.deref();
       }
     }
@@ -565,8 +564,8 @@
       defer(() => {
         const parentSourceA = parentEventA();
         const parentSourceB = parentEventB();
-        const parentSinkA = parentSourceA.getSink();
-        const parentSinkB = parentSourceB.getSink();
+        const parentSinkA = parentSourceA.derefSink();
+        const parentSinkB = parentSourceB.derefSink();
         return parentSinkA === undefined
           ? parentSinkB === undefined
             ? neverSource
@@ -577,7 +576,7 @@
       });
     const filter = (parentEvent, predicate) =>
       defer(() => {
-        const parentSink = parentEvent().getSink();
+        const parentSink = parentEvent().derefSink();
         return parentSink === undefined
           ? neverSource
           : new Source(new Sink.Filter(parentSink, predicate));
@@ -585,7 +584,7 @@
 
     const singleParentEvent = (parentEvent, mapParentValue) =>
       defer(() => {
-        const parentSink = parentEvent().getSink();
+        const parentSink = parentEvent().derefSink();
         return parentSink === undefined
           ? neverSource
           : new Source(new Sink.SingleParent(parentSink, mapParentValue));
@@ -598,7 +597,7 @@
 
     const observeE = parentEvent =>
       defer(() => {
-        const parentSink = parentEvent().getSink();
+        const parentSink = parentEvent().derefSink();
         return parentSink === undefined
           ? neverSource
           : new Source(new Sink.ObserveE(parentSink));
@@ -611,7 +610,7 @@
       output: (parentEvent, handle) =>
         defer(() => {
           // TODO unsubscribe
-          const parentSink = parentEvent().getSink();
+          const parentSink = parentEvent().derefSink();
           if (parentSink !== undefined) {
             new Sink.Output(parentSink, handle);
           }
