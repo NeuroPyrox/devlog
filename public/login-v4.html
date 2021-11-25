@@ -1096,6 +1096,9 @@
       return start;
     }
 
-    runMonad(new Moment.Context(), main())();
+    const start = runMonad(PullContext, main());
+    deferred.forEach(f => f());
+    deferred = [];
+    start();
   </script>
 </html>
