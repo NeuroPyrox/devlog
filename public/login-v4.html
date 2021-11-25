@@ -144,9 +144,6 @@
 
       const weakRefUndefined = { deref: () => undefined };
 
-      // We use this so that type errors like [null + 1] don't pass silently.
-      const nullNumber = Symbol();
-
       const weakMapFromEdges = edges => {
         const graph = new WeakMap();
         for (const [parent, child] of edges) {
@@ -166,7 +163,6 @@
         PriorityQueue,
         ChildList,
         weakRefUndefined,
-        nullNumber,
         weakMapFromEdges,
         callMethod
       };
@@ -381,16 +377,12 @@
           this._children = new Util.ChildList();
           this._parentSink = parentSink;
           this._childListNode = parentSink.linkChild(this);
-          this._priority = Util.nullNumber;
+          this._priority = parentSink.getPriority() + 1;
           this._mapParentValue = mapParentValue;
         }
 
         linkChild(childSink) {
           return this._children.add(childSink);
-        }
-
-        initPriority() {
-          this._priority = this._parentSink.getPriority() + 1;
         }
 
         getPriority() {
@@ -418,16 +410,12 @@
           this._children = new Util.ChildList();
           this._parentSink = parentSink;
           this._childListNode = parentSink.linkChild(this);
-          this._priority = Util.nullNumber;
+          this._priority = parentSink.getPriority() + 1;
           this._predicate = predicate;
         }
 
         linkChild(childSink) {
           return this._children.add(childSink);
-        }
-
-        initPriority() {
-          this._priority = this._parentSink.getPriority() + 1;
         }
 
         getPriority() {
