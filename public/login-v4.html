@@ -383,10 +383,6 @@
         // Push monad
         *poll() {
           const parentValue = yield Push.readSink(this._parentSink);
-          if (parentValue === undefined) {
-            // TODO is this check necessary?
-            return [];
-          }
           const value = this._mapParentValue(parentValue.value);
           if (value === undefined) {
             return [];
