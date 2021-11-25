@@ -571,8 +571,8 @@
           ? parentSinkB === undefined
             ? neverSource
             : parentSourceB
-          : parentSinkB === parentSourceA
-          ? neverSource
+          : parentSinkB === undefined
+          ? parentSourceA
           : new Source(new Sink.Merge(parentSinkA, parentSinkB, combine));
       });
     const filter = (parentEvent, predicate) =>
