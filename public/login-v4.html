@@ -171,6 +171,29 @@
         callMethod
       };
     })();
+
+    let deferred = [];
+    const defer = thunk => {
+      const result = () => {
+        if (thunk.processing) {
+          throw new Error("Illegal circular lazy evaluation");
+        }
+        if (!thunk.done) {
+          const temp = thunk;
+          thunk = { processing: true };
+          const value = temp();
+          thunk = { done: true, value };
+        }
+        return thunk.value;
+      };
+      deferred.push(result);
+      return result;
+    };
+    const doDeferred = () => {
+      deferred.forEach(f => f());
+      deferred = [];
+    }
+    
     const Push = (() => {
       class Context {
         constructor() {
@@ -200,9 +223,11 @@
         }
 
         _endMonad() {
+          // TODO check if this._actions should be deferred instead
           for (const [handle, value] of this._actions) {
             handle(value);
           }
+          doDeferred();
         }
       }
 
@@ -526,24 +551,6 @@
         return this._sink.deref();
       }
     }
-
-    let deferred = [];
-    const defer = thunk => {
-      const result = () => {
-        if (thunk.processing) {
-          throw new Error("Illegal circular lazy evaluation");
-        }
-        if (!thunk.done) {
-          const temp = thunk;
-          thunk = { processing: true };
-          const value = temp();
-          thunk = { done: true, value };
-        }
-        return thunk.value;
-      };
-      deferred.push(result);
-      return result;
-    };
 
     const eventLoop = () => {
       let event = null;
@@ -1059,8 +1066,7 @@
     }
 
     const start = runMonad(PullContext, main());
-    deferred.forEach(f => f());
-    deferred = [];
+    doDeferred();
     start();
   </script>
 </html>
