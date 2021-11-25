@@ -1003,14 +1003,18 @@
           ),
           () => (statusText.textContent = "Password required!")
         );
+        signupAttempts = filter(
+          signupAttempts,
+          ({ username, password }) => username !== "" && password !== ""
+        );
 
         return [
           root,
-          map(getClicks(loginButton), () => createLoginDiv),
-          filter(
-            signupAttempts,
-            ({ username, password }) => username !== "" && password !== ""
-          )
+          merge(
+            map(getClicks(loginButton), () => createLoginDiv),
+            map(signupAttempts, ({username}) => () => createLoggedInDiv(username))
+          ),
+          signupAttempts
         ];
       }
 
