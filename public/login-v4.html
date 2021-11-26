@@ -377,13 +377,13 @@
         }
       }
 
-      class SingleParent {
-        constructor(parentSink, mapParentValue) {
+      class Map {
+        constructor(parentSink, f) {
           this._children = new Util.ChildList();
           this._parentSink = parentSink;
           this._childListNode = parentSink.linkChild(this);
           this._priority = parentSink.getPriority() + 1;
-          this._mapParentValue = mapParentValue;
+          this._f = f;
         }
 
         linkChild(childSink) {
@@ -404,7 +404,7 @@
         // Push monad
         *poll() {
           const parentValue = yield Push.readSink(this._parentSink);
-          const value = this._mapParentValue(parentValue.value);
+          const value = this._f(parentValue.value);
           yield Push.writeSink(this, value);
           return this._children;
         }
@@ -527,7 +527,7 @@
         }
       }
 
-      return { Input, Output, Merge, SingleParent, Filter, SwitchE, ObserveE };
+      return { Input, Output, Merge, Map, Filter, SwitchE, ObserveE };
     })();
 
     const neverSource = {
@@ -588,18 +588,17 @@
             : new Source(new Sink.Filter(parentSink, predicate));
         });
 
-      const singleParentEvent = (parentEvent, mapParentValue) =>
+      const map = (parentEvent, f) =>
         lazy(() => {
           const parentSink = parentEvent().derefSink();
           return parentSink === undefined
             ? neverSource
-            : new Source(new Sink.SingleParent(parentSink, mapParentValue));
+            : new Source(new Sink.Map(parentSink, f));
         });
-      const map = (event, f) => singleParentEvent(event, f);
-      const mapTag = (event, latchGet, combine) =>
-        singleParentEvent(event, x => combine(x, latchGet()));
-      const tag = (event, latchGet) =>
-        singleParentEvent(event, () => latchGet());
+      const mapTag = (parentEvent, latchGet, combine) =>
+        map(parentEvent, x => combine(x, latchGet()));
+      const tag = (parentEvent, latchGet) =>
+        map(parentEvent, () => latchGet());
 
       const observeE = parentEvent =>
         lazy(() => {
