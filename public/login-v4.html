@@ -168,6 +168,8 @@
       };
     })();
 
+    // Stores computations that we don't want done in the middle of Push.push
+    // TODO make it an error to call doDeferred during Push.push
     let deferred = [];
     const defer = f => deferred.push(f);
     const lazy = thunk => {
@@ -542,104 +544,109 @@
       }
     }
 
-    const eventLoop = () => {
-      let event = null;
-      const result = () => {
-        if (event === null) {
-          throw new Error("Must call [loop] on every [eventLoop]!");
-        }
-        return event();
-      };
-      result.loop = setTo => {
-        if (typeof setTo !== "function") {
-          throw new TypeError("setTo is not a function");
-        }
-        event = setTo;
-      };
-      return result;
-    };
-
-    const input = subscribe =>
-      lazy(() => new Source(new Sink.Input(subscribe)));
-    const never = () => neverSource;
-    // TODO mergeWith
-    const merge = (parentEventA, parentEventB, combine = (a, b) => a) =>
-      lazy(() => {
-        const parentSourceA = parentEventA();
-        const parentSourceB = parentEventB();
-        const parentSinkA = parentSourceA.derefSink();
-        const parentSinkB = parentSourceB.derefSink();
-        return parentSinkA === undefined
-          ? parentSinkB === undefined
-            ? neverSource
-            : parentSourceB
-          : parentSinkB === undefined
-          ? parentSourceA
-          : new Source(new Sink.Merge(parentSinkA, parentSinkB, combine));
-      });
-    const filter = (parentEvent, predicate) =>
-      lazy(() => {
-        const parentSink = parentEvent().derefSink();
-        return parentSink === undefined
-          ? neverSource
-          : new Source(new Sink.Filter(parentSink, predicate));
-      });
-
-    const singleParentEvent = (parentEvent, mapParentValue) =>
-      lazy(() => {
-        const parentSink = parentEvent().derefSink();
-        return parentSink === undefined
-          ? neverSource
-          : new Source(new Sink.SingleParent(parentSink, mapParentValue));
-      });
-    const map = (event, f) => singleParentEvent(event, f);
-    const mapTag = (event, latchGet, combine) =>
-      singleParentEvent(event, x => combine(x, latchGet()));
-    const tag = (event, latchGet) =>
-      singleParentEvent(event, () => latchGet());
-
-    const observeE = parentEvent =>
-      lazy(() => {
-        const parentSink = parentEvent().derefSink();
-        return parentSink === undefined
-          ? neverSource
-          : new Source(new Sink.ObserveE(parentSink));
-      });
-
-    const getClicks = domNode =>
-      input(push => domNode.addEventListener("click", push));
-
-    const PullContext = {
-      output: (parentEvent, handle) =>
-        lazy(() => {
-          // TODO unsubscribe
-          const parentSink = parentEvent().derefSink();
-          if (parentSink !== undefined) {
-            new Sink.Output(parentSink, handle);
+    const FRP = (() => {
+      const eventLoop = () => {
+        let event = null;
+        const result = () => {
+          if (event === null) {
+            throw new Error("Must call [loop] on every [eventLoop]!");
           }
-        }),
-      _endMonad: () => {}
-    };
-    const output = Util.callMethod("output");
+          return event();
+        };
+        result.loop = setTo => {
+          if (typeof setTo !== "function") {
+            throw new TypeError("setTo is not a function");
+          }
+          event = setTo;
+        };
+        return result;
+      };
 
-    function* switchE(eventOfEvent) {
-      const sink = new Sink.SwitchE();
-      const source = new Source(sink);
-      yield output(eventOfEvent, event => sink.setParent(event));
-      // TODO fix memory leak
-      return () => source;
-    }
+      const input = subscribe =>
+        lazy(() => new Source(new Sink.Input(subscribe)));
+      const never = () => neverSource;
+      // TODO mergeWith
+      const merge = (parentEventA, parentEventB, combine = (a, b) => a) =>
+        lazy(() => {
+          const parentSourceA = parentEventA();
+          const parentSourceB = parentEventB();
+          const parentSinkA = parentSourceA.derefSink();
+          const parentSinkB = parentSourceB.derefSink();
+          return parentSinkA === undefined
+            ? parentSinkB === undefined
+              ? neverSource
+              : parentSourceB
+            : parentSinkB === undefined
+            ? parentSourceA
+            : new Source(new Sink.Merge(parentSinkA, parentSinkB, combine));
+        });
+      const filter = (parentEvent, predicate) =>
+        lazy(() => {
+          const parentSink = parentEvent().derefSink();
+          return parentSink === undefined
+            ? neverSource
+            : new Source(new Sink.Filter(parentSink, predicate));
+        });
 
-    // TODO optimize with binary tree
-    function* mergeBind(eventOfEvent, f) {
-      let current = never;
-      const next = map(eventOfEvent, event => merge(f(event), current));
-      yield output(next, event => (current = event));
-      return yield* switchE(next);
-    }
+      const singleParentEvent = (parentEvent, mapParentValue) =>
+        lazy(() => {
+          const parentSink = parentEvent().derefSink();
+          return parentSink === undefined
+            ? neverSource
+            : new Source(new Sink.SingleParent(parentSink, mapParentValue));
+        });
+      const map = (event, f) => singleParentEvent(event, f);
+      const mapTag = (event, latchGet, combine) =>
+        singleParentEvent(event, x => combine(x, latchGet()));
+      const tag = (event, latchGet) =>
+        singleParentEvent(event, () => latchGet());
 
-    // TODO replace with behavior
-    const getInputValues = domNode => () => domNode.value;
+      const observeE = parentEvent =>
+        lazy(() => {
+          const parentSink = parentEvent().derefSink();
+          return parentSink === undefined
+            ? neverSource
+            : new Source(new Sink.ObserveE(parentSink));
+        });
+
+      const getClicks = domNode =>
+        input(push => domNode.addEventListener("click", push));
+
+      const PullContext = {
+        output: (parentEvent, handle) =>
+          lazy(() => {
+            // TODO unsubscribe
+            const parentSink = parentEvent().derefSink();
+            if (parentSink !== undefined) {
+              new Sink.Output(parentSink, handle);
+            }
+          }),
+        _endMonad: () => {}
+      };
+      const output = Util.callMethod("output");
+
+      function* switchE(eventOfEvent) {
+        const sink = new Sink.SwitchE();
+        const source = new Source(sink);
+        yield output(eventOfEvent, event => sink.setParent(event));
+        // TODO fix memory leak
+        return () => source;
+      }
+
+      // TODO optimize with binary tree
+      function* mergeBind(eventOfEvent, f) {
+        let current = never;
+        const next = map(eventOfEvent, event => merge(f(event), current));
+        yield output(next, event => (current = event));
+        return yield* switchE(next);
+      }
+
+      // TODO replace with behavior
+      const getInputValues = domNode => () => domNode.value;
+      
+      return {eventLoop, input, never, merge, filter, map, mapTag, tag, observeE, getClicks, PullContext, output, switchE, mergeBind, getInputValues}
+    })();
+    const {eventLoop, input, never, merge, filter, map, mapTag, tag, observeE, getClicks, PullContext, output, switchE, mergeBind, getInputValues} = FRP;
 
     function* userDatabase({
       insertions,
