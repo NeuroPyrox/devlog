@@ -168,8 +168,10 @@
       };
     })();
 
+    // TODO ability to defer during doDeferred
     let deferred = [];
-    const defer = thunk => {
+    const defer = f => deferred.push(f);
+    const lazy = thunk => {
       const result = () => {
         if (thunk.processing) {
           throw new Error("Illegal circular lazy evaluation");
@@ -182,7 +184,7 @@
         }
         return thunk.value;
       };
-      deferred.push(result);
+      defer(result);
       return result;
     };
     const doDeferred = () => {
@@ -211,7 +213,7 @@
         }
 
         enqueueAction(handle, value) {
-          this._actions.push([handle, value]);
+          defer(() => handle(value));
         }
 
         liftPull(monadicValue) {
@@ -219,10 +221,6 @@
         }
 
         _endMonad() {
-          // TODO check if this._actions should be deferred instead
-          for (const [handle, value] of this._actions) {
-            handle(value);
-          }
           doDeferred();
         }
       }
@@ -557,11 +555,11 @@
     };
 
     const input = subscribe =>
-      defer(() => new Source(new Sink.Input(subscribe)));
+      lazy(() => new Source(new Sink.Input(subscribe)));
     const never = () => neverSource;
     // TODO mergeWith
     const merge = (parentEventA, parentEventB, combine = (a, b) => a) =>
-      defer(() => {
+      lazy(() => {
         const parentSourceA = parentEventA();
         const parentSourceB = parentEventB();
         const parentSinkA = parentSourceA.derefSink();
@@ -575,7 +573,7 @@
           : new Source(new Sink.Merge(parentSinkA, parentSinkB, combine));
       });
     const filter = (parentEvent, predicate) =>
-      defer(() => {
+      lazy(() => {
         const parentSink = parentEvent().derefSink();
         return parentSink === undefined
           ? neverSource
@@ -583,7 +581,7 @@
       });
 
     const singleParentEvent = (parentEvent, mapParentValue) =>
-      defer(() => {
+      lazy(() => {
         const parentSink = parentEvent().derefSink();
         return parentSink === undefined
           ? neverSource
@@ -596,7 +594,7 @@
       singleParentEvent(event, () => latchGet());
 
     const observeE = parentEvent =>
-      defer(() => {
+      lazy(() => {
         const parentSink = parentEvent().derefSink();
         return parentSink === undefined
           ? neverSource
@@ -608,7 +606,7 @@
 
     const PullContext = {
       output: (parentEvent, handle) =>
-        defer(() => {
+        lazy(() => {
           // TODO unsubscribe
           const parentSink = parentEvent().derefSink();
           if (parentSink !== undefined) {
