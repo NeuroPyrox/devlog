@@ -198,8 +198,8 @@
         throw new Error("Just testing if this branch ever gets visited");
         doDeferred();
       }
-    }
-    
+    };
+
     const Push = (() => {
       class Context {
         constructor() {
@@ -598,8 +598,7 @@
         });
       const mapTag = (parentEvent, latchGet, combine) =>
         map(parentEvent, x => combine(x, latchGet()));
-      const tag = (parentEvent, latchGet) =>
-        map(parentEvent, () => latchGet());
+      const tag = (parentEvent, latchGet) => map(parentEvent, () => latchGet());
 
       const observeE = parentEvent =>
         lazy(() => {
@@ -651,10 +650,42 @@
 
       // TODO replace with behavior
       const getInputValues = domNode => () => domNode.value;
-      
-      return {eventLoop, input, never, merge, filter, map, mapTag, tag, observeE, getClicks, PullContext, output, switchE, mergeBind, getInputValues}
+
+      return {
+        eventLoop,
+        input,
+        never,
+        merge,
+        filter,
+        map,
+        mapTag,
+        tag,
+        observeE,
+        getClicks,
+        PullContext,
+        output,
+        switchE,
+        mergeBind,
+        getInputValues
+      };
     })();
-    const {eventLoop, input, never, merge, filter, map, mapTag, tag, observeE, getClicks, PullContext, output, switchE, mergeBind, getInputValues} = FRP;
+    const {
+      eventLoop,
+      input,
+      never,
+      merge,
+      filter,
+      map,
+      mapTag,
+      tag,
+      observeE,
+      getClicks,
+      PullContext,
+      output,
+      switchE,
+      mergeBind,
+      getInputValues
+    } = FRP;
 
     function* userDatabase({
       insertions,
@@ -1029,7 +1060,9 @@
           root,
           merge(
             map(getClicks(loginButton), k(createLoginDiv)),
-            map(signupAttempts, ({username}) => () => createLoggedInDiv(username))
+            map(signupAttempts, ({ username }) => () =>
+              createLoggedInDiv(username)
+            )
           ),
           signupAttempts
         ];
