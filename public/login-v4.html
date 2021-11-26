@@ -168,7 +168,6 @@
       };
     })();
 
-    // TODO ability to defer during doDeferred
     let deferred = [];
     const defer = f => deferred.push(f);
     const lazy = thunk => {
@@ -188,8 +187,14 @@
       return result;
     };
     const doDeferred = () => {
-      deferred.forEach(f => f());
+      const temp = deferred;
       deferred = [];
+      temp.forEach(f => f());
+      if (deferred.length !== 0) {
+        // TODO remove this error
+        throw new Error("Just testing if this branch ever gets visited");
+        doDeferred();
+      }
     }
     
     const Push = (() => {
