@@ -613,14 +613,23 @@
         input(push => domNode.addEventListener("click", push));
 
       const PullContext = {
-        output: (parentEvent, handle) =>
-          lazy(() => {
-            // TODO unsubscribe
-            const parentSink = parentEvent().derefSink();
+        output: (parentEvent, handle) => {
+          let parentSink = null;
+          defer(() => {
+            parentSink = parentEvent().derefSink();
             if (parentSink !== undefined) {
               new Sink.Output(parentSink, handle);
             }
-          }),
+          });
+          const unsubscribe = () => {
+            if (parentSink === null) {
+              throw new Error("This branch hasn't been programmed yet");
+            } else if (parentSink !== undefined) {
+              parentSink.unsubscribe();
+            }
+          };
+          return unsubscribe;
+        },
         _endMonad: () => {}
       };
       const output = Util.callMethod("output");
