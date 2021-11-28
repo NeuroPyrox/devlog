@@ -279,6 +279,7 @@
           );
           this._children = new Util.ChildList();
           this._priority = 0;
+          this._sourceIsDead = false;
         }
 
         linkChild(childSink) {
@@ -299,6 +300,10 @@
         // Don't write because it's assumed that was already done in [Push.push].
         *poll() {
           return this._children;
+        }
+        
+        onSourceFinalization() {
+          this._sourceIsDead = true;
         }
       }
 
@@ -341,6 +346,7 @@
           this._childListNodeB = new WeakRef(parentSinkB.linkChild(this));
           this._priority =
             Math.max(parentSinkA.getPriority(), parentSinkB.getPriority()) + 1;
+          this._sourceIsDead = false;
         }
 
         linkChild(childSink) {
@@ -376,6 +382,10 @@
           }
           return this._children;
         }
+        
+        onSourceFinalization() {
+          this._sourceIsDead = true;
+        }
       }
 
       class Map {
@@ -385,6 +395,7 @@
           this._childListNode = parentSink.linkChild(this);
           this._priority = parentSink.getPriority() + 1;
           this._f = f;
+          this._sourceIsDead = false;
         }
 
         linkChild(childSink) {
@@ -409,6 +420,10 @@
           yield Push.writeSink(this, value);
           return this._children;
         }
+        
+        onSourceFinalization() {
+          this._sourceIsDead = true;
+        }
       }
 
       class Filter {
@@ -418,6 +433,7 @@
           this._childListNode = parentSink.linkChild(this);
           this._priority = parentSink.getPriority() + 1;
           this._predicate = predicate;
+          this._sourceIsDead = false;
         }
 
         linkChild(childSink) {
@@ -444,6 +460,10 @@
           yield Push.writeSink(this, value);
           return this._children;
         }
+        
+        onSourceFinalization() {
+          this._sourceIsDead = true;
+        }
       }
 
       class SwitchE {
@@ -454,6 +474,7 @@
           // Any number would work, but we choose a high one to reduce
           // the workload of [this.setParent].
           this._priority = 1000;
+          this._sourceIsDead = false;
         }
 
         linkChild(childSink) {
@@ -493,6 +514,10 @@
           yield Push.writeSink(this, value);
           return this._children;
         }
+        
+        onSourceFinalization() {
+          this._sourceIsDead = true;
+        }
       }
 
       class ObserveE {
@@ -501,6 +526,7 @@
           this._parentSink = parentSink;
           this._childListNode = parentSink.linkChild(this);
           this._priority = parentSink.getPriority() + 1;
+          this._sourceIsDead = false;
         }
 
         linkChild(childSink) {
@@ -525,6 +551,10 @@
           const value = yield Push.liftPull(parentValue.value);
           yield Push.writeSink(this, value);
           return this._children;
+        }
+        
+        onSourceFinalization() {
+          this._sourceIsDead = true;
         }
       }
 
