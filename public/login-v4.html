@@ -652,6 +652,7 @@
               new Sink.Output(parentSink, handle);
             }
           });
+          // Currently benign memory leak: unsubscribe keeps parentEvent alive.
           const unsubscribe = () => {
             if (parentSink === null) {
               throw new Error("This branch hasn't been programmed yet");
