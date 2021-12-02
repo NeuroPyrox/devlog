@@ -255,8 +255,10 @@
         for (const sink of queue) {
           const childrenToPoll = yield* sink.poll();
           for (const child of childrenToPoll) {
-            // Yes, I'm mutating the queue while iterating over it.
-            queue.push(child);
+            if (child.isActive()) {
+              // Mutating the queue while iterating over it.
+              queue.push(child);
+            }
           }
         }
       }
@@ -301,6 +303,10 @@
             this._priority = childPriority - 1;
           }
         }
+        
+        activate() {
+          // TODO avoid pushing this if inactive
+        }
 
         // Push monad
         // Don't write because it's assumed that was already done in [Push.push].
@@ -319,6 +325,7 @@
           this._parentSink = parentSink;
           this._childListNode = parentSink.linkChild(this);
           this._priority = parentSink.getPriority() + 1;
+          parentSink.activate();
         }
 
         getPriority() {
@@ -330,6 +337,10 @@
             this._priority = childPriority - 1;
             this._parentSink.capPriority(this._priority);
           }
+        }
+        
+        isActive() {
+          return true;
         }
 
         // Push monad
@@ -352,6 +363,7 @@
           this._childListNodeB = new WeakRef(parentSinkB.linkChild(this));
           this._priority =
             Math.max(parentSinkA.getPriority(), parentSinkB.getPriority()) + 1;
+          this._isActive = false;
           this._sourceIsDead = false;
         }
 
@@ -368,6 +380,18 @@
             this._priority = childPriority - 1;
             this._parentSinkA.deref()?.capPriority(this._priority);
             this._parentSinkB.deref()?.capPriority(this._priority);
+          }
+        }
+        
+        isActive() {
+          return this._isActive;
+        }
+        
+        activate() {
+          if (!this._isActive) {
+            this._isActive = true;
+            this._parentSinkA.deref()?.activate();
+            this._parentSinkB.deref()?.activate();
           }
         }
 
@@ -400,6 +424,7 @@
           this._parentSink = parentSink;
           this._childListNode = parentSink.linkChild(this);
           this._priority = parentSink.getPriority() + 1;
+          this._isActive = false;
           this._f = f;
           this._sourceIsDead = false;
         }
@@ -416,6 +441,17 @@
           if (childPriority <= this._priority) {
             this._priority = childPriority - 1;
             this._parentSink.capPriority(this._priority);
+          }
+        }
+        
+        isActive() {
+          return this._isActive;
+        }
+        
+        activate() {
+          if (!this._isActive) {
+            this._isActive = true;
+            this._parentSink.activate();
           }
         }
 
@@ -438,6 +474,7 @@
           this._parentSink = parentSink;
           this._childListNode = parentSink.linkChild(this);
           this._priority = parentSink.getPriority() + 1;
+          this._isActive = false;
           this._predicate = predicate;
           this._sourceIsDead = false;
         }
@@ -454,6 +491,17 @@
           if (childPriority <= this._priority) {
             this._priority = childPriority - 1;
             this._parentSink.capPriority(this._priority);
+          }
+        }
+        
+        isActive() {
+          return this._isActive;
+        }
+        
+        activate() {
+          if (!this._isActive) {
+            this._isActive = true;
+            this._parentSink.activate();
           }
         }
 
@@ -480,6 +528,7 @@
           // Any number would work, but we choose a high one to reduce
           // the workload of [this.setParent].
           this._priority = 1000;
+          this._isActive = false;
           this._sourceIsDead = false;
         }
 
@@ -512,6 +561,20 @@
           this._parentSink = new WeakRef(parentSink);
           this._childListNode = new WeakRef(parentSink.linkChild(this));
           parentSink.capPriority(this._priority);
+          if (this._isActive) {
+            parentSink.activate();
+          }
+        }
+        
+        isActive() {
+          return this._isActive;
+        }
+        
+        activate() {
+          if (!this._isActive) {
+            this._isActive = true;
+            this._parentSink.deref()?.activate();
+          }
         }
 
         // Push monad
@@ -532,6 +595,7 @@
           this._parentSink = parentSink;
           this._childListNode = parentSink.linkChild(this);
           this._priority = parentSink.getPriority() + 1;
+          this._isActive = false;
           this._sourceIsDead = false;
         }
 
@@ -548,6 +612,17 @@
           if (childPriority <= this._priority) {
             this._priority = childPriority - 1;
             this._parentSink.capPriority(this._priority);
+          }
+        }
+        
+        isActive() {
+          return this._isActive;
+        }
+        
+        activate() {
+          if (!this._isActive) {
+            this._isActive = true;
+            this._parentSink.activate();
           }
         }
 
