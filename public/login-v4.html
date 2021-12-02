@@ -101,6 +101,12 @@
           return this;
         }
       }
+      
+      const assert = condition => {
+        if (!condition) {
+          throw new Error("Assertion failed")
+        }
+      }
 
       class ChildList {
         constructor() {
@@ -115,6 +121,7 @@
           return result;
         }
 
+        // Assumes no nodes will be removed while iterating
         [Symbol.iterator]() {
           let current = this._next;
           return {
@@ -138,6 +145,8 @@
         }
 
         remove() {
+          assert(this._prev._next === this);
+          assert(this._next._prev === this);
           this._prev._next = this._next;
           this._next._prev = this._prev;
         }
