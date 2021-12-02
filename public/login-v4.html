@@ -270,11 +270,8 @@
         // Impure: subscribe, runMonad
         // Subscribe takes a push function, attaches it as an event listener,
         // and returns an unsubscribe function.
-        // We assume that this won't be pushed until the surrounding
-        // pull monad finishes. If this assumption turns out false,
-        // we can just defer subscriptions until the end of the monad.
         constructor(subscribe) {
-          this._unsubscribe = subscribe(x =>
+          this.unsubscribe = subscribe(x =>
             runMonad(new Push.Context(), Push.push(this, x))
           );
           this._children = new Util.ChildList();
@@ -301,7 +298,7 @@
         *poll() {
           return this._children;
         }
-        
+
         onSourceFinalization() {
           this._sourceIsDead = true;
         }
@@ -382,7 +379,7 @@
           }
           return this._children;
         }
-        
+
         onSourceFinalization() {
           this._sourceIsDead = true;
         }
@@ -420,7 +417,7 @@
           yield Push.writeSink(this, value);
           return this._children;
         }
-        
+
         onSourceFinalization() {
           this._sourceIsDead = true;
         }
@@ -460,7 +457,7 @@
           yield Push.writeSink(this, value);
           return this._children;
         }
-        
+
         onSourceFinalization() {
           this._sourceIsDead = true;
         }
@@ -514,7 +511,7 @@
           yield Push.writeSink(this, value);
           return this._children;
         }
-        
+
         onSourceFinalization() {
           this._sourceIsDead = true;
         }
@@ -552,7 +549,7 @@
           yield Push.writeSink(this, value);
           return this._children;
         }
-        
+
         onSourceFinalization() {
           this._sourceIsDead = true;
         }
@@ -565,7 +562,9 @@
       derefSink: k(undefined)
     };
 
-    const sourceFinalizers = new FinalizationRegistry(weakSink => weakSink.deref()?.onSourceFinalization());
+    const sourceFinalizers = new FinalizationRegistry(weakSink =>
+      weakSink.deref()?.onSourceFinalization()
+    );
     class Source {
       constructor(sink) {
         this._sink = new WeakRef(sink);
