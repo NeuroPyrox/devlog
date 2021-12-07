@@ -288,8 +288,10 @@
       Object.freeze(noParents);
       
       class OneParent {
-        constructor(parentSink) {
+        constructor(parentSink, that) {
           this._parentSink = parentSink;
+          // TODO Util.assert(!parentSink.source.isDead());
+          this._childListNode = parentSink.children.add(that);
         }
         
         forEach(f) {
@@ -342,6 +344,7 @@
           this.parents = noParents;
           this.priority = new Priority(0, this.parents);
           this.activeness = new Activeness(this.parents);
+          this.children = new Util.ChildList();
           this.poll = function*() {
             return true;
           }
@@ -352,9 +355,10 @@
       class Output {
         constructor(parentSink, handle) {
           const that = this;
-          this.parents = new OneParent(parentSink);
+          this.parents = new OneParent(parentSink, this);
           this.priority = new Priority(parentSink.priority.getValue() + 1, this.parents);
           this.activeness = new Activeness(this.parents);
+          this.children = new Util.ChildList();
           this.poll = function*() {
             const parentValue = yield that.parents.read();
             if (parentValue !== undefined) {
@@ -370,9 +374,10 @@
       class Map {
         constructor(parentSink, f) {
           const that = this;
-          this.parents = new OneParent(parentSink);
+          this.parents = new OneParent(parentSink, this);
           this.priority = new Priority(parentSink.priority.getValue() + 1, this.parents);
           this.activeness = new Activeness(this.parents);
+          this.children = new Util.ChildList();
           this.poll = function*() {
             const parentValue = yield that.parents.read();
             const value = f(parentValue.value);
@@ -386,9 +391,10 @@
       class Filter {
         constructor(parentSink, predicate) {
           const that = this;
-          this.parents = new OneParent(parentSink);
+          this.parents = new OneParent(parentSink, this);
           this.priority = new Priority(parentSink.priority.getValue() + 1, this.parents);
           this.activeness = new Activeness(this.parents);
+          this.children = new Util.ChildList();
           this.poll = function*() {
             const { value } = yield that.parents.read();
             if (!this._predicate(value)) {
