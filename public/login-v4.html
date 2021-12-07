@@ -278,6 +278,24 @@
     };
 
     const Sink = (() => {
+      class Priority {
+        constructor(priority, parents) {
+          this._priority = priority;
+          this._parents = parents;
+        }
+        
+        getValue() {
+          return this._value;
+        }
+        
+        onChildPriority(childPriority) {
+          if (childPriorityValue <= this._value) {
+            this._value = childPriorityValue - 1;
+            parents.forEach(parent => parent.priority.onChildPriority())
+          }
+        }
+      }
+      
       class Input {
         // Impure: subscribe, runMonad
         // Subscribe takes a push function, attaches it as an event listener,
