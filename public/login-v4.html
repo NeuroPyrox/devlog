@@ -295,6 +295,10 @@
         forEach(f) {
           f(this._parentSink);
         }
+        
+        read() {
+          return Push.readSink(this._parentSink);
+        }
       }
       
       class Priority {
@@ -341,6 +345,9 @@
           this.parents = noParents;
           this.priority = new Priority(0, this.parents);
           this.activeness = new Activeness(this.parents);
+          this.poll = function*() {
+            return true;
+          }
           Object.freeze(this);
         }
       }
@@ -350,6 +357,14 @@
           this.parents = new OneParent(parentSink);
           this.priority = new Priority(parentSink.priority.getValue() + 1, this.parents);
           this.activeness = constantActiveness;
+          const that = this;
+          this.poll = function*() {
+            const parentValue = yield that.parents.read();
+            if (parentValue !== undefined) {
+              yield Push.enqueueAction(handle, parentValue.value);
+            }
+            return false;
+          }
           Object.freeze(this);
         }
       }
@@ -359,6 +374,14 @@
           this.parents = new OneParent(parentSink);
           this.priority = new Priority(parentSink.priority.getValue() + 1, this.parents);
           this.activeness = new Activeness(this.parents);
+          const that = this;
+          this.poll = function*() {
+            const parentValue = yield that.parents.read();
+            const value = f(parentValue.value);
+            yield Push.writeSink(that, value);
+            return true;
+          }
+          Object.freeze(this);
         }
       }
     })();
