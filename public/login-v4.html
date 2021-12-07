@@ -171,6 +171,7 @@
 
       return {
         PriorityQueue,
+        assert,
         ChildList,
         weakRefUndefined,
         weakMapFromEdges,
@@ -291,6 +292,7 @@
         }
 
         linkChild(childSink) {
+          Util.assert(!this._sourceIsDead);
           return this._children.add(childSink);
         }
 
@@ -368,6 +370,7 @@
         }
 
         linkChild(childSink) {
+          Util.assert(!this._sourceIsDead);
           return this._children.add(childSink);
         }
 
@@ -430,6 +433,7 @@
         }
 
         linkChild(childSink) {
+          Util.assert(!this._sourceIsDead);
           return this._children.add(childSink);
         }
 
@@ -480,6 +484,7 @@
         }
 
         linkChild(childSink) {
+          Util.assert(!this._sourceIsDead);
           return this._children.add(childSink);
         }
 
@@ -533,6 +538,7 @@
         }
 
         linkChild(childSink) {
+          Util.assert(!this._sourceIsDead);
           return this._children.add(childSink);
         }
 
@@ -600,6 +606,7 @@
         }
 
         linkChild(childSink) {
+          Util.assert(!this._sourceIsDead);
           return this._children.add(childSink);
         }
 
