@@ -450,6 +450,11 @@
             return true;
           }, this);
           Object.freeze(this);
+          subscribe(x => {
+            if (this.activeness.isActive()) {
+              runMonad(new Push.Context(), Push.push(this, x));
+            }
+          });
         }
       }
       
