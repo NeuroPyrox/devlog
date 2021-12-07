@@ -286,6 +286,16 @@
       }
       Object.freeze(noParents);
       
+      class OneParent {
+        constructor(parentSink) {
+          this._parentSink = parentSink;
+        }
+        
+        forEach(f) {
+          f(this._parentSink);
+        }
+      }
+      
       class Priority {
         constructor(priority, parents) {
           this._priority = priority;
@@ -314,7 +324,7 @@
       
       class Output {
         constructor(parentSink, handle) {
-          this.parents = oneParent(parentSink);
+          this.parents = new OneParent(parentSink);
           this.priority = new Priority(parentSink.priority.getValue() + 1, this.parents);
           Object.freeze(this);
         }
