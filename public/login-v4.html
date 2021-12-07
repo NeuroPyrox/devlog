@@ -300,7 +300,7 @@
           return this._priority;
         }
 
-        capPriority(childPriority) {
+        onChildPriority(childPriority) {
           if (childPriority <= this._priority) {
             this._priority = childPriority - 1;
           }
@@ -334,10 +334,10 @@
           return this._priority;
         }
 
-        capPriority(childPriority) {
+        onChildPriority(childPriority) {
           if (childPriority <= this._priority) {
             this._priority = childPriority - 1;
-            this._parentSink.capPriority(this._priority);
+            this._parentSink.onChildPriority(this._priority);
           }
         }
         
@@ -378,11 +378,11 @@
           return this._priority;
         }
 
-        capPriority(childPriority) {
+        onChildPriority(childPriority) {
           if (childPriority <= this._priority) {
             this._priority = childPriority - 1;
-            this._parentSinkA.deref()?.capPriority(this._priority);
-            this._parentSinkB.deref()?.capPriority(this._priority);
+            this._parentSinkA.deref()?.onChildPriority(this._priority);
+            this._parentSinkB.deref()?.onChildPriority(this._priority);
           }
         }
         
@@ -441,10 +441,10 @@
           return this._priority;
         }
 
-        capPriority(childPriority) {
+        onChildPriority(childPriority) {
           if (childPriority <= this._priority) {
             this._priority = childPriority - 1;
-            this._parentSink.capPriority(this._priority);
+            this._parentSink.onChildPriority(this._priority);
           }
         }
         
@@ -492,10 +492,10 @@
           return this._priority;
         }
 
-        capPriority(childPriority) {
+        onChildPriority(childPriority) {
           if (childPriority <= this._priority) {
             this._priority = childPriority - 1;
-            this._parentSink.capPriority(this._priority);
+            this._parentSink.onChildPriority(this._priority);
           }
         }
         
@@ -547,10 +547,10 @@
           return this._priority;
         }
 
-        capPriority(childPriority) {
+        onChildPriority(childPriority) {
           if (childPriority <= this._priority) {
             this._priority = childPriority - 1;
-            this._parentSink.deref()?.capPriority(this._priority);
+            this._parentSink.deref()?.onChildPriority(this._priority);
           }
         }
 
@@ -566,7 +566,7 @@
           }
           this._parentSink = new WeakRef(parentSink);
           this._childListNode = new WeakRef(parentSink.linkChild(this));
-          parentSink.capPriority(this._priority);
+          parentSink.onChildPriority(this._priority);
           if (this._isActive) {
             parentSink.activate();
           }
@@ -615,10 +615,10 @@
           return this._priority;
         }
 
-        capPriority(childPriority) {
+        onChildPriority(childPriority) {
           if (childPriority <= this._priority) {
             this._priority = childPriority - 1;
-            this._parentSink.capPriority(this._priority);
+            this._parentSink.onChildPriority(this._priority);
           }
         }
         
