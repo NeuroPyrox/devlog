@@ -280,6 +280,7 @@
 
     // Optimized: worst case algorithmic complexity
     // Not benchmarked
+    // TODO
     const indirectSink = (() => {
       const noParents = {
         forEach: () => {}
@@ -309,7 +310,25 @@
         onChildPriority(childPriority) {
           if (childPriorityValue <= this._value) {
             this._value = childPriorityValue - 1;
-            parents.forEach(parent => parent.priority.onChildPriority());
+            this._parents.forEach(parent => parent.priority.onChildPriority());
+          }
+        }
+      }
+      
+      class Activeness {
+        constructor(parents) {
+          this._isActive = false;
+          this._parents = parents;
+        }
+        
+        isActive() {
+          return this._isActive;
+        }
+        
+        activate() {
+          if (!this._isActive) {
+            this._isActive = true;
+            this._parents.forEach(parent => parent.activeness.activate());
           }
         }
       }
@@ -318,6 +337,7 @@
         constructor(subscribe) {
           this.parents = noParents;
           this.priority = new Priority(0, this.parents);
+          this.activeness = new Activeness(this.parents);
           Object.freeze(this);
         }
       }
