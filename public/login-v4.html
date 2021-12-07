@@ -353,6 +353,14 @@
           Object.freeze(this);
         }
       }
+      
+      class Map {
+        constructor(parentSink, f) {
+          this.parents = new OneParent(parentSink);
+          this.priority = new Priority(parentSink.priority.getValue() + 1, this.parents);
+          this.activeness = new Activeness(this.parents);
+        }
+      }
     })();
     
     // Optimized: worst case algorithmic complexity, indirection
