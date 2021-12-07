@@ -313,7 +313,6 @@
             weakChildListNode.deref()?.remove();
           }
           const parentSink = parentEvent().derefSink();
-          parentSink === undefined ? this.parents.clear() : this.parents.switch(parentSink);
           if (parentSink === undefined) {
             this._weakParentSinks = [];
             this._weakChildListNodes = [];
@@ -368,6 +367,77 @@
         const parentValues = yield* sink.parents.read();
         const shouldPropagate = yield* generatorFunction(...parentValues);
         return shouldPropagate ? sink.children : [];
+      }
+      
+      class Sink {
+        constructor(parentSinks, poll) {
+          // TODO Util.assert(!parentSinks.some(parentSink => parentSink._sourceIsDead));
+          this._weakParentSinks = parentSinks.map(parentSink => new WeakRef(parentSink));
+          this._weakChildListNodes = parentSinks.map(parentSink => new WeakRef(parentSink._addChild(this)));
+          this._children = new Util.ChildList();
+          this._isActive = false;
+          this._priority = parentSinks.length === 0 ? 0 : (Math.max(...parentSinks.map(parentSink => parentSink.getPriority())) + 1);
+          this._poll = poll;
+        }
+        
+        isActive() {
+          return this._isActive;
+        }
+        
+        getPriority() {
+          return this._priority;
+        }
+        
+        *poll() {
+          const parentValues = [];
+          for (const weakParentSink of this._weakParentSinks) {
+            parentValues.push(yield Push.readSink(weakParentSink.deref()))
+          }
+          const shouldPropagate = yield* this._poll(...parentValues);
+          return shouldPropagate ? this._children : [];
+        }
+        
+        _addChild(childSink) {
+          // TODO Util.assert(!this._sourceIsDead);
+          return this._children.add(childSink);
+        }
+        
+        _activate() {
+          if (!this._isActive) {
+            this._isActive = true;
+            for (const weakParentSink of this._weakParentSinks) {
+              weakParentSink.deref()?._activate();
+            }
+          }
+        }
+        
+        _onChildPriority(childPriority) {
+          if (childPriority <= this._priority) {
+            this._priority = childPriority - 1;
+            for (const weakParentSink of this._weakParentSinks) {
+              weakParentSink.deref()?._onChildPriority(childPriority);
+            }
+          }
+        }
+        
+        setParent(parentEvent) {
+          // TODO unsubscribe properly
+          for (const weakChildListNode of this._weakChildListNodes) {
+            weakChildListNode.deref()?.remove();
+          }
+          const parentSink = parentEvent().derefSink();
+          if (parentSink === undefined) {
+            this._weakParentSinks = [];
+            this._weakChildListNodes = [];
+          } else {
+            this._weakParentSinks = [new WeakRef(parentSink)];
+            this._weakChildListNodes = [new WeakRef(parentSink.addChild(this))];
+            if (this._isActive) {
+              parentSink._activate();
+            }
+            parentSink._onChildPriority(this._priority);
+          }
+        }
       }
       
       class Input {
