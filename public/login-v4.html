@@ -279,6 +279,11 @@
     };
 
     const unoptimizedSink = (() => {
+      const noParents = {
+        forEach: () => {}
+      }
+      Object.freeze(noParents);
+      
       class Priority {
         constructor(priority, parents) {
           this._priority = priority;
