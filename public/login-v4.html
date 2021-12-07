@@ -282,39 +282,15 @@
     // Not benchmarked
     // TODO
     const indirectSink = (() => {
-      const noParents = {
-        forEach: () => {}
-      }
-      Object.freeze(noParents);
-      
-      class OneParent {
-        constructor(parentSink, that) {
-          this._parentSink = parentSink;
-          // TODO Util.assert(!parentSink.source.isDead());
-          this._childListNode = parentSink.children.add(that);
+      class Parents {
+        constructor(parentSinks, that) {
+          // TODO Util.assert(!parentSink.some(parentSink => parentSink.source.isDead()));
+          this._weakParentSinks = parentSinks.map(parentSink => new WeakRef(parentSink));
+          this._weakChildListNodes = parentSinks.map(parentSink => new WeakRef(parentSink.children.add(that)));
         }
         
         forEach(f) {
-          f(this._parentSink);
-        }
-        
-        read() {
-          return Push.readSink(this._parentSink);
-        }
-      }
-      
-      class TwoParents {
-        constructor(parentSinkA, parentSinkB, that) {
-          this._parentSinkA = new WeakRef(parentSinkA);
-          this._parentSinkB = new WeakRef(parentSinkB);
-          // TODO Util.assert(!parentSinkA.source.isDead());
-          // TODO Util.assert(!parentSinkB.source.isDead());
-          this._childListNodeA = parentSinkA.children.add(that);
-          this._childListNodeB = parentSinkB.children.add(that);
-        }
-        
-        forEach(f) {
-          for (const weakParentSink of [this._parentSinkA, this._parentSinkB]) {
+          for (const weakParentSink of this._weakParentSinks) {
             const parentSink = weakParentSink.deref();
             if (parentSink !== undefined) {
               f(parentSink);
@@ -323,9 +299,11 @@
         }
         
         *read() {
-          const parentAValue = yield Push.readSink(this._parentSinkA.deref());
-          const parentBValue = yield Push.readSink(this._parentSinkB.deref());
-          return [parentAValue, parentBValue];
+          const result = [];
+          for (const weakParentSink of this._weakParentSinks) {
+            result.push(yield Push.readSink(weakParentSink.deref()))
+          }
+          return result;
         }
       }
       
@@ -367,7 +345,7 @@
       
       class Input {
         constructor(subscribe) {
-          this.parents = noParents;
+          this.parents = new Parents([], this);
           this.priority = new Priority(0, this.parents);
           this.activeness = new Activeness(this.parents);
           this.children = new Util.ChildList();
@@ -381,7 +359,7 @@
       class Output {
         constructor(parentSink, handle) {
           const that = this;
-          this.parents = new OneParent(parentSink, this);
+          this.parents = new Parents([parentSink], this);
           this.priority = new Priority(parentSink.priority.getValue() + 1, this.parents);
           this.activeness = new Activeness(this.parents);
           this.children = new Util.ChildList();
@@ -400,7 +378,7 @@
       class Map {
         constructor(parentSink, f) {
           const that = this;
-          this.parents = new OneParent(parentSink, this);
+          this.parents = new Parents([parentSink], this);
           this.priority = new Priority(parentSink.priority.getValue() + 1, this.parents);
           this.activeness = new Activeness(this.parents);
           this.children = new Util.ChildList();
@@ -417,7 +395,7 @@
       class Filter {
         constructor(parentSink, predicate) {
           const that = this;
-          this.parents = new OneParent(parentSink, this);
+          this.parents = new Parents([parentSink], this);
           this.priority = new Priority(parentSink.priority.getValue() + 1, this.parents);
           this.activeness = new Activeness(this.parents);
           this.children = new Util.ChildList();
@@ -436,7 +414,7 @@
       class Merge {
         constructor(parentSinkA, parentSinkB, combine) {
           const that = this;
-          this.parents = new TwoParents(parentSinkA, parentSinkB, this);
+          this.parents = new Parents([parentSinkA, parentSinkB], this);
           this.priority = new Priority(Math.max(parentSinkA.priority.getValue(), parentSinkB.priority.getValue()) + 1, this.parents);
           this.activeness = new Activeness(this.parents);
           this.children = new Util.ChildList();
