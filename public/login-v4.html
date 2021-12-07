@@ -283,11 +283,14 @@
         // Subscribe takes a push function, attaches it as an event listener,
         // and returns an unsubscribe function.
         constructor(subscribe) {
-          this.unsubscribe = subscribe(x =>
-            runMonad(new Push.Context(), Push.push(this, x))
-          );
+          this.unsubscribe = subscribe(x => {
+            if (this._isActive) {
+              runMonad(new Push.Context(), Push.push(this, x));
+            }
+          });
           this._children = new Util.ChildList();
           this._priority = 0;
+          this._isActive = false;
           this._sourceIsDead = false;
         }
 
@@ -307,7 +310,7 @@
         }
         
         activate() {
-          // TODO avoid pushing this if inactive
+          this._isActive = true;
         }
 
         // Push monad
