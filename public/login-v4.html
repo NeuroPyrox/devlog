@@ -278,7 +278,9 @@
       return step.value;
     };
 
-    const unoptimizedSink = (() => {
+    // Optimized: worst case algorithmic complexity
+    // Not benchmarked
+    const indirectSink = (() => {
       const noParents = {
         forEach: () => {}
       }
@@ -309,8 +311,18 @@
           Object.freeze(this);
         }
       }
+      
+      class Output {
+        constructor(parentSink, handle) {
+          this.parents = oneParent(parentSink);
+          this.priority = new Priority(parentSink.priority.getValue() + 1, this.parents);
+          Object.freeze(this);
+        }
+      }
     })();
     
+    // Optimized: worst case algorithmic complexity, indirection
+    // Not benchmarked
     const Sink = (() => {
       class Input {
         // Impure: subscribe, runMonad
