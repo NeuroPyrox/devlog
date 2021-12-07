@@ -252,6 +252,7 @@
       function* push(sink, value) {
         yield writeSink(sink, value);
         const queue = new Util.PriorityQueue();
+        // TODO don't push initial sink
         queue.push(sink);
         for (const sink of queue) {
           const childrenToPoll = yield* sink.poll();
@@ -277,7 +278,7 @@
       return step.value;
     };
 
-    const Sink = (() => {
+    const unoptimizedSink = (() => {
       class Priority {
         constructor(priority, parents) {
           this._priority = priority;
@@ -291,11 +292,21 @@
         onChildPriority(childPriority) {
           if (childPriorityValue <= this._value) {
             this._value = childPriorityValue - 1;
-            parents.forEach(parent => parent.priority.onChildPriority())
+            parents.forEach(parent => parent.priority.onChildPriority());
           }
         }
       }
       
+      class Input {
+        constructor(subscribe) {
+          this.parents = noParents;
+          this.priority = new Priority(0, this.parents);
+          Object.freeze(this);
+        }
+      }
+    })();
+    
+    const Sink = (() => {
       class Input {
         // Impure: subscribe, runMonad
         // Subscribe takes a push function, attaches it as an event listener,
