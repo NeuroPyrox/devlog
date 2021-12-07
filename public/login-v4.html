@@ -435,6 +435,23 @@
           Object.freeze(this);
         }
       }
+      
+      class ObserveE {
+        constructor(parentSink) {
+          const that = this;
+          this.parents = new Parents([parentSink], this);
+          this.priority = new Priority(parentSink.priority.getValue() + 1, this.parents);
+          this.activeness = new Activeness(this.parents);
+          this.children = new Util.ChildList();
+          this.poll = function*() {
+            const parentValue = yield that.parents.read();
+            const value = yield Push.liftPull(parentValue.value);
+            yield Push.writeSink(that, value);
+            return true;
+          }
+          Object.freeze(this);
+        }
+      }
     })();
     
     // Optimized: worst case algorithmic complexity, indirection
