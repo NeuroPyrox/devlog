@@ -351,10 +351,10 @@
       
       class Output {
         constructor(parentSink, handle) {
+          const that = this;
           this.parents = new OneParent(parentSink);
           this.priority = new Priority(parentSink.priority.getValue() + 1, this.parents);
           this.activeness = new Activeness(this.parents);
-          const that = this;
           this.poll = function*() {
             const parentValue = yield that.parents.read();
             if (parentValue !== undefined) {
@@ -369,14 +369,32 @@
       
       class Map {
         constructor(parentSink, f) {
+          const that = this;
           this.parents = new OneParent(parentSink);
           this.priority = new Priority(parentSink.priority.getValue() + 1, this.parents);
           this.activeness = new Activeness(this.parents);
-          const that = this;
           this.poll = function*() {
             const parentValue = yield that.parents.read();
             const value = f(parentValue.value);
             yield Push.writeSink(that, value);
+            return true;
+          }
+          Object.freeze(this);
+        }
+      }
+      
+      class Filter {
+        constructor(parentSink, predicate) {
+          const that = this;
+          this.parents = new OneParent(parentSink);
+          this.priority = new Priority(parentSink.priority.getValue() + 1, this.parents);
+          this.activeness = new Activeness(this.parents);
+          this.poll = function*() {
+            const { value } = yield that.parents.read();
+            if (!this._predicate(value)) {
+              return false;
+            }
+            yield Push.writeSink(this, value);
             return true;
           }
           Object.freeze(this);
