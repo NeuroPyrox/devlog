@@ -303,6 +303,10 @@
         }
       }
       
+      class TwoParents {
+        // TODO
+      }
+      
       class Priority {
         constructor(priority, parents) {
           this._priority = priority;
@@ -400,7 +404,32 @@
             if (!this._predicate(value)) {
               return false;
             }
-            yield Push.writeSink(this, value);
+            yield Push.writeSink(that, value);
+            return true;
+          }
+          Object.freeze(this);
+        }
+      }
+      
+      class Merge {
+        constructor(parentSinkA, parentSinkB, combine) {
+          const that = this;
+          this.parents = new TwoParents(parentSinkA, parentSinkB, this);
+          this.priority = new Priority(Math.max(parentSinkA.priority.getValue(), parentSinkB.priority.getValue()) + 1, this.parents);
+          this.activeness = new Activeness(this.parents);
+          this.children = new Util.ChildList();
+          this.poll = function*() {
+            const [parentAValue, parentBValue] = yield that.parents.read();
+            if (parentAValue === undefined) {
+              yield Push.writeSink(that, parentBValue.value);
+            } else if (parentBValue === undefined) {
+              yield Push.writeSink(that, parentAValue.value);
+            } else {
+              yield Push.writeSink(
+                that,
+                combine(parentAValue.value, parentBValue.value)
+              );
+            }
             return true;
           }
           Object.freeze(this);
