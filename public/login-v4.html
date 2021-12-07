@@ -343,15 +343,21 @@
         }
       }
       
+      const poller = (generatorFunction, sink) => function*() {
+        const parentValues = yield* sink.parents.read();
+        const shouldPropagate = yield* generatorFunction(...parentValues);
+        return shouldPropagate ? sink.children : [];
+      }
+      
       class Input {
         constructor(subscribe) {
           this.parents = new Parents([], this);
           this.priority = new Priority(0, this.parents);
           this.activeness = new Activeness(this.parents);
           this.children = new Util.ChildList();
-          this.poll = function*() {
+          this.poll = poller(function*() {
             return true;
-          }
+          }, this);
           Object.freeze(this);
         }
       }
@@ -363,13 +369,10 @@
           this.priority = new Priority(parentSink.priority.getValue() + 1, this.parents);
           this.activeness = new Activeness(this.parents);
           this.children = new Util.ChildList();
-          this.poll = function*() {
-            const parentValue = yield that.parents.read();
-            if (parentValue !== undefined) {
-              yield Push.enqueueAction(handle, parentValue.value);
-            }
+          this.poll = poller(function*({ value }) {
+            yield Push.enqueueAction(handle, value);
             return false;
-          }
+          }, this);
           Object.freeze(this);
           this.activeness.activate();
         }
@@ -382,12 +385,10 @@
           this.priority = new Priority(parentSink.priority.getValue() + 1, this.parents);
           this.activeness = new Activeness(this.parents);
           this.children = new Util.ChildList();
-          this.poll = function*() {
-            const parentValue = yield that.parents.read();
-            const value = f(parentValue.value);
-            yield Push.writeSink(that, value);
+          this.poll = poller(function*({ value }) {
+            yield Push.writeSink(that, f(value));
             return true;
-          }
+          }, this);
           Object.freeze(this);
         }
       }
@@ -399,14 +400,13 @@
           this.priority = new Priority(parentSink.priority.getValue() + 1, this.parents);
           this.activeness = new Activeness(this.parents);
           this.children = new Util.ChildList();
-          this.poll = function*() {
-            const { value } = yield that.parents.read();
+          this.poll = poller(function*({ value }) {
             if (!this._predicate(value)) {
               return false;
             }
             yield Push.writeSink(that, value);
             return true;
-          }
+          }, this);
           Object.freeze(this);
         }
       }
@@ -418,8 +418,7 @@
           this.priority = new Priority(Math.max(parentSinkA.priority.getValue(), parentSinkB.priority.getValue()) + 1, this.parents);
           this.activeness = new Activeness(this.parents);
           this.children = new Util.ChildList();
-          this.poll = function*() {
-            const [parentAValue, parentBValue] = yield* that.parents.read();
+          this.poll = poller(function*(parentAValue, parentBValue) {
             if (parentAValue === undefined) {
               yield Push.writeSink(that, parentBValue.value);
             } else if (parentBValue === undefined) {
@@ -431,7 +430,7 @@
               );
             }
             return true;
-          }
+          }, this);
           Object.freeze(this);
         }
       }
@@ -443,12 +442,10 @@
           this.priority = new Priority(parentSink.priority.getValue() + 1, this.parents);
           this.activeness = new Activeness(this.parents);
           this.children = new Util.ChildList();
-          this.poll = function*() {
-            const parentValue = yield that.parents.read();
-            const value = yield Push.liftPull(parentValue.value);
-            yield Push.writeSink(that, value);
+          this.poll = poller(function*({ value }) {
+            yield Push.writeSink(that, yield Push.liftPull(value));
             return true;
-          }
+          }, this);
           Object.freeze(this);
         }
       }
