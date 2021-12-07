@@ -304,7 +304,29 @@
       }
       
       class TwoParents {
-        // TODO
+        constructor(parentSinkA, parentSinkB, that) {
+          this._parentSinkA = new WeakRef(parentSinkA);
+          this._parentSinkB = new WeakRef(parentSinkB);
+          // TODO Util.assert(!parentSinkA.source.isDead());
+          // TODO Util.assert(!parentSinkB.source.isDead());
+          this._childListNodeA = parentSinkA.children.add(that);
+          this._childListNodeB = parentSinkB.children.add(that);
+        }
+        
+        forEach(f) {
+          for (const weakParentSink of [this._parentSinkA, this._parentSinkB]) {
+            const parentSink = weakParentSink.deref();
+            if (parentSink !== undefined) {
+              f(parentSink);
+            }
+          }
+        }
+        
+        *read() {
+          const parentAValue = yield Push.readSink(this._parentSinkA.deref());
+          const parentBValue = yield Push.readSink(this._parentSinkB.deref());
+          return [parentAValue, parentBValue];
+        }
       }
       
       class Priority {
@@ -419,7 +441,7 @@
           this.activeness = new Activeness(this.parents);
           this.children = new Util.ChildList();
           this.poll = function*() {
-            const [parentAValue, parentBValue] = yield that.parents.read();
+            const [parentAValue, parentBValue] = yield* that.parents.read();
             if (parentAValue === undefined) {
               yield Push.writeSink(that, parentBValue.value);
             } else if (parentBValue === undefined) {
