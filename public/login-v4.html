@@ -474,29 +474,19 @@
         return true;
       });
       
-      class Merge {
-        constructor(parentSinkA, parentSinkB, combine) {
-          const that = this;
-          this.parents = new Parents([parentSinkA, parentSinkB], this);
-          this.priority = new Priority(Math.max(parentSinkA.priority.getValue(), parentSinkB.priority.getValue()) + 1, this.parents);
-          this.activeness = new Activeness(this.parents);
-          this.children = new Util.ChildList();
-          this.poll = poller(function*(parentAValue, parentBValue) {
-            if (parentAValue === undefined) {
-              yield Push.writeSink(that, parentBValue.value);
-            } else if (parentBValue === undefined) {
-              yield Push.writeSink(that, parentAValue.value);
-            } else {
-              yield Push.writeSink(
-                that,
-                combine(parentAValue.value, parentBValue.value)
-              );
-            }
-            return true;
-          }, this);
-          Object.freeze(this);
+      const merge = (parentSinkA, parentSinkB, combine) => new Sink([parentSinkA, parentSinkB], function*(parentAValue, parentBValue) {
+        if (parentAValue === undefined) {
+          yield Push.writeSink(that, parentBValue.value);
+        } else if (parentBValue === undefined) {
+          yield Push.writeSink(that, parentAValue.value);
+        } else {
+          yield Push.writeSink(
+            that,
+            combine(parentAValue.value, parentBValue.value)
+          );
         }
-      }
+        return true;
+      });
       
       class ObserveE {
         constructor(parentSink) {
