@@ -393,7 +393,7 @@
           for (const weakParentSink of this._weakParentSinks) {
             parentValues.push(yield Push.readSink(weakParentSink.deref()))
           }
-          const shouldPropagate = yield* this._poll(...parentValues);
+          const shouldPropagate = yield* this._poll(this, ...parentValues);
           return shouldPropagate ? this._children : [];
         }
         
@@ -441,7 +441,7 @@
       }
       
       const input = subscribe => {
-        const result = new Sink([], function*() {
+        const result = new Sink([], function*(that) {
           return true;
         });
         subscribe(x => {
@@ -453,7 +453,7 @@
       };
       
       const output = (parentSink, handle) => {
-        const result = new Sink([parentSink], function*({ value }) {
+        const result = new Sink([parentSink], function*(that, { value }) {
           yield Push.enqueueAction(handle, value);
           return false;
         });
@@ -461,12 +461,12 @@
         return result;
       };
       
-      const map = (parentSink, f) => new Sink([parentSink], function*({ value }) {
+      const map = (parentSink, f) => new Sink([parentSink], function*(that, { value }) {
         yield Push.writeSink(that, f(value));
         return true;
       });
       
-      const filter = (parentSink, predicate) => new Sink([parentSink], function*({ value }) {
+      const filter = (parentSink, predicate) => new Sink([parentSink], function*(that, { value }) {
         if (predicate(value)) {
           return false;
         }
@@ -474,7 +474,7 @@
         return true;
       });
       
-      const merge = (parentSinkA, parentSinkB, combine) => new Sink([parentSinkA, parentSinkB], function*(parentAValue, parentBValue) {
+      const merge = (parentSinkA, parentSinkB, combine) => new Sink([parentSinkA, parentSinkB], function*(that, parentAValue, parentBValue) {
         if (parentAValue === undefined) {
           yield Push.writeSink(that, parentBValue.value);
         } else if (parentBValue === undefined) {
@@ -488,12 +488,12 @@
         return true;
       });
       
-      const observeE = parentSink => new Sink([parentSink], function*({ value }) {
+      const observeE = parentSink => new Sink([parentSink], function*(that, { value }) {
         yield Push.writeSink(that, yield Push.liftPull(value));
         return true;
       });
       
-      const switchE = () => new Sink([], function*({ value }) {
+      const switchE = () => new Sink([], function*(that, { value }) {
         yield Push.writeSink(that, value);
         return true;
       });
