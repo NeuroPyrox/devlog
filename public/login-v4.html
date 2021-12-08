@@ -466,23 +466,13 @@
         return true;
       });
       
-      class Filter {
-        constructor(parentSink, predicate) {
-          const that = this;
-          this.parents = new Parents([parentSink], this);
-          this.priority = new Priority(parentSink.priority.getValue() + 1, this.parents);
-          this.activeness = new Activeness(this.parents);
-          this.children = new Util.ChildList();
-          this.poll = poller(function*({ value }) {
-            if (!this._predicate(value)) {
-              return false;
-            }
-            yield Push.writeSink(that, value);
-            return true;
-          }, this);
-          Object.freeze(this);
+      const filter = (parentSink, predicate) => new Sink([parentSink], function*({ value }) {
+        if (predicate(value)) {
+          return false;
         }
-      }
+        yield Push.writeSink(that, value);
+        return true;
+      });
       
       class Merge {
         constructor(parentSinkA, parentSinkB, combine) {
