@@ -452,21 +452,14 @@
         return result;
       };
       
-      class Output {
-        constructor(parentSink, handle) {
-          const that = this;
-          this.parents = new Parents([parentSink], this);
-          this.priority = new Priority(parentSink.priority.getValue() + 1, this.parents);
-          this.activeness = new Activeness(this.parents);
-          this.children = new Util.ChildList();
-          this.poll = poller(function*({ value }) {
-            yield Push.enqueueAction(handle, value);
-            return false;
-          }, this);
-          Object.freeze(this);
-          this.activeness.activate();
-        }
-      }
+      const output = (parentSink, handle) => {
+        const result = new Sink([parentSink], function*({ value }) {
+          yield Push.enqueueAction(handle, value);
+          return false;
+        });
+        result._activate();
+        return result;
+      };
       
       class Map {
         constructor(parentSink, f) {
