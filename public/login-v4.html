@@ -108,14 +108,14 @@
         }
       };
 
-      class ChildList {
+      class ShrinkingList {
         constructor() {
           this._prev = this;
           this._next = this;
         }
 
         add(value) {
-          const result = new ChildListNode(this, value, this._next);
+          const result = new ShrinkingListNode(this, value, this._next);
           this._next._prev = result;
           this._next = result;
           return result;
@@ -137,7 +137,7 @@
         }
       }
 
-      class ChildListNode {
+      class ShrinkingListNode {
         constructor(prev, value, next) {
           this._prev = prev;
           this._value = value;
@@ -172,7 +172,7 @@
       return {
         PriorityQueue,
         assert,
-        ChildList,
+        ShrinkingList,
         weakRefUndefined,
         weakMapFromEdges,
         callMethod
@@ -288,10 +288,10 @@
           this._weakParentSinks = parentSinks.map(
             parentSink => new WeakRef(parentSink)
           );
-          this._weakChildListNodes = parentSinks.map(
+          this._weakChildNodes = parentSinks.map(
             parentSink => new WeakRef(parentSink._addChild(this))
           );
-          this._children = new Util.ChildList();
+          this._children = new Util.ShrinkingList();
           this._isActive = false;
           this._priority =
             parentSinks.length === 0
@@ -344,16 +344,16 @@
 
         setParent(parentEvent) {
           // TODO unsubscribe properly
-          for (const weakChildListNode of this._weakChildListNodes) {
-            weakChildListNode.deref()?.remove();
+          for (const weakChildNode of this._weakChildNodes) {
+            weakChildNode.deref()?.remove();
           }
           const parentSink = parentEvent().derefSink();
           if (parentSink === undefined) {
             this._weakParentSinks = [];
-            this._weakChildListNodes = [];
+            this._weakChildNodes = [];
           } else {
             this._weakParentSinks = [new WeakRef(parentSink)];
-            this._weakChildListNodes = [new WeakRef(parentSink.addChild(this))];
+            this._weakChildNodes = [new WeakRef(parentSink.addChild(this))];
             if (this._isActive) {
               parentSink._activate();
             }
@@ -443,7 +443,7 @@
               runMonad(new Push.Context(), Push.push(this, x));
             }
           });
-          this._children = new Util.ChildList();
+          this._children = new Util.ShrinkingList();
           this._priority = 0;
           this._isActive = false;
           this._sourceIsDead = false;
@@ -516,7 +516,7 @@
       class Merge {
         constructor(parentSinkA, parentSinkB, combine) {
           this._combine = combine;
-          this._children = new Util.ChildList();
+          this._children = new Util.ShrinkingList();
           this._parentSinkA = new WeakRef(parentSinkA);
           this._parentSinkB = new WeakRef(parentSinkB);
           this._childListNodeA = new WeakRef(parentSinkA.linkChild(this));
@@ -581,7 +581,7 @@
 
       class Map {
         constructor(parentSink, f) {
-          this._children = new Util.ChildList();
+          this._children = new Util.ShrinkingList();
           this._parentSink = parentSink;
           this._childListNode = parentSink.linkChild(this);
           this._priority = parentSink.getPriority() + 1;
@@ -632,7 +632,7 @@
 
       class Filter {
         constructor(parentSink, predicate) {
-          this._children = new Util.ChildList();
+          this._children = new Util.ShrinkingList();
           this._parentSink = parentSink;
           this._childListNode = parentSink.linkChild(this);
           this._priority = parentSink.getPriority() + 1;
@@ -685,7 +685,7 @@
 
       class SwitchE {
         constructor() {
-          this._children = new Util.ChildList();
+          this._children = new Util.ShrinkingList();
           this._parentSink = Util.weakRefUndefined;
           this._childListNode = Util.weakRefUndefined;
           // Any number would work, but we choose a high one to reduce
@@ -755,7 +755,7 @@
 
       class ObserveE {
         constructor(parentSink) {
-          this._children = new Util.ChildList();
+          this._children = new Util.ShrinkingList();
           this._parentSink = parentSink;
           this._childListNode = parentSink.linkChild(this);
           this._priority = parentSink.getPriority() + 1;
