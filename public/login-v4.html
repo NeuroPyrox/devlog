@@ -353,7 +353,7 @@
             this._weakChildNodes = [];
           } else {
             this._weakParentSinks = [new WeakRef(parentSink)];
-            this._weakChildNodes = [new WeakRef(parentSink.addChild(this))];
+            this._weakChildNodes = [new WeakRef(parentSink._addChild(this))];
             if (this._isActive) {
               parentSink._activate();
             }
