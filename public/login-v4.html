@@ -120,7 +120,7 @@
           this._next = result;
           return result;
         }
-        
+
         isEmpty() {
           return this._next === this;
         }
@@ -346,16 +346,22 @@
             }
           }
         }
-
-        onSourceFinalization() {
-          this._sourceIsDead = true;
-        }
-
-        setParent(parentEvent) {
-          // TODO unsubscribe properly
+        
+        _unsubscribeSegment() {
           for (const weakChildNode of this._weakChildNodes) {
             weakChildNode.deref()?.remove();
           }
+        }
+
+        onSourceFinalization() {
+          this._sourceIsDead = true;
+          if (this._children.isEmpty()) {
+            this._unsubscribeSegment();
+          }
+        }
+
+        setParent(parentEvent) {
+          this._unsubscribeSegment();
           const parentSink = parentEvent().derefSink();
           if (parentSink === undefined) {
             this._weakParentSinks = [];
