@@ -120,6 +120,10 @@
           this._next = result;
           return result;
         }
+        
+        isEmpty() {
+          return this._next === this;
+        }
 
         // Assumes no nodes will be removed while iterating
         [Symbol.iterator]() {
