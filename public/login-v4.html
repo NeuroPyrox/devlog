@@ -287,7 +287,7 @@
     // TODO
     const indirectSink = (() => {
       class Sink {
-        constructor(parentSinks, poll) {
+        constructor(parentSinks, poll, onUnsubscribe = () => {}) {
           // TODO Util.assert(!parentSinks.some(parentSink => parentSink._sourceIsDead));
           this._weakParentSinks = parentSinks.map(
             parentSink => new WeakRef(parentSink)
@@ -305,6 +305,7 @@
                 ) + 1;
           this._poll = poll;
           this._sourceIsDead = false;
+          this._onUnsubscribe = onUnsubscribe;
         }
 
         isActive() {
@@ -349,8 +350,13 @@
         
         _onChildUnsubscribe() {
           if (this._sourceIsDead && this._children.isEmpty()) {
-            this._unsubscribeSegment();
+            this._unsubscribe();
           }
+        }
+        
+        _unsubscribe() {
+          this._unsubscribeSegment();
+          this._onUnsubscribe();
         }
         
         _unsubscribeSegment() {
@@ -360,14 +366,12 @@
           for (const weakParentSink of this._weakParentSinks) {
             weakParentSink.deref()?._onChildUnsubscribe(childPriority);
           }
-          this._weakChildNodes = [];
-          this._weakParentSinks = [];
         }
 
         onSourceFinalization() {
           this._sourceIsDead = true;
           if (this._children.isEmpty()) {
-            this._unsubscribeSegment();
+            this._unsubscribe();
           }
         }
 
@@ -375,6 +379,9 @@
           this._unsubscribeSegment();
           const parentSink = parentEvent().derefSink();
           if (parentSink !== undefined) {
+            this._weakParentSinks = [];
+            this._weakChildNodes = [];
+          } else {
             this._weakParentSinks = [new WeakRef(parentSink)];
             this._weakChildNodes = [new WeakRef(parentSink._addChild(this))];
             if (this._isActive) {
