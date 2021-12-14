@@ -360,6 +360,8 @@
           for (const weakParentSink of this._weakParentSinks) {
             weakParentSink.deref()?._onChildUnsubscribe(childPriority);
           }
+          this._weakChildNodes = [];
+          this._weakParentSinks = [];
         }
 
         onSourceFinalization() {
