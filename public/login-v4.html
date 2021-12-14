@@ -347,9 +347,18 @@
           }
         }
         
+        _onChildUnsubscribe() {
+          if (this._sourceIsDead && this._children.isEmpty()) {
+            this._unsubscribeSegment();
+          }
+        }
+        
         _unsubscribeSegment() {
           for (const weakChildNode of this._weakChildNodes) {
             weakChildNode.deref()?.remove();
+          }
+          for (const weakParentSink of this._weakParentSinks) {
+            weakParentSink.deref()?._onChildUnsubscribe(childPriority);
           }
         }
 
