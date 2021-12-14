@@ -374,10 +374,7 @@
         setParent(parentEvent) {
           this._unsubscribeSegment();
           const parentSink = parentEvent().derefSink();
-          if (parentSink === undefined) {
-            this._weakParentSinks = [];
-            this._weakChildNodes = [];
-          } else {
+          if (parentSink !== undefined) {
             this._weakParentSinks = [new WeakRef(parentSink)];
             this._weakChildNodes = [new WeakRef(parentSink._addChild(this))];
             if (this._isActive) {
