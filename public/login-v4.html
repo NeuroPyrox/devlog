@@ -158,6 +158,7 @@
 
       const weakRefUndefined = { deref: k(undefined) };
 
+      // TODO remove
       const weakMapFromEdges = (edges) => {
         const graph = new WeakMap();
         for (const [parent, child] of edges) {
@@ -188,6 +189,8 @@
     })();
 
     // Stores computations that we don't want done in the middle of Push.push
+    // Possible refactor once we implement behaviors:
+    //   store output callbacks in a different list than event constructors.
     let deferred = [];
     const defer = (f) => deferred.push(f);
     const lazy = (thunk) => {
@@ -206,6 +209,7 @@
       defer(result);
       return result;
     };
+    // TODO make a dedicated startup function.
     // Only called on startup and at the end of push monads.
     const doDeferred = () => {
       const temp = deferred;
