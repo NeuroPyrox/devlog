@@ -15,7 +15,7 @@
   </head>
   <body></body>
   <script>
-    const k = x => () => x;
+    const k = (x) => () => x;
     const Util = (() => {
       // TODO learn how imports work so I can use a library instead of this custom implementation.
       class PriorityQueue {
@@ -60,7 +60,7 @@
             case 1:
               return {
                 value: this._array.pop(),
-                done: false
+                done: false,
               };
           }
           const value = this._array[0];
@@ -102,7 +102,7 @@
         }
       }
 
-      const assert = condition => {
+      const assert = (condition) => {
         if (!condition) {
           throw new Error("Assertion failed");
         }
@@ -136,7 +136,7 @@
               const value = current._value;
               current = current._next;
               return { done: false, value };
-            }
+            },
           };
         }
       }
@@ -158,7 +158,7 @@
 
       const weakRefUndefined = { deref: k(undefined) };
 
-      const weakMapFromEdges = edges => {
+      const weakMapFromEdges = (edges) => {
         const graph = new WeakMap();
         for (const [parent, child] of edges) {
           const children = graph.get(parent);
@@ -171,7 +171,11 @@
         return graph;
       };
 
-      const callMethod = field => (...args) => object => object[field](...args);
+      const callMethod =
+        (field) =>
+        (...args) =>
+        (object) =>
+          object[field](...args);
 
       return {
         PriorityQueue,
@@ -179,15 +183,15 @@
         ShrinkingList,
         weakRefUndefined,
         weakMapFromEdges,
-        callMethod
+        callMethod,
       };
     })();
 
     // Stores computations that we don't want done in the middle of Push.push
     // TODO make it an error to call doDeferred during Push.push
     let deferred = [];
-    const defer = f => deferred.push(f);
-    const lazy = thunk => {
+    const defer = (f) => deferred.push(f);
+    const lazy = (thunk) => {
       const result = () => {
         if (thunk.processing) {
           throw new Error("Illegal circular lazy evaluation");
@@ -206,7 +210,7 @@
     const doDeferred = () => {
       const temp = deferred;
       deferred = [];
-      temp.forEach(f => f());
+      temp.forEach((f) => f());
       if (deferred.length !== 0) {
         // TODO remove this error
         throw new Error("Just testing if this branch ever gets visited");
@@ -290,10 +294,10 @@
         constructor(parentSinks, poll, onUnsubscribe = () => {}) {
           // TODO Util.assert(!parentSinks.some(parentSink => parentSink._sourceIsDead));
           this._weakParentSinks = parentSinks.map(
-            parentSink => new WeakRef(parentSink)
+            (parentSink) => new WeakRef(parentSink)
           );
           this._weakChildNodes = parentSinks.map(
-            parentSink => new WeakRef(parentSink._addChild(this))
+            (parentSink) => new WeakRef(parentSink._addChild(this))
           );
           this._children = new Util.ShrinkingList();
           this._isActive = false;
@@ -301,7 +305,7 @@
             parentSinks.length === 0
               ? 0
               : Math.max(
-                  ...parentSinks.map(parentSink => parentSink.getPriority())
+                  ...parentSinks.map((parentSink) => parentSink.getPriority())
                 ) + 1;
           this._poll = poll;
           this._sourceIsDead = false;
@@ -347,18 +351,18 @@
             }
           }
         }
-        
+
         _onChildUnsubscribe() {
           if (this._sourceIsDead && this._children.isEmpty()) {
             this._unsubscribe();
           }
         }
-        
+
         _unsubscribe() {
           this._unsubscribeSegment();
           this._onUnsubscribe();
         }
-        
+
         _unsubscribeSegment() {
           for (const weakChildNode of this._weakChildNodes) {
             weakChildNode.deref()?.remove();
@@ -392,11 +396,11 @@
         }
       }
 
-      const input = subscribe => {
-        const result = new Sink([], function*(that) {
+      const input = (subscribe) => {
+        const result = new Sink([], function* (that) {
           return true;
         });
-        subscribe(x => {
+        subscribe((x) => {
           if (result.isActive()) {
             runMonad(new Push.Context(), Push.push(result, x));
           }
@@ -405,7 +409,7 @@
       };
 
       const output = (parentSink, handle) => {
-        const result = new Sink([parentSink], function*(that, { value }) {
+        const result = new Sink([parentSink], function* (that, { value }) {
           yield Push.enqueueAction(handle, value);
           return false;
         });
@@ -414,13 +418,13 @@
       };
 
       const map = (parentSink, f) =>
-        new Sink([parentSink], function*(that, { value }) {
+        new Sink([parentSink], function* (that, { value }) {
           yield Push.writeSink(that, f(value));
           return true;
         });
 
       const filter = (parentSink, predicate) =>
-        new Sink([parentSink], function*(that, { value }) {
+        new Sink([parentSink], function* (that, { value }) {
           if (predicate(value)) {
             return false;
           }
@@ -429,7 +433,7 @@
         });
 
       const merge = (parentSinkA, parentSinkB, combine) =>
-        new Sink([parentSinkA, parentSinkB], function*(
+        new Sink([parentSinkA, parentSinkB], function* (
           that,
           parentAValue,
           parentBValue
@@ -447,14 +451,14 @@
           return true;
         });
 
-      const observeE = parentSink =>
-        new Sink([parentSink], function*(that, { value }) {
+      const observeE = (parentSink) =>
+        new Sink([parentSink], function* (that, { value }) {
           yield Push.writeSink(that, yield Push.liftPull(value));
           return true;
         });
 
       const switchE = () =>
-        new Sink([], function*(that, { value }) {
+        new Sink([], function* (that, { value }) {
           yield Push.writeSink(that, value);
           return true;
         });
@@ -468,7 +472,7 @@
         // Subscribe takes a push function, attaches it as an event listener,
         // and returns an unsubscribe function.
         constructor(subscribe) {
-          this.unsubscribe = subscribe(x => {
+          this.unsubscribe = subscribe((x) => {
             if (this._isActive) {
               runMonad(new Push.Context(), Push.push(this, x));
             }
@@ -838,10 +842,10 @@
     })();
 
     const neverSource = {
-      derefSink: k(undefined)
+      derefSink: k(undefined),
     };
 
-    const sourceFinalizers = new FinalizationRegistry(weakSink =>
+    const sourceFinalizers = new FinalizationRegistry((weakSink) =>
       weakSink.deref()?.onSourceFinalization()
     );
     class Source {
@@ -864,7 +868,7 @@
           }
           return event();
         };
-        result.loop = setTo => {
+        result.loop = (setTo) => {
           if (typeof setTo !== "function") {
             throw new TypeError("setTo is not a function");
           }
@@ -873,7 +877,7 @@
         return result;
       };
 
-      const input = subscribe =>
+      const input = (subscribe) =>
         lazy(() => new Source(new Sink.Input(subscribe)));
       const never = k(neverSource);
       // TODO mergeWith
@@ -907,10 +911,10 @@
             : new Source(new Sink.Map(parentSink, f));
         });
       const mapTag = (parentEvent, latchGet, combine) =>
-        map(parentEvent, x => combine(x, latchGet()));
+        map(parentEvent, (x) => combine(x, latchGet()));
       const tag = (parentEvent, latchGet) => map(parentEvent, () => latchGet());
 
-      const observeE = parentEvent =>
+      const observeE = (parentEvent) =>
         lazy(() => {
           const parentSink = parentEvent().derefSink();
           return parentSink === undefined
@@ -918,8 +922,8 @@
             : new Source(new Sink.ObserveE(parentSink));
         });
 
-      const getClicks = domNode =>
-        input(push => domNode.addEventListener("click", push));
+      const getClicks = (domNode) =>
+        input((push) => domNode.addEventListener("click", push));
 
       const PullContext = {
         output: (parentEvent, handle) => {
@@ -940,27 +944,27 @@
           };
           return unsubscribe;
         },
-        _endMonad: () => {}
+        _endMonad: () => {},
       };
       const output = Util.callMethod("output");
 
       function* switchE(eventOfEvent) {
         const sink = new Sink.SwitchE();
         const source = new Source(sink);
-        yield output(eventOfEvent, event => sink.setParent(event));
+        yield output(eventOfEvent, (event) => sink.setParent(event));
         return k(source);
       }
 
       // TODO optimize with binary tree
       function* mergeBind(eventOfEvent, f) {
         let current = never;
-        const next = map(eventOfEvent, event => merge(f(event), current));
-        yield output(next, event => (current = event));
+        const next = map(eventOfEvent, (event) => merge(f(event), current));
+        yield output(next, (event) => (current = event));
         return yield* switchE(next);
       }
 
       // TODO replace with behavior
-      const getInputValues = domNode => () => domNode.value;
+      const getInputValues = (domNode) => () => domNode.value;
 
       return {
         eventLoop,
@@ -977,7 +981,7 @@
         output,
         switchE,
         mergeBind,
-        getInputValues
+        getInputValues,
       };
     })();
     const {
@@ -995,14 +999,14 @@
       output,
       switchE,
       mergeBind,
-      getInputValues
+      getInputValues,
     } = FRP;
 
     function* userDatabase({
       insertions,
       usernamesToRemove,
       clears,
-      signupAttempts
+      signupAttempts,
     }) {
       let internalTable = [];
 
@@ -1017,11 +1021,11 @@
           return protoFindUsername(start, middle, username);
         }
       };
-      const findUsername = username =>
+      const findUsername = (username) =>
         protoFindUsername(0, internalTable.length, username);
 
       let signups = filter(
-        map(signupAttempts, user => {
+        map(signupAttempts, (user) => {
           const index = findUsername(user.username);
           const foundUser = internalTable[index];
           if (foundUser === undefined || foundUser.username !== user.username) {
@@ -1029,7 +1033,7 @@
           }
           return null;
         }),
-        x => x !== null
+        (x) => x !== null
       );
       yield output(signups, ([index, user]) =>
         internalTable.splice(index, 0, user)
@@ -1047,7 +1051,7 @@
         return [];
       });
       const createUserInsertions = map(
-        filter(insertions, x => x[0] === "createUser"),
+        filter(insertions, (x) => x[0] === "createUser"),
         ([, index, user]) => [index, user]
       );
       yield output(createUserInsertions, ([index, user]) => {
@@ -1056,29 +1060,29 @@
       const createdUsers = merge(createUserInsertions, signups);
       const changePasswordInsertions = filter(
         insertions,
-        x => x[0] === "changePassword"
+        (x) => x[0] === "changePassword"
       );
       const passwordChanges = map(
         changePasswordInsertions,
         ([, index, password]) => ({
           index,
           username: internalTable[index].username,
-          password
+          password,
         })
       );
       yield output(
         passwordChanges,
         ({ index, password }) => (internalTable[index].password = password)
       );
-      const removedUsers = map(usernamesToRemove, username => ({
+      const removedUsers = map(usernamesToRemove, (username) => ({
         index: findUsername(username),
-        username
+        username,
       }));
       yield output(removedUsers, ({ index }) => internalTable.splice(index, 1));
-      clears = filter(clears, _ => internalTable.length !== 0);
-      yield output(clears, _ => (internalTable = []));
+      clears = filter(clears, (_) => internalTable.length !== 0);
+      yield output(clears, (_) => (internalTable = []));
 
-      const tryLogins = event =>
+      const tryLogins = (event) =>
         map(event, ({ username, password }) => {
           const foundUser = internalTable[findUsername(username)];
           return (
@@ -1093,35 +1097,37 @@
         removedUsers,
         clears,
         tryLogins,
-        signups
+        signups,
       };
     }
 
     const nodeBuilder = (constructor, modifiers) => {
-      const fromImpureBuilder = impureBuild => {
+      const fromImpureBuilder = (impureBuild) => {
         const builder = (...children) =>
-          fromImpureBuilder(varsOut => {
+          fromImpureBuilder((varsOut) => {
             const node = impureBuild(varsOut);
             // Use append instead of appendChild because we need to handle text nodes
-            node.append(...children.map(child => child._impureBuild(varsOut)));
+            node.append(
+              ...children.map((child) => child._impureBuild(varsOut))
+            );
             return node;
           });
         for (const [key, modifier] of Object.entries(modifiers)) {
           builder[key] = (...args) =>
-            fromImpureBuilder(varsOut => {
+            fromImpureBuilder((varsOut) => {
               const node = impureBuild(varsOut);
               modifier(...args)(node);
               return node;
             });
         }
         builder._impureBuild = impureBuild;
-        builder.build = _ => {
+        builder.build = (_) => {
           const varsOut = {};
           varsOut.root = impureBuild(varsOut);
           return varsOut;
         };
-        builder.var = name =>
-          fromImpureBuilder(varsOut => {
+        builder.var = (name) =>
+          fromImpureBuilder((varsOut) => {
             const node = impureBuild(varsOut);
             varsOut[name] = node;
             return node;
@@ -1130,28 +1136,28 @@
       };
       return fromImpureBuilder(constructor);
     };
-    const div = nodeBuilder(_ => document.createElement("div"), {});
-    const button = nodeBuilder(_ => document.createElement("button"), {
-      textContent: textContent => node => (node.textContent = textContent)
+    const div = nodeBuilder((_) => document.createElement("div"), {});
+    const button = nodeBuilder((_) => document.createElement("button"), {
+      textContent: (textContent) => (node) => (node.textContent = textContent),
     });
-    const textInput = nodeBuilder(_ => {
+    const textInput = nodeBuilder((_) => {
       const node = document.createElement("input");
       node.type = "text";
       return node;
     }, {});
-    const p = nodeBuilder(_ => document.createElement("p"), {});
-    const table = nodeBuilder(_ => document.createElement("table"), {});
-    const thead = nodeBuilder(_ => document.createElement("thead"), {});
-    const tbody = nodeBuilder(_ => document.createElement("tbody"), {});
-    const tr = nodeBuilder(_ => document.createElement("tr"), {});
-    const th = nodeBuilder(_ => document.createElement("th"), {
-      textContent: textContent => node => (node.textContent = textContent)
+    const p = nodeBuilder((_) => document.createElement("p"), {});
+    const table = nodeBuilder((_) => document.createElement("table"), {});
+    const thead = nodeBuilder((_) => document.createElement("thead"), {});
+    const tbody = nodeBuilder((_) => document.createElement("tbody"), {});
+    const tr = nodeBuilder((_) => document.createElement("tr"), {});
+    const th = nodeBuilder((_) => document.createElement("th"), {
+      textContent: (textContent) => (node) => (node.textContent = textContent),
     });
-    const td = nodeBuilder(_ => document.createElement("td"), {
-      textContent: textContent => node => (node.textContent = textContent)
+    const td = nodeBuilder((_) => document.createElement("td"), {
+      textContent: (textContent) => (node) => (node.textContent = textContent),
     });
-    const text = string => ({
-      _impureBuild: _ => string
+    const text = (string) => ({
+      _impureBuild: (_) => string,
     });
 
     function* userTable(signupAttempts) {
@@ -1162,7 +1168,7 @@
         usernameInsertInput,
         passwordInsertInput,
         insertButton,
-        userTableBody
+        userTableBody,
       } = div(
         button.var("clearButton").textContent("Clear"),
         table.var("userTable")(
@@ -1184,7 +1190,7 @@
           getInputValues(passwordInsertInput),
           (username, password) => ({
             username,
-            password
+            password,
           })
         ),
         ({ username, password }) => username !== "" && password !== ""
@@ -1192,18 +1198,13 @@
 
       const usernamesToRemove = eventLoop();
 
-      const {
-        createdUsers,
-        passwordChanges,
-        removedUsers,
-        clears,
-        tryLogins
-      } = yield* userDatabase({
-        insertions,
-        usernamesToRemove,
-        clears: getClicks(clearButton),
-        signupAttempts
-      });
+      const { createdUsers, passwordChanges, removedUsers, clears, tryLogins } =
+        yield* userDatabase({
+          insertions,
+          usernamesToRemove,
+          clears: getClicks(clearButton),
+          signupAttempts,
+        });
 
       yield output(insertions, () => {
         usernameInsertInput.value = "";
@@ -1226,7 +1227,7 @@
               userTableBody.children[index]
             );
           }
-          return map(getClicks(xButton), _ => user.username);
+          return map(getClicks(xButton), (_) => user.username);
         })
       );
 
@@ -1239,7 +1240,7 @@
         userTableBody.children[index].remove()
       );
 
-      yield output(clears, _ => (userTableBody.innerHTML = ""));
+      yield output(clears, (_) => (userTableBody.innerHTML = ""));
 
       return { userTableDiv, passwordChanges, removedUsers, clears, tryLogins };
     }
@@ -1249,13 +1250,8 @@
       const signupAttempts = eventLoop();
 
       //div(yield* userTable(signupAttempts).var("userTable"), slot(loginDiv))
-      const {
-        userTableDiv,
-        passwordChanges,
-        removedUsers,
-        clears,
-        tryLogins
-      } = yield* userTable(signupAttempts);
+      const { userTableDiv, passwordChanges, removedUsers, clears, tryLogins } =
+        yield* userTable(signupAttempts);
       document.body.appendChild(userTableDiv);
       document.body.appendChild(document.createElement("p"));
 
@@ -1266,7 +1262,7 @@
           passwordInput,
           loginButton,
           statusText,
-          signupButton
+          signupButton,
         } = div(
           text("Username:"),
           textInput.var("usernameInput"),
@@ -1283,7 +1279,7 @@
           getInputValues(passwordInput),
           (username, password) => ({
             username,
-            password
+            password,
           })
         );
         yield output(
@@ -1304,7 +1300,7 @@
           )
         );
         yield output(
-          filter(loginAttempts, success => !success),
+          filter(loginAttempts, (success) => !success),
           () => (statusText.textContent = `Invalid login!`)
         );
 
@@ -1314,13 +1310,13 @@
             map(getClicks(signupButton), k(createSignupDiv)),
             map(
               tag(
-                filter(loginAttempts, success => success),
+                filter(loginAttempts, (success) => success),
                 getInputValues(usernameInput)
               ),
-              username => () => createLoggedInDiv(username)
+              (username) => () => createLoggedInDiv(username)
             )
           ),
-          never
+          never,
         ];
       }
 
@@ -1331,7 +1327,7 @@
           passwordInput,
           signupButton,
           statusText,
-          loginButton
+          loginButton,
         } = div(
           text("Username:"),
           textInput.var("usernameInput"),
@@ -1348,7 +1344,7 @@
           getInputValues(passwordInput),
           (username, password) => ({
             username,
-            password
+            password,
           })
         );
         yield output(
@@ -1371,11 +1367,14 @@
           root,
           merge(
             map(getClicks(loginButton), k(createLoginDiv)),
-            map(signupAttempts, ({ username }) => () =>
-              createLoggedInDiv(username)
+            map(
+              signupAttempts,
+              ({ username }) =>
+                () =>
+                  createLoggedInDiv(username)
             )
           ),
-          signupAttempts
+          signupAttempts,
         ];
       }
 
@@ -1391,19 +1390,19 @@
             merge(
               filter(
                 merge(passwordChanges, removedUsers),
-                x => x.username === username
+                (x) => x.username === username
               ),
               merge(getClicks(logoutButton), clears)
             ),
             k(createLoginDiv)
           ),
-          never
+          never,
         ];
       }
 
       let publishStartPage;
-      const startPage = input(p => (publishStartPage = p));
-      const start = _ => publishStartPage(createLoginDiv);
+      const startPage = input((p) => (publishStartPage = p));
+      const start = (_) => publishStartPage(createLoginDiv);
 
       const authPages = eventLoop();
       const appPages = observeE(merge(authPages, startPage));
