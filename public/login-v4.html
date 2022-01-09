@@ -206,15 +206,19 @@
       defer(result);
       return result;
     };
-    // Only called at the end of push/pull monads.
+    // Only called on startup and at the end of push monads.
     const doDeferred = () => {
       const temp = deferred;
       deferred = [];
       temp.forEach((f) => f());
-      // This branch can be visited if for example within an output event,
-      // we create a new event and store it in a variable.
+      // This branch will only be visited if
+      // we create a new event within an output callback.
       if (deferred.length !== 0) {
-        doDeferred();
+        const temp = deferred;
+        deferred = [];
+        temp.forEach((f) => f());
+        // Can't loop more than once, but that might change once we implement behaviors.
+        Util.assert(deferred.length === 0);
       }
     };
 
