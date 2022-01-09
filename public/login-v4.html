@@ -188,7 +188,6 @@
     })();
 
     // Stores computations that we don't want done in the middle of Push.push
-    // TODO make it an error to call doDeferred during Push.push
     let deferred = [];
     const defer = (f) => deferred.push(f);
     const lazy = (thunk) => {
@@ -207,13 +206,14 @@
       defer(result);
       return result;
     };
+    // Only called at the end of push/pull monads.
     const doDeferred = () => {
       const temp = deferred;
       deferred = [];
       temp.forEach((f) => f());
+      // This branch can be visited if for example within an output event,
+      // we create a new event and store it in a variable.
       if (deferred.length !== 0) {
-        // TODO remove this error
-        throw new Error("Just testing if this branch ever gets visited");
         doDeferred();
       }
     };
