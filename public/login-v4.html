@@ -232,7 +232,6 @@
           // We're able to use a weakMap without fear of losing access to the values
           // because the keys will be strongly referenced by a chain of parent pulsePushes.
           this._values = new WeakMap();
-          this._actions = [];
         }
 
         writeSink(sink, value) {
