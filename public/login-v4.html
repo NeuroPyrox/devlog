@@ -297,6 +297,35 @@
 
       return { writeSink, readSink, enqueueAction, liftPull, push };
     })();
+    
+    class Sink {
+      constructor(parents) {
+        this._weakParentLinks = parents.map(parent => new WeakRef(parent._children.add(this)));
+        this._children = new Util.ShrinkingList();
+      }
+    }
+    
+    class Source {
+      constructor(parents, sink) {
+        this._parentLinks = new Util.ShrinkingList();
+        for (const parent of parents) {
+          const parentLink = this._parentLinks.add(null);
+          const childLink = parent._weakChildLinks.add(parentLink);
+          parentLink.set(childLink);
+        }
+        this._weakChildLinks = new Util.ShrinkingList();
+        this._sink = new WeakRef(sink);
+      }
+    }
+    
+    // Possible optimization: specialize the different cases of how many parents are alive.
+    const newEvent = (parents, poll) => lazyEvent(() => {
+      const parentSources = parents.map(parent => parent());
+      const parentSinks = parentSources.map(source => source._sink).filter(source => source !== undefined);
+      const sink = new Sink(parentSinks);
+      const source = new Source(parentSources, sink);
+      return source;
+    });
 
     // Optimized: worst case algorithmic complexity
     // Not benchmarked
