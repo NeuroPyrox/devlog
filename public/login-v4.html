@@ -205,7 +205,6 @@
       while (!step.done) {
         step = generator.next(step.value(context));
       }
-      context._endMonad();
       return step.value;
     };
     
@@ -228,8 +227,7 @@
             }
           };
           return unsubscribe;
-        },
-        _endMonad: () => {},
+        }
       };
       const output = Util.callMethod("output");
       
@@ -269,11 +267,6 @@
         liftPull(monadicValue) {
           return Pull.pullLazy(monadicValue);
         }
-
-        _endMonad() {
-          this._actions.forEach(([handle, value]) => handle(value));
-          constructEvents();
-        }
       }
 
       const writeSink = Util.callMethod("writeSink");
@@ -282,21 +275,25 @@
       const liftPull = Util.callMethod("liftPull");
       
       // TODO check if sink is active
-      const push = (sink, value) => runMonad(new Context(), (function*() {
-        yield writeSink(sink, value);
-        const queue = new Util.PriorityQueue();
-        // TODO don't push initial sink
-        queue.push(sink);
-        for (const sink of queue) {
-          const childrenToPoll = yield* sink.poll();
-          for (const child of childrenToPoll) {
-            if (child.isActive()) {
-              // Mutating the queue while iterating over it.
-              queue.push(child);
+      const push = (sink, value) => {
+        runMonad(new Context(), (function*() {
+          yield writeSink(sink, value);
+          const queue = new Util.PriorityQueue();
+          // TODO don't push initial sink
+          queue.push(sink);
+          for (const sink of queue) {
+            const childrenToPoll = yield* sink.poll();
+            for (const child of childrenToPoll) {
+              if (child.isActive()) {
+                // Mutating the queue while iterating over it.
+                queue.push(child);
+              }
             }
           }
-        }
-      })());
+          yield context => context._actions.forEach(([handle, value]) => handle(value));
+        })());
+        constructEvents();
+      }
 
       return { writeSink, readSink, enqueueAction, liftPull, push };
     })();
