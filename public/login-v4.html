@@ -415,9 +415,9 @@
         const result = new Sink([], function* (that) {
           return true;
         });
-        subscribe((x) => 
-          if (result.isActive()) Push.push(result, x)
-        );
+        subscribe((x) => {
+          if (result.isActive()) Push.push(result, x);
+        });
         return result;
       };
 
@@ -485,9 +485,9 @@
         // Subscribe takes a push function, attaches it as an event listener,
         // and returns an unsubscribe function.
         constructor(subscribe) {
-          this.unsubscribe = subscribe((x) => 
-            if (this._isActive) Push.push(this, x)
-          );
+          this.unsubscribe = subscribe((x) => {
+            if (this._isActive) Push.push(this, x);
+          });
           this._children = new Util.ShrinkingList();
           this._priority = 0;
           this._isActive = false;
