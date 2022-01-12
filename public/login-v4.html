@@ -202,8 +202,6 @@
     const Push = (() => {
       class Context {
         constructor() {
-          // We're able to use a weakMap without fear of losing access to the values
-          // because the keys will be strongly referenced by a chain of parent pulsePushes.
           this._values = new WeakMap();
           this._actions = [];
         }
@@ -237,9 +235,9 @@
       const readSink = Util.callMethod("readSink");
       const enqueueAction = Util.callMethod("enqueueAction");
       const liftPull = Util.callMethod("liftPull");
-
-      // Mutable: queue
-      function* push(sink, value) {
+      
+      // TODO check if sink is active
+      const push = (sink, value) => runMonad(new Context(), (function*() {
         yield writeSink(sink, value);
         const queue = new Util.PriorityQueue();
         // TODO don't push initial sink
@@ -253,9 +251,9 @@
             }
           }
         }
-      }
+      })());
 
-      return { Context, writeSink, readSink, enqueueAction, liftPull, push };
+      return { writeSink, readSink, enqueueAction, liftPull, push };
     })();
 
     // Mutable: context, generator
@@ -382,11 +380,9 @@
         const result = new Sink([], function* (that) {
           return true;
         });
-        subscribe((x) => {
-          if (result.isActive()) {
-            runMonad(new Push.Context(), Push.push(result, x));
-          }
-        });
+        subscribe((x) => 
+          if (result.isActive()) Push.push(result, x)
+        );
         return result;
       };
 
@@ -454,11 +450,9 @@
         // Subscribe takes a push function, attaches it as an event listener,
         // and returns an unsubscribe function.
         constructor(subscribe) {
-          this.unsubscribe = subscribe((x) => {
-            if (this._isActive) {
-              runMonad(new Push.Context(), Push.push(this, x));
-            }
-          });
+          this.unsubscribe = subscribe((x) => 
+            if (this._isActive) Push.push(this, x)
+          );
           this._children = new Util.ShrinkingList();
           this._priority = 0;
           this._isActive = false;
