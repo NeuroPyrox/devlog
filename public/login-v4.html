@@ -189,7 +189,7 @@
     })();
 
     let eventConstructors = [];
-    const lazy = (thunk) => {
+    const lazyEvent = (thunk) => {
       const result = () => {
         if (thunk.processing) {
           throw new Error("Illegal circular event dependency");
@@ -875,11 +875,11 @@
       };
 
       const input = (subscribe) =>
-        lazy(() => new Source(new Sink.Input(subscribe)));
+        lazyEvent(() => new Source(new Sink.Input(subscribe)));
       const never = k(neverSource);
       // TODO mergeWith
       const merge = (parentEventA, parentEventB, combine = (a, b) => a) =>
-        lazy(() => {
+        lazyEvent(() => {
           const parentSourceA = parentEventA();
           const parentSourceB = parentEventB();
           const parentSinkA = parentSourceA.derefSink();
@@ -893,7 +893,7 @@
             : new Source(new Sink.Merge(parentSinkA, parentSinkB, combine));
         });
       const filter = (parentEvent, predicate) =>
-        lazy(() => {
+        lazyEvent(() => {
           const parentSink = parentEvent().derefSink();
           return parentSink === undefined
             ? neverSource
@@ -901,7 +901,7 @@
         });
 
       const map = (parentEvent, f) =>
-        lazy(() => {
+        lazyEvent(() => {
           const parentSink = parentEvent().derefSink();
           return parentSink === undefined
             ? neverSource
@@ -912,7 +912,7 @@
       const tag = (parentEvent, latchGet) => map(parentEvent, () => latchGet());
 
       const observeE = (parentEvent) =>
-        lazy(() => {
+        lazyEvent(() => {
           const parentSink = parentEvent().derefSink();
           return parentSink === undefined
             ? neverSource
