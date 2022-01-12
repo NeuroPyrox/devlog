@@ -199,6 +199,50 @@
       Util.assert(deferred.length === 0);
     };
 
+    // Mutable: context, generator
+    const runMonad = (context, generator) => {
+      let step = generator.next();
+      while (!step.done) {
+        step = generator.next(step.value(context));
+      }
+      context._endMonad();
+      return step.value;
+    };
+    
+    const Pull = (() => {
+      const context = {
+        output: (parentEvent, handle) => {
+          let parentSink = null;
+          eventConstructors.push(() => {
+            parentSink = parentEvent().derefSink();
+            if (parentSink !== undefined) {
+              new Sink.Output(parentSink, handle);
+            }
+          });
+          // Currently benign memory leak: unsubscribe keeps parentEvent alive.
+          const unsubscribe = () => {
+            if (parentSink === null) {
+              throw new Error("This branch hasn't been programmed yet");
+            } else if (parentSink !== undefined) {
+              parentSink.unsubscribe();
+            }
+          };
+          return unsubscribe;
+        },
+        _endMonad: () => {},
+      };
+      const output = Util.callMethod("output");
+      
+      const pullLazy = monadicValue => runMonad(context, monadicValue());
+      const pull = monadicValue => {
+        const result = pullLazy(monadicValue);
+        doDeferred();
+        return result;
+      }
+      
+      return { output, pullLazy, pull };
+    })();
+
     const Push = (() => {
       class Context {
         constructor() {
@@ -221,8 +265,9 @@
           this._actions.push([handle, value]);
         }
 
+        // TODO is the return value needed?
         liftPull(monadicValue) {
-          return runMonad(PullContext, monadicValue());
+          return Pull.pullLazy(monadicValue);
         }
 
         _endMonad() {
@@ -255,16 +300,6 @@
 
       return { writeSink, readSink, enqueueAction, liftPull, push };
     })();
-
-    // Mutable: context, generator
-    const runMonad = (context, generator) => {
-      let step = generator.next();
-      while (!step.done) {
-        step = generator.next(step.value(context));
-      }
-      context._endMonad();
-      return step.value;
-    };
 
     // Optimized: worst case algorithmic complexity
     // Not benchmarked
@@ -901,28 +936,7 @@
       const getClicks = (domNode) =>
         input((push) => domNode.addEventListener("click", push));
 
-      const PullContext = {
-        output: (parentEvent, handle) => {
-          let parentSink = null;
-          eventConstructors.push(() => {
-            parentSink = parentEvent().derefSink();
-            if (parentSink !== undefined) {
-              new Sink.Output(parentSink, handle);
-            }
-          });
-          // Currently benign memory leak: unsubscribe keeps parentEvent alive.
-          const unsubscribe = () => {
-            if (parentSink === null) {
-              throw new Error("This branch hasn't been programmed yet");
-            } else if (parentSink !== undefined) {
-              parentSink.unsubscribe();
-            }
-          };
-          return unsubscribe;
-        },
-        _endMonad: () => {},
-      };
-      const output = Util.callMethod("output");
+      const output = Pull.output;
 
       function* switchE(eventOfEvent) {
         const sink = new Sink.SwitchE();
@@ -953,7 +967,6 @@
         tag,
         observeE,
         getClicks,
-        PullContext,
         output,
         switchE,
         mergeBind,
@@ -971,7 +984,6 @@
       tag,
       observeE,
       getClicks,
-      PullContext,
       output,
       switchE,
       mergeBind,
@@ -1398,8 +1410,6 @@
       return start;
     }
 
-    const start = runMonad(PullContext, main());
-    doDeferred();
-    start();
+    Pull.pull(main)();
   </script>
 </html>
