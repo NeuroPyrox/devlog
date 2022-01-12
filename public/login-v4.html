@@ -188,15 +188,11 @@
       };
     })();
 
-    // Stores computations that we don't want done in the middle of Push.push
-    // Possible refactor once we implement behaviors:
-    //   store output callbacks in a different list than event constructors.
-    let deferred = [];
-    const defer = (f) => deferred.push(f);
+    let eventConstructors = [];
     const lazy = (thunk) => {
       const result = () => {
         if (thunk.processing) {
-          throw new Error("Illegal circular lazy evaluation");
+          throw new Error("Illegal circular event dependency");
         }
         if (!thunk.done) {
           const temp = thunk;
@@ -206,7 +202,7 @@
         }
         return thunk.value;
       };
-      defer(result);
+      eventConstructors.push(result);
       return result;
     };
     // TODO make a dedicated startup function.
@@ -215,15 +211,7 @@
       const temp = deferred;
       deferred = [];
       temp.forEach((f) => f());
-      // This branch will only be visited if
-      // we create a new event within an output callback.
-      if (deferred.length !== 0) {
-        const temp = deferred;
-        deferred = [];
-        temp.forEach((f) => f());
-        // Can't loop more than once, but that might change once we implement behaviors.
-        Util.assert(deferred.length === 0);
-      }
+      Util.assert(deferred.length === 0);
     };
 
     const Push = (() => {
@@ -232,6 +220,7 @@
           // We're able to use a weakMap without fear of losing access to the values
           // because the keys will be strongly referenced by a chain of parent pulsePushes.
           this._values = new WeakMap();
+          this._actions = [];
         }
 
         writeSink(sink, value) {
@@ -246,7 +235,7 @@
         }
 
         enqueueAction(handle, value) {
-          defer(() => handle(value));
+          this._actions.push([handle, value]);
         }
 
         liftPull(monadicValue) {
@@ -254,6 +243,7 @@
         }
 
         _endMonad() {
+          this._actions.forEach(([handle, value]) => handle(value));
           doDeferred();
         }
       }
@@ -935,7 +925,7 @@
       const PullContext = {
         output: (parentEvent, handle) => {
           let parentSink = null;
-          defer(() => {
+          eventConstructors.push(() => {
             parentSink = parentEvent().derefSink();
             if (parentSink !== undefined) {
               new Sink.Output(parentSink, handle);
