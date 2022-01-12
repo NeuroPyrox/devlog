@@ -192,11 +192,11 @@
     };
     // TODO make a dedicated startup function.
     // Only called on startup and at the end of push monads.
-    const doDeferred = () => {
-      const temp = deferred;
-      deferred = [];
+    const constructEvents = () => {
+      const temp = eventConstructors;
+      eventConstructors = [];
       temp.forEach((f) => f());
-      Util.assert(deferred.length === 0);
+      Util.assert(eventConstructors.length === 0);
     };
 
     // Mutable: context, generator
@@ -236,7 +236,7 @@
       const pullLazy = monadicValue => runMonad(context, monadicValue());
       const pull = monadicValue => {
         const result = pullLazy(monadicValue);
-        doDeferred();
+        constructEvents();
         return result;
       }
       
@@ -272,7 +272,7 @@
 
         _endMonad() {
           this._actions.forEach(([handle, value]) => handle(value));
-          doDeferred();
+          constructEvents();
         }
       }
 
