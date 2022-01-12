@@ -158,20 +158,6 @@
 
       const weakRefUndefined = { deref: k(undefined) };
 
-      // TODO remove
-      const weakMapFromEdges = (edges) => {
-        const graph = new WeakMap();
-        for (const [parent, child] of edges) {
-          const children = graph.get(parent);
-          if (children === undefined) {
-            graph.set(parent, [child]);
-          } else {
-            children.push(child);
-          }
-        }
-        return graph;
-      };
-
       const callMethod =
         (field) =>
         (...args) =>
@@ -183,7 +169,6 @@
         assert,
         ShrinkingList,
         weakRefUndefined,
-        weakMapFromEdges,
         callMethod,
       };
     })();
