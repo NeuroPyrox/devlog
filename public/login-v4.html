@@ -147,6 +147,14 @@
           this._value = value;
           this._next = next;
         }
+        
+        set(value) {
+          this._value = value;
+        }
+        
+        get() {
+          return this._value;
+        }
 
         remove() {
           assert(this._prev._next === this);
