@@ -147,11 +147,11 @@
           this._value = value;
           this._next = next;
         }
-        
+
         set(value) {
           this._value = value;
         }
-        
+
         get() {
           return this._value;
         }
@@ -198,7 +198,6 @@
       eventConstructors.push(result);
       return result;
     };
-    // TODO make a dedicated startup function.
     // Only called on startup and at the end of push monads.
     const constructEvents = () => {
       const temp = eventConstructors;
@@ -207,6 +206,7 @@
       Util.assert(eventConstructors.length === 0);
     };
 
+    // TODO once we implement the html monad, remove the return value.
     // Mutable: context, generator
     const runMonad = (context, generator) => {
       let step = generator.next();
@@ -215,7 +215,7 @@
       }
       return step.value;
     };
-    
+
     const Pull = (() => {
       const context = {
         output: (parentEvent, handle) => {
@@ -235,17 +235,17 @@
             }
           };
           return unsubscribe;
-        }
+        },
       };
       const output = Util.callMethod("output");
-      
-      const pullLazy = monadicValue => runMonad(context, monadicValue());
-      const pull = monadicValue => {
+
+      const pullLazy = (monadicValue) => runMonad(context, monadicValue());
+      const pull = (monadicValue) => {
         const result = pullLazy(monadicValue);
         constructEvents();
         return result;
-      }
-      
+      };
+
       return { output, pullLazy, pull };
     })();
 
@@ -271,7 +271,6 @@
           this._actions.push([handle, value]);
         }
 
-        // TODO is the return value needed?
         liftPull(monadicValue) {
           return Pull.pullLazy(monadicValue);
         }
@@ -281,38 +280,44 @@
       const readSink = Util.callMethod("readSink");
       const enqueueAction = Util.callMethod("enqueueAction");
       const liftPull = Util.callMethod("liftPull");
-      
+
       // TODO check if sink is active
       const push = (sink, value) => {
-        runMonad(new Context(), (function*() {
-          yield writeSink(sink, value);
-          const queue = new Util.PriorityQueue();
-          // TODO don't push initial sink
-          queue.push(sink);
-          for (const sink of queue) {
-            const childrenToPoll = yield* sink.poll();
-            for (const child of childrenToPoll) {
-              if (child.isActive()) {
-                // Mutating the queue while iterating over it.
-                queue.push(child);
+        runMonad(
+          new Context(),
+          (function* () {
+            yield writeSink(sink, value);
+            const queue = new Util.PriorityQueue();
+            // TODO don't push initial sink
+            queue.push(sink);
+            for (const sink of queue) {
+              const childrenToPoll = yield* sink.poll();
+              for (const child of childrenToPoll) {
+                if (child.isActive()) {
+                  // Mutating the queue while iterating over it.
+                  queue.push(child);
+                }
               }
             }
-          }
-          yield context => context._actions.forEach(([handle, value]) => handle(value));
-        })());
+            yield (context) =>
+              context._actions.forEach(([handle, value]) => handle(value));
+          })()
+        );
         constructEvents();
-      }
+      };
 
       return { writeSink, readSink, enqueueAction, liftPull, push };
     })();
-    
+
     class Sink {
       constructor(parents) {
-        this._weakParentLinks = parents.map(parent => new WeakRef(parent._children.add(this)));
+        this._weakParentLinks = parents.map(
+          (parent) => new WeakRef(parent._children.add(this))
+        );
         this._children = new Util.ShrinkingList();
       }
     }
-    
+
     class Source {
       constructor(parents, sink) {
         this._parentLinks = new Util.ShrinkingList();
@@ -325,15 +330,18 @@
         this._sink = new WeakRef(sink);
       }
     }
-    
+
     // Possible optimization: specialize the different cases of how many parents are alive.
-    const newEvent = (parents, poll) => lazyEvent(() => {
-      const parentSources = parents.map(parent => parent());
-      const parentSinks = parentSources.map(source => source._sink).filter(source => source !== undefined);
-      const sink = new Sink(parentSinks);
-      const source = new Source(parentSources, sink);
-      return source;
-    });
+    const newEvent = (parents, poll) =>
+      lazyEvent(() => {
+        const parentSources = parents.map((parent) => parent());
+        const parentSinks = parentSources
+          .map((source) => source._sink)
+          .filter((source) => source !== undefined);
+        const sink = new Sink(parentSinks);
+        const source = new Source(parentSources, sink);
+        return source;
+      });
 
     // Optimized: worst case algorithmic complexity
     // Not benchmarked
