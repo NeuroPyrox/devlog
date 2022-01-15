@@ -310,10 +310,13 @@
     })();
 
     class Sink {
-      constructor(parents) {
+      constructor(weakParents) {
         this._children = new Util.ShrinkingList();
-        this._weakParentLinks = parents.map(
-          (parent) => new WeakRef(parent._children.add(this))
+        this._weakParentLinks = weakParents.map(
+          (weakParent) => {
+            const parent = weakParent.deref();
+            return parent === undefined ? Util.weakRefUndefined : new WeakRef(parent._children.add(this));
+          }
         );
       }
     }
@@ -335,10 +338,7 @@
     const newEvent = (parents, poll) =>
       lazyEvent(() => {
         const parentSources = parents.map((parent) => parent());
-        const parentSinks = parentSources
-          .map((source) => source._sink)
-          .filter((source) => source !== undefined);
-        const sink = new Sink(parentSinks);
+        const sink = new Sink(parentSources.map((source) => source._sink));
         const source = new Source(parentSources, sink);
         return source;
       });
