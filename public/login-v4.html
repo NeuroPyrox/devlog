@@ -310,6 +310,8 @@
     })();
 
     class Sink {
+      static _finalizers = new FinalizationRegistry(weakSource => weakSource.deref()?._remove());
+      
       constructor(weakParents) {
         this._children = new Util.ShrinkingList();
         this._weakParentLinks = weakParents.map(
@@ -339,11 +341,19 @@
           const childLink = parent._weakChildLinks.add(new WeakRef(parentLink));
           this._parentLinkFinalizers.register(parentLink, new WeakRef(childLink));
         }
-        this._sink = new WeakRef(sink); // TODO make undefined on sink finalization.
+        this._sink = new WeakRef(sink);
       }
       
       _isPushable() {
         return this._sink.deref() !== undefined;
+      }
+      
+      _remove() {
+        Util.assert(this._sink.deref() === undefined);
+        for (const weakChildLink of this._weakChildLinks) {
+          weakChildLink.deref()?.remove();
+        }
+        // [this._weakChildLinks] will soon get cleared by [this._parentLinkFinalizers].
       }
     }
 
@@ -353,6 +363,7 @@
         const parentSources = parents.map((parent) => parent());
         const sink = new Sink(parentSources.map((source) => source._sink));
         const source = new Source(parentSources.filter(source => source._isPushable(), sink));
+        sink._finalizers.register(sink, new WeakRef(source));
         source._finalizers.register(source, source._sink);
         return source;
       });
