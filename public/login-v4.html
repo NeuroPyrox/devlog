@@ -322,6 +322,8 @@
     }
 
     class Source {
+      static parentLinkFinalizers = new FinalizationRegistry(weakChildLink => weakChildLink.deref()?.remove());
+      
       constructor(parents, sink) {
         this._weakChildLinks = new Util.ShrinkingList();
         // TODO refactor so this is a linked list
@@ -331,6 +333,7 @@
           const parentLink = this._parentLinks.add(null);
           const childLink = parent._weakChildLinks.add(new WeakRef(parentLink));
           parentLink.set(childLink);
+          this.parentLinkFinalizers.register(parentLink, new WeakRef(childLink));
         }
         this._sink = new WeakRef(sink); // TODO make undefined on sink finalization.
       }
