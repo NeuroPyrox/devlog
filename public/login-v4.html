@@ -206,7 +206,6 @@
       Util.assert(eventConstructors.length === 0);
     };
 
-    // TODO once we implement the html monad, remove the return value.
     // Mutable: context, generator
     const runMonad = (context, generator) => {
       let step = generator.next();
@@ -239,7 +238,9 @@
       };
       const output = Util.callMethod("output");
 
+      // The return value is used by observeE.
       const pullLazy = (monadicValue) => runMonad(context, monadicValue());
+      // TODO once we implement the html monad, remove the return value.
       const pull = (monadicValue) => {
         const result = pullLazy(monadicValue);
         constructEvents();
