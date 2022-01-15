@@ -310,18 +310,20 @@
     })();
 
     class Sink {
-      static _finalizers = new FinalizationRegistry(weakSource => weakSource.deref()?._remove());
-      
+      static _finalizers = new FinalizationRegistry((weakSource) =>
+        weakSource.deref()?._remove()
+      );
+
       constructor(weakParents) {
         this._children = new Util.ShrinkingList();
-        this._weakParentLinks = weakParents.map(
-          (weakParent) => {
-            const parent = weakParent.deref();
-            return parent === undefined ? Util.weakRefUndefined : new WeakRef(parent._children.add(this));
-          }
-        );
+        this._weakParentLinks = weakParents.map((weakParent) => {
+          const parent = weakParent.deref();
+          return parent === undefined
+            ? Util.weakRefUndefined
+            : new WeakRef(parent._children.add(this));
+        });
       }
-      
+
       _remove() {
         for (const weakParentLink of this._weakParentLinks) {
           weakParentLink.deref()?.remove();
@@ -330,24 +332,31 @@
     }
 
     class Source {
-      static _finalizers = new FinalizationRegistry(weakSink => weakSink.deref()?._remove());
-      static _parentLinkFinalizers = new FinalizationRegistry(weakChildLink => weakChildLink.deref()?.remove());
-      
+      static _finalizers = new FinalizationRegistry((weakSink) =>
+        weakSink.deref()?._remove()
+      );
+      static _parentLinkFinalizers = new FinalizationRegistry((weakChildLink) =>
+        weakChildLink.deref()?.remove()
+      );
+
       constructor(parents, sink) {
         this._weakChildLinks = new Util.ShrinkingList();
         this._parents = new Util.ShrinkingList();
         for (const parent of parents) {
           const parentLink = this._parents.add(parent);
           const childLink = parent._weakChildLinks.add(new WeakRef(parentLink));
-          this._parentLinkFinalizers.register(parentLink, new WeakRef(childLink));
+          this._parentLinkFinalizers.register(
+            parentLink,
+            new WeakRef(childLink)
+          );
         }
         this._sink = new WeakRef(sink);
       }
-      
+
       _isPushable() {
         return this._sink.deref() !== undefined;
       }
-      
+
       _remove() {
         Util.assert(this._sink.deref() === undefined);
         for (const weakChildLink of this._weakChildLinks) {
@@ -362,7 +371,9 @@
       lazyEvent(() => {
         const parentSources = parents.map((parent) => parent());
         const sink = new Sink(parentSources.map((source) => source._sink));
-        const source = new Source(parentSources.filter(source => source._isPushable(), sink));
+        const source = new Source(
+          parentSources.filter((source) => source._isPushable(), sink)
+        );
         sink._finalizers.register(sink, new WeakRef(source));
         source._finalizers.register(source, source._sink);
         return source;
