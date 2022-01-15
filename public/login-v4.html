@@ -324,6 +324,7 @@
     class Source {
       constructor(parents, sink) {
         this._weakChildLinks = new Util.ShrinkingList();
+        this._weakChildLinks.add(this); // Make it so a reference to _weakChildLinks keeps this alive
         this._parentLinks = new Util.ShrinkingList();
         for (const parent of parents) {
           const parentLink = this._parentLinks.add(null);
