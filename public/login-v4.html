@@ -311,22 +311,22 @@
 
     class Sink {
       constructor(parents) {
+        this._children = new Util.ShrinkingList();
         this._weakParentLinks = parents.map(
           (parent) => new WeakRef(parent._children.add(this))
         );
-        this._children = new Util.ShrinkingList();
       }
     }
 
     class Source {
       constructor(parents, sink) {
+        this._weakChildLinks = new Util.ShrinkingList();
         this._parentLinks = new Util.ShrinkingList();
         for (const parent of parents) {
           const parentLink = this._parentLinks.add(null);
           const childLink = parent._weakChildLinks.add(new WeakRef(parentLink));
           parentLink.set(childLink);
         }
-        this._weakChildLinks = new Util.ShrinkingList();
         this._sink = new WeakRef(sink);
       }
     }
