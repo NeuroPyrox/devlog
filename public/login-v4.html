@@ -319,10 +319,17 @@
           }
         );
       }
+      
+      _remove() {
+        for (const weakParentLink of this._weakParentLinks) {
+          weakParentLink.deref()?.remove();
+        }
+      }
     }
 
     class Source {
-      static parentLinkFinalizers = new FinalizationRegistry(weakChildLink => weakChildLink.deref()?.remove());
+      static _finalizers = new FinalizationRegistry(weakSink => weakSink.deref()?._remove());
+      static _parentLinkFinalizers = new FinalizationRegistry(weakChildLink => weakChildLink.deref()?.remove());
       
       constructor(parents, sink) {
         this._weakChildLinks = new Util.ShrinkingList();
@@ -330,7 +337,7 @@
         for (const parent of parents) {
           const parentLink = this._parents.add(parent);
           const childLink = parent._weakChildLinks.add(new WeakRef(parentLink));
-          this.parentLinkFinalizers.register(parentLink, new WeakRef(childLink));
+          this._parentLinkFinalizers.register(parentLink, new WeakRef(childLink));
         }
         this._sink = new WeakRef(sink); // TODO make undefined on sink finalization.
       }
@@ -345,7 +352,8 @@
       lazyEvent(() => {
         const parentSources = parents.map((parent) => parent());
         const sink = new Sink(parentSources.map((source) => source._sink));
-        const source = new Source(parentSources.filter(source => source._isPushable(), sink);
+        const source = new Source(parentSources.filter(source => source._isPushable(), sink));
+        source._finalizers.register(source, source._sink);
         return source;
       });
 
