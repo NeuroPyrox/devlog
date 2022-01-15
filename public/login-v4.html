@@ -358,7 +358,7 @@
       }
 
       _remove() {
-        Util.assert(this._sink.deref() === undefined);
+        Util.assert(!this._isPushable());
         for (const weakChildLink of this._weakChildLinks) {
           weakChildLink.deref()?.remove();
         }
