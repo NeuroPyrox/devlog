@@ -324,6 +324,7 @@
     class Source {
       constructor(parents, sink) {
         this._weakChildLinks = new Util.ShrinkingList();
+        // TODO refactor so this is a linked list
         this._weakChildLinks.add(this); // Make it so a reference to _weakChildLinks keeps this alive
         this._parentLinks = new Util.ShrinkingList();
         for (const parent of parents) {
@@ -331,7 +332,11 @@
           const childLink = parent._weakChildLinks.add(new WeakRef(parentLink));
           parentLink.set(childLink);
         }
-        this._sink = new WeakRef(sink);
+        this._sink = new WeakRef(sink); // TODO make undefined on sink finalization.
+      }
+      
+      _isPushable() {
+        return this._sink.deref() !== undefined;
       }
     }
 
@@ -340,7 +345,7 @@
       lazyEvent(() => {
         const parentSources = parents.map((parent) => parent());
         const sink = new Sink(parentSources.map((source) => source._sink));
-        const source = new Source(parentSources, sink);
+        const source = new Source(parentSources.filter(source => source._isPushable(), sink);
         return source;
       });
 
