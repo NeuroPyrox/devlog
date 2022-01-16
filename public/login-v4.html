@@ -316,13 +316,24 @@
       );
 
       constructor(weakParents) {
+        const maybeParents = weakParents.map((weakParent) => weakParent.deref());
+        const parents = maybeParents.filter(maybeParent => maybeParent !== undefined);
         this._children = new Util.ShrinkingList();
-        this._weakParentLinks = weakParents.map((weakParent) => {
-          const parent = weakParent.deref();
-          return parent === undefined
+        this._weakParentLinks = maybeParents.map((maybeParent) =>
+          maybeParent === undefined
             ? Util.weakRefUndefined
-            : new WeakRef(parent._children.add(this));
-        });
+            : new WeakRef(maybeParent._children.add(this));
+        );
+        this._priority =
+          parents.length === 0
+            ? 0
+            : Math.max(
+                ...parents.map((parentSink) => parentSink.getPriority())
+              ) + 1;
+      }
+      
+      getPriority() {
+        return this._priority;
       }
 
       _remove() {
