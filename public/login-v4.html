@@ -315,7 +315,7 @@
         weakSource.deref()?._remove()
       );
 
-      constructor(weakParents) {
+      constructor(weakParents, poll) {
         const maybeParents = weakParents.map((weakParent) => weakParent.deref());
         const parents = maybeParents.filter(maybeParent => maybeParent !== undefined);
         this._children = new Util.ShrinkingList();
@@ -324,16 +324,28 @@
             ? Util.weakRefUndefined
             : new WeakRef(maybeParent._children.add(this));
         );
+        this._weakParents = weakParents;
         this._priority =
           parents.length === 0
             ? 0
             : Math.max(
                 ...parents.map((parentSink) => parentSink.getPriority())
               ) + 1;
+        this._poll = poll;
       }
       
       getPriority() {
         return this._priority;
+      }
+      
+      *poll() {
+        const parentValues = [];
+        for (const weakParent of this._weakParents) {
+          parentValues.push(yield Push.readSink(weakParent.deref()));
+        }
+        const shouldPropagate = yield* this._poll(this, ...parentValues);
+        // TODO filter by activeness
+        return shouldPropagate ? this._children : [];
       }
 
       _remove() {
@@ -380,11 +392,11 @@
 
     // Possible optimization: specialize the different cases of how many parents are alive.
     // Some of the event's parents may not be passed into this function but added later.
-    // The only parents passed here are the ones that [poll] depends on.
+    // The only parents passed here are the ones that [poll] immediately depends on.
     const newEvent = (parents, poll) =>
       lazyEvent(() => {
         const parentSources = parents.map((parent) => parent());
-        const sink = new Sink(parentSources.map((source) => source._sink));
+        const sink = new Sink(parentSources.map((source) => source._sink), poll);
         const source = new Source(
           parentSources.filter((source) => source._isPushable(), sink)
         );
