@@ -217,24 +217,19 @@
 
     const Pull = (() => {
       const context = {
-        output: (parentEvent, handle) => {
-          let parentSink = null;
-          eventConstructors.push(() => {
-            parentSink = parentEvent().derefSink();
-            if (parentSink !== undefined) {
-              new Sink.Output(parentSink, handle);
-            }
-          });
-          // Currently benign memory leak: unsubscribe keeps parentEvent alive.
-          const unsubscribe = () => {
-            if (parentSink === null) {
-              throw new Error("This branch hasn't been programmed yet");
-            } else if (parentSink !== undefined) {
-              parentSink.unsubscribe();
-            }
-          };
-          return unsubscribe;
-        },
+        // TODO activeness
+        // The output eventually stops when there are no more
+        // references to the return value of this function.
+        // Implementation-wise, there's no need to put this function
+        // in the Pull monad, but we do it to make the semantics cleaner
+        // and for the ability to control when the output starts.
+        output: (parent, handle) => lazyEvent(() => {
+          const parentSource = parent();
+          return newEventPair([parent()], function* (that, {value}) {
+            yield Push.enqueueAction(handle, value);
+            return false;
+          })[1];
+        })
       };
       const output = Util.callMethod("output");
 
@@ -411,6 +406,7 @@
     const input = (subscribe) => lazyEvent(() => {
       let sink, source;
       const unsubscribe = subscribe(x => Push.push(sink, x));
+      // TODO refactor so we're able to put an empty poll function.
       [sink, source] = newEventPair([], function* (that) {
         return true;
       }, unsubscribe);
