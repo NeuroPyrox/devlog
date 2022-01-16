@@ -309,14 +309,14 @@
 
       return { writeSink, readSink, enqueueAction, liftPull, push };
     })();
-    
-    const newEvent = (() => {
+
+    const newEventPair = (() => {
       class Sink {
         static _finalizers = new FinalizationRegistry((weakSource) =>
           weakSource.deref()?._remove()
         );
 
-        constructor(weakParents, poll) {
+        constructor(weakParents, poll, unsubscribe) {
           const maybeParents = weakParents.map((weakParent) => weakParent.deref());
           const parents = maybeParents.filter(maybeParent => maybeParent !== undefined);
           this._children = new Util.ShrinkingList();
@@ -333,6 +333,7 @@
                   ...parents.map((parentSink) => parentSink.getPriority())
                 ) + 1;
           this._poll = poll;
+          this._unsubscribe = unsubscribe;
         }
 
         getPriority() {
@@ -353,6 +354,7 @@
           for (const weakParentLink of this._weakParentLinks) {
             weakParentLink.deref()?.remove();
           }
+          this._unsubscribe();
         }
       }
 
@@ -394,18 +396,26 @@
       // Possible optimization: specialize the different cases of how many parents are alive.
       // Some of the event's parents may not be passed into this function but added later.
       // The only parents passed here are the ones that [poll] immediately depends on.
-      return (parents, poll) =>
-        lazyEvent(() => {
-          const parentSources = parents.map((parent) => parent());
-          const sink = new Sink(parentSources.map((source) => source._sink), poll);
-          const source = new Source(
-            parentSources.filter((source) => source._isPushable(), sink)
-          );
-          sink._finalizers.register(sink, new WeakRef(source));
-          source._finalizers.register(source, source._sink);
-          return source;
-        });
+      return (parents, poll, unsubscribe = () => {}) => {
+        const parentSources = parents.map((parent) => parent());
+        const sink = new Sink(parentSources.map((source) => source._sink), poll);
+        const source = new Source(
+          parentSources.filter((source) => source._isPushable(), sink)
+        );
+        sink._finalizers.register(sink, new WeakRef(source), unsubscribe);
+        source._finalizers.register(source, source._sink);
+        return [sink, source];
+      };
     })();
+    
+    const input = (subscribe) => lazyEvent(() => {
+      let sink, source;
+      const unsubscribe = subscribe(x => Push.push(sink, x));
+      [sink, source] = newEventPair([], function* (that) {
+        return true;
+      }, unsubscribe);
+      return source;
+    });
 
     // Optimized: worst case algorithmic complexity
     // Not benchmarked
