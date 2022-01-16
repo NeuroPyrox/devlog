@@ -368,6 +368,8 @@
     }
 
     // Possible optimization: specialize the different cases of how many parents are alive.
+    // Some of the event's parents may not be passed into this function but added later.
+    // The only parents passed here are the ones that [poll] depends on.
     const newEvent = (parents, poll) =>
       lazyEvent(() => {
         const parentSources = parents.map((parent) => parent());
