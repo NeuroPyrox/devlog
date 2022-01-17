@@ -327,7 +327,7 @@
                   ...parents.map((parentSink) => parentSink.getPriority())
                 ) + 1;
           this._poll = poll;
-          this._unsubscribe = unsubscribe;
+          this._unsubscribe = unsubscribe; // Only used for input events
         }
 
         getPriority() {
@@ -411,6 +411,12 @@
       }, unsubscribe);
       return source;
     });
+    
+    const map = (parent, f) => lazyEvent(() =>
+      newEventPair([parent()], function* (that, {value}) {
+        yield Push.writeSink(that, f(value));
+        return true;
+      }));
 
     // Optimized: worst case algorithmic complexity
     // Not benchmarked
