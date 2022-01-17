@@ -417,6 +417,15 @@
         yield Push.writeSink(that, f(value));
         return true;
       }));
+    
+    const filter = (parent, predicate) => lazyEvent(() =>
+      newEventPair([parent()], function* (that, {value}) {
+        if (predicate(value)) {
+          return false;
+        }
+        yield Push.writeSink(that, value);
+        return true;
+      }));
 
     // Optimized: worst case algorithmic complexity
     // Not benchmarked
