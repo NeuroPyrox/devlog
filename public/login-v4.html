@@ -443,6 +443,12 @@
         return true;
       }));
 
+    const observeE = parent => lazyEvent(() =>
+      newEventPair([parent()], function* (that, {value}) {
+        yield Push.writeSink(that, yield Push.liftPull(value));
+        return true;
+      }));
+
     // Optimized: worst case algorithmic complexity
     // Not benchmarked
     // TODO
