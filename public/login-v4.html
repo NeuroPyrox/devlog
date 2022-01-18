@@ -339,6 +339,7 @@
           for (const weakParent of this._weakParents) {
             parentValues.push(yield Push.readSink(weakParent.deref()));
           }
+          // TODO refactor to return a maybe value from this._poll.
           const shouldPropagate = yield* this._poll(this, ...parentValues);
           // TODO filter by activeness
           return shouldPropagate ? this._children : [];
@@ -401,7 +402,7 @@
         return [sink, source];
       };
     })();
-    
+
     const input = (subscribe) => lazyEvent(() => {
       let sink, source;
       const unsubscribe = subscribe(x => Push.push(sink, x));
@@ -411,13 +412,13 @@
       }, unsubscribe);
       return source;
     });
-    
+
     const map = (parent, f) => lazyEvent(() =>
       newEventPair([parent()], function* (that, {value}) {
         yield Push.writeSink(that, f(value));
         return true;
       }));
-    
+
     const filter = (parent, predicate) => lazyEvent(() =>
       newEventPair([parent()], function* (that, {value}) {
         if (predicate(value)) {
@@ -426,7 +427,7 @@
         yield Push.writeSink(that, value);
         return true;
       }));
-    
+
     const merge = (parentA, parentB, ABtoC = (a, b) => a, AtoC = a => a, BtoC = b => b) => lazyEvent(() =>
       newEventPair([parentA(), parentB()], function* (that, parentAValue, parentBValue) {
         if (parentAValue === undefined) {
