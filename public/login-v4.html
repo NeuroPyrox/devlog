@@ -426,6 +426,21 @@
         yield Push.writeSink(that, value);
         return true;
       }));
+    
+    const merge = (parentA, parentB, ABtoC = (a, b) => a, AtoC = a => a, BtoC = b => b) => lazyEvent(() =>
+      newEventPair([parentA(), parentB()], function* (that, parentAValue, parentBValue) {
+        if (parentAValue === undefined) {
+          yield Push.writeSink(that, BtoC(parentBValue.value));
+        } else if (parentBValue === undefined) {
+          yield Push.writeSink(that, AtoC(parentAValue.value));
+        } else {
+          yield Push.writeSink(
+            that,
+            ABtoC(parentAValue.value, parentBValue.value)
+          );
+        }
+        return true;
+      }));
 
     // Optimized: worst case algorithmic complexity
     // Not benchmarked
