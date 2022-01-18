@@ -307,7 +307,7 @@
     const newEventPair = (() => {
       class Sink {
         static _finalizers = new FinalizationRegistry((weakSource) =>
-          weakSource.deref()?._remove()
+          weakSource.deref()?._onUnpushable()
         );
 
         constructor(weakParents, poll, unsubscribe) {
@@ -345,7 +345,7 @@
           return shouldPropagate ? this._children : [];
         }
 
-        _remove() {
+        _onUnpullable() {
           for (const weakParentLink of this._weakParentLinks) {
             weakParentLink.deref()?.remove();
           }
@@ -355,7 +355,7 @@
 
       class Source {
         static _finalizers = new FinalizationRegistry((weakSink) =>
-          weakSink.deref()?._remove()
+          weakSink.deref()?._onUnpullable()
         );
         static _parentLinkFinalizers = new FinalizationRegistry((weakChildLink) =>
           weakChildLink.deref()?.remove()
@@ -379,7 +379,7 @@
           return this._sink.deref() !== undefined;
         }
 
-        _remove() {
+        _onUnpushable() {
           Util.assert(!this._isPushable());
           for (const weakChildLink of this._weakChildLinks) {
             weakChildLink.deref()?.remove();
@@ -448,6 +448,8 @@
         yield Push.writeSink(that, yield Push.liftPull(value));
         return true;
       }));
+    
+    
 
     // Optimized: worst case algorithmic complexity
     // Not benchmarked
