@@ -409,7 +409,7 @@
         const parentSources = parents.map((parent) => parent());
         const sink = new Sink(parentSources.map((source) => source._sink), poll);
         const source = new Source(
-          parentSources.filter((source) => source._isPushable(), sink)
+          parentSources.filter((source) => source._isPushable()), sink
         );
         sink._finalizers.register(sink, new WeakRef(source), unsubscribe);
         source._finalizers.register(source, source._sink);
