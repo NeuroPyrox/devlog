@@ -374,7 +374,20 @@
             );
           }
           this._sink = new WeakRef(sink);
-        } 
+        }
+        
+        _addChild(child) {
+          if (!this._isPushable()) {
+            return;
+          }
+          Util.assert(child._isPushable());
+          const parentLink = child._parents.add(this);
+          const childLink = this._weakChildLinks.add(new WeakRef(parentLink));
+          this._parentLinkFinalizers.register(
+            parentLink,
+            new WeakRef(childLink)
+          );
+        }
 
         _isPushable() {
           return this._sink.deref() !== undefined;
@@ -466,7 +479,7 @@
         sink._switch(segmentSource._sink);
         weakSource.deref()?._switch(segmentSource);
       });
-      eventConstructors.push(() => source._addParent(switcher()));
+      eventConstructors.push(() => switcher()._addChild(source));
       return k(source);
     }
 
