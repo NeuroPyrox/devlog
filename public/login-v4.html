@@ -365,15 +365,8 @@
         constructor(parents, sink) {
           this._weakChildLinks = new Util.ShrinkingList();
           this._parents = new Util.ShrinkingList();
-          for (const parent of parents) {
-            const parentLink = this._parents.add(parent);
-            const childLink = parent._weakChildLinks.add(new WeakRef(parentLink));
-            this._parentLinkFinalizers.register(
-              parentLink,
-              new WeakRef(childLink)
-            );
-          }
           this._sink = new WeakRef(sink);
+          parents.forEach(parent => parent._addChild(this));
         }
         
         _addChild(child) {
@@ -408,9 +401,7 @@
       return (parents, poll, unsubscribe = () => {}) => {
         const parentSources = parents.map((parent) => parent());
         const sink = new Sink(parentSources.map((source) => source._sink), poll);
-        const source = new Source(
-          parentSources.filter((source) => source._isPushable()), sink
-        );
+        const source = new Source(parentSources, sink);
         sink._finalizers.register(sink, new WeakRef(source), unsubscribe);
         source._finalizers.register(source, source._sink);
         return [sink, source];
