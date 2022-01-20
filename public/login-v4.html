@@ -466,10 +466,12 @@
       // The free variables in the closure are [sink] and [weakSource]
       const switcher = yield Pull.output(parent, segment => {
         const segmentSource = segment(); // It's safe to construct events within output.
-        // [onUnpullable] needs to make [switch] not add any more parents.
+        // Won't add the sink edge if unpullable.
         sink._switch(segmentSource._sink);
+        // Will add the source edge because [sink] is pushable.
         weakSource.deref()?._switch(segmentSource);
       });
+      // Won't add the source edge if unpushable.
       eventConstructors.push(() => switcher()._addChild(source));
       return k(source);
     }
