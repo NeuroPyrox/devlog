@@ -124,6 +124,14 @@
         isEmpty() {
           return this._next === this;
         }
+        
+        getFirst() {
+          return this._next;
+        }
+        
+        getLast() {
+          return this._prev;
+        }
 
         // Assumes no nodes will be removed while iterating
         [Symbol.iterator]() {
@@ -394,10 +402,11 @@
           // [this._weakChildLinks] will soon get cleared by [this._parentLinkFinalizers].
         }
         
+        // Only used for switchE
         _switch(segment) {
-          // TODO use public instead of private accessors.
-          if (this._parents._prev !== this._parents._next) {
-            this._parents._prev.remove();
+          // Check if there's more than one parent.
+          if (this._parents.getLast() !== this._parents.getFirst()) {
+            this._parents.getLast().remove();
           }
           segment._addChild(this);
         }
