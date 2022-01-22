@@ -115,9 +115,9 @@
         }
 
         add(value) {
-          const result = new ShrinkingListNode(this, value, this._next);
-          this._next._prev = result;
-          this._next = result;
+          const result = new ShrinkingListNode(this._prev, value, this);
+          this._prev._next = result;
+          this._prev = result;
           return result;
         }
 
@@ -397,7 +397,7 @@
         _switch(segment) {
           // TODO use public instead of private accessors.
           if (this._parents._prev !== this._parents._next) {
-            this._parents._next.remove();
+            this._parents._prev.remove();
           }
           segment._addChild(this);
         }
