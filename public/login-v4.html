@@ -453,77 +453,88 @@
         return [sink, source];
       };
     })();
+    
+    const Combinators = (() => {
+      const input = (subscribe) => lazyEvent(() => {
+        let sink, source;
+        const unsubscribe = subscribe(x => Push.push(sink, x));
+        // TODO refactor so we're able to put an empty poll function.
+        [sink, source] = newEventPair([], function* (that) {
+          return true;
+        }, unsubscribe);
+        return source;
+      });
 
-    const input = (subscribe) => lazyEvent(() => {
-      let sink, source;
-      const unsubscribe = subscribe(x => Push.push(sink, x));
-      // TODO refactor so we're able to put an empty poll function.
-      [sink, source] = newEventPair([], function* (that) {
-        return true;
-      }, unsubscribe);
-      return source;
-    });
+      const map = (parent, f) => lazyEvent(() =>
+        newEventPair([parent()], function* (that, {value}) {
+          yield Push.writeSink(that, f(value));
+          return true;
+        })[1]);
 
-    const map = (parent, f) => lazyEvent(() =>
-      newEventPair([parent()], function* (that, {value}) {
-        yield Push.writeSink(that, f(value));
-        return true;
-      })[1]);
+      const filter = (parent, predicate) => lazyEvent(() =>
+        newEventPair([parent()], function* (that, {value}) {
+          if (predicate(value)) {
+            return false;
+          }
+          yield Push.writeSink(that, value);
+          return true;
+        })[1]);
 
-    const filter = (parent, predicate) => lazyEvent(() =>
-      newEventPair([parent()], function* (that, {value}) {
-        if (predicate(value)) {
-          return false;
+      const merge = (parentA, parentB, ABtoC = (a, b) => a, AtoC = a => a, BtoC = b => b) => lazyEvent(() =>
+        newEventPair([parentA(), parentB()], function* (that, parentAValue, parentBValue) {
+          if (parentAValue === undefined) {
+            yield Push.writeSink(that, BtoC(parentBValue.value));
+          } else if (parentBValue === undefined) {
+            yield Push.writeSink(that, AtoC(parentAValue.value));
+          } else {
+            yield Push.writeSink(
+              that,
+              ABtoC(parentAValue.value, parentBValue.value)
+            );
+          }
+          return true;
+        })[1]);
+
+      const observeE = parent => lazyEvent(() =>
+        newEventPair([parent()], function* (that, {value}) {
+          yield Push.writeSink(that, yield Push.liftPull(value));
+          return true;
+        })[1]);
+
+      const switchE = (() => {
+        const poll = function*(that, {value}) {
+          yield Push.writeSink(that, value);
+          return true;
         }
-        yield Push.writeSink(that, value);
-        return true;
-      })[1]);
 
-    const merge = (parentA, parentB, ABtoC = (a, b) => a, AtoC = a => a, BtoC = b => b) => lazyEvent(() =>
-      newEventPair([parentA(), parentB()], function* (that, parentAValue, parentBValue) {
-        if (parentAValue === undefined) {
-          yield Push.writeSink(that, BtoC(parentBValue.value));
-        } else if (parentBValue === undefined) {
-          yield Push.writeSink(that, AtoC(parentAValue.value));
-        } else {
-          yield Push.writeSink(
-            that,
-            ABtoC(parentAValue.value, parentBValue.value)
-          );
+        const switcherHandle = (sink, weakSource) => segment => {
+          const segmentSource = segment(); // It's safe to construct events within output.
+          // If the segment is unpushable or the sink is unpullable, do nothing.
+          sink._switch(segmentSource._sink);
+          // Will add the source edge because [sink] is pushable.
+          weakSource.deref()?._switch(segmentSource);
         }
-        return true;
-      })[1]);
 
-    const observeE = parent => lazyEvent(() =>
-      newEventPair([parent()], function* (that, {value}) {
-        yield Push.writeSink(that, yield Push.liftPull(value));
-        return true;
-      })[1]);
-    
-    const switchE = (() => {
-      const poll = function*(that, {value}) {
-        yield Push.writeSink(that, value);
-        return true;
-      }
-    
-      const switcherHandle = (sink, weakSource) => segment => {
-        const segmentSource = segment(); // It's safe to construct events within output.
-        // If the segment is unpushable or the sink is unpullable, do nothing.
-        sink._switch(segmentSource._sink);
-        // Will add the source edge because [sink] is pushable.
-        weakSource.deref()?._switch(segmentSource);
-      }
-    
-      return parent => function*() {
-        // We're safe evaluating the event pair eagerly instead of using [lazyEvent]
-        // because there are no parents yet.
-        const [sink, source] = newEventPair([], poll);
-        const weakSource = new WeakRef(source); // Prevents memory leaks.
-        const switcher = yield Pull.output(parent, switcherHandle(sink, weakSource));
-        // Won't add the source edge if unpushable.
-        eventConstructors.push(() => switcher()._addChild(source));
-        return k(source);
-      }
+        return parent => function*() {
+          // We're safe evaluating the event pair eagerly instead of using [lazyEvent]
+          // because there are no parents yet.
+          const [sink, source] = newEventPair([], poll);
+          const weakSource = new WeakRef(source); // Prevents memory leaks.
+          const switcher = yield Pull.output(parent, switcherHandle(sink, weakSource));
+          // Won't add the source edge if unpushable.
+          eventConstructors.push(() => switcher()._addChild(source));
+          return k(source);
+        }
+      })();
+
+      return {
+        input,
+        map,
+        filter,
+        merge,
+        observeE,
+        switchE,
+      };
     })();
     
     const neverSource = {
