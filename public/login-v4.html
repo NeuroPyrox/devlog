@@ -468,7 +468,7 @@
       newEventPair([parent()], function* (that, {value}) {
         yield Push.writeSink(that, f(value));
         return true;
-      }));
+      })[1]);
 
     const filter = (parent, predicate) => lazyEvent(() =>
       newEventPair([parent()], function* (that, {value}) {
@@ -477,7 +477,7 @@
         }
         yield Push.writeSink(that, value);
         return true;
-      }));
+      })[1]);
 
     const merge = (parentA, parentB, ABtoC = (a, b) => a, AtoC = a => a, BtoC = b => b) => lazyEvent(() =>
       newEventPair([parentA(), parentB()], function* (that, parentAValue, parentBValue) {
@@ -492,13 +492,13 @@
           );
         }
         return true;
-      }));
+      })[1]);
 
     const observeE = parent => lazyEvent(() =>
       newEventPair([parent()], function* (that, {value}) {
         yield Push.writeSink(that, yield Push.liftPull(value));
         return true;
-      }));
+      })[1]);
     
     const switchE = (() => {
       const poll = function*(that, {value}) {
