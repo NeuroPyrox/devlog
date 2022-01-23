@@ -362,6 +362,15 @@
           this._unsubscribe();
           this._pullable = false;
         }
+
+        _switchPriority(childPriority) {
+          if (childPriority <= this._priority) {
+            this._priority = childPriority - 1;
+            for (const weakParent of this._weakParents) {
+              weakParent.deref()?._switchPriority(this._priority);
+            }
+          }
+        }
         
         _switch(weakSegment) {
           if (!this._pullable) {
@@ -378,7 +387,7 @@
           // TODO factor out an addChild function.
           this._weakParents = [weakSegment];
           this._weakParentLinks = [segment._children.add(this)];
-          // TODO change priority.
+          segment._switchPriority(this._priority);
         }
       }
 
