@@ -180,12 +180,21 @@
         (object) =>
           object[field](...args);
 
+      const runMonad = (context, generator) => {
+        let step = generator.next();
+        while (!step.done) {
+          step = generator.next(step.value(context));
+        }
+        return step.value;
+      };
+
       return {
         PriorityQueue,
         assert,
         ShrinkingList,
         weakRefUndefined,
         callMethod,
+        runMonad
       };
     })();
 
@@ -214,15 +223,6 @@
       Util.assert(eventConstructors.length === 0);
     };
 
-    // Mutable: context, generator
-    const runMonad = (context, generator) => {
-      let step = generator.next();
-      while (!step.done) {
-        step = generator.next(step.value(context));
-      }
-      return step.value;
-    };
-
     const Pull = (() => {
       const context = {
         // TODO activeness
@@ -242,7 +242,7 @@
       const output = Util.callMethod("output");
 
       // The return value is used by observeE.
-      const pullLazy = (monadicValue) => runMonad(context, monadicValue());
+      const pullLazy = (monadicValue) => Util.runMonad(context, monadicValue());
       // TODO once we implement the html monad, remove the return value.
       const pull = (monadicValue) => {
         const result = pullLazy(monadicValue);
@@ -287,7 +287,7 @@
 
       // TODO check if sink is active
       const push = (sink, value) => {
-        runMonad(
+        Util.runMonad(
           new Context(),
           (function* () {
             yield writeSink(sink, value);
