@@ -362,6 +362,24 @@
           this._unsubscribe();
           this._pullable = false;
         }
+        
+        _switch(weakSegment) {
+          if (!this._pullable) {
+            return;
+          }
+          const segment = weakSegment.deref();
+          if (segment === undefined) {
+            return;
+          }
+          for (const weakParentLink of this._weakParentLinks) {
+            weakParentLink.deref()?.remove();
+            weakParentLink.remove();
+          }
+          // TODO factor out an addChild function.
+          this._weakParents = [weakSegment];
+          this._weakParentLinks = [segment._children.add(this)];
+          // TODO change priority.
+        }
       }
 
       class Source {
