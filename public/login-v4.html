@@ -500,23 +500,25 @@
         return true;
       }));
     
-    // TODO fix closure memory leaks
+    const poll = function*(that, {value}) {
+      yield Push.writeSink(that, value);
+      return true;
+    }
+    
+    const switcherHandle = (sink, weakSource) => segment => {
+      const segmentSource = segment(); // It's safe to construct events within output.
+      // If the segment is unpushable or the sink is unpullable, do nothing.
+      sink._switch(segmentSource._sink);
+      // Will add the source edge because [sink] is pushable.
+      weakSource.deref()?._switch(segmentSource);
+    }
+    
     const switchE = parent => function*() {
       // We're safe evaluating the event pair eagerly instead of using [lazyEvent]
       // because there are no parents yet.
-      const [sink, source] = newEventPair([], function*(that, {value}) {
-        yield Push.writeSink(that, value);
-        return true;
-      });
+      const [sink, source] = newEventPair([], poll);
       const weakSource = new WeakRef(source); // Prevents memory leaks.
-      // The free variables in the closure are [sink] and [weakSource]
-      const switcher = yield Pull.output(parent, segment => {
-        const segmentSource = segment(); // It's safe to construct events within output.
-        // If the segment is unpushable or the sink is unpullable, do nothing.
-        sink._switch(segmentSource._sink);
-        // Will add the source edge because [sink] is pushable.
-        weakSource.deref()?._switch(segmentSource);
-      });
+      const switcher = yield Pull.output(parent, switcherHandle(sink, weakSource));
       // Won't add the source edge if unpushable.
       eventConstructors.push(() => switcher()._addChild(source));
       return k(source);
