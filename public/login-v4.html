@@ -519,6 +519,8 @@
           yield Push.writeSink(that, yield Push.liftPull(value));
           return true;
         })[1]);
+      
+      const output = Pull.output;
 
       const switchE = (() => {
         const poll = function*(that, {value}) {
@@ -539,7 +541,7 @@
           // because there are no parents yet.
           const [sink, source] = newEventPair([], poll);
           const weakSource = new WeakRef(source); // Prevents memory leaks.
-          const switcher = yield Pull.output(parent, switcherHandle(sink, weakSource));
+          const switcher = yield output(parent, switcherHandle(sink, weakSource));
           // Won't add the source edge if unpushable.
           eventConstructors.push(() => switcher()._addChild(source));
           return k(source);
