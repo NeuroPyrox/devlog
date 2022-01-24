@@ -516,6 +516,8 @@
       
       const mapTag = (parent, latchGet, combine) =>
         map(parent, (x) => combine(x, latchGet()));
+      
+      const tag = (parent, latchGet) => map(parent, () => latchGet());
 
       const observeE = parent => lazyEvent(() =>
         newEventPair([parent()], function* (that, {value}) {
