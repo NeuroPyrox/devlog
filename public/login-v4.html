@@ -471,6 +471,8 @@
         };
         return result;
       };
+      
+      const never = k(newEventPair([], null)[1]);
 
       const input = (subscribe) => lazyEvent(() => {
         let sink, source;
