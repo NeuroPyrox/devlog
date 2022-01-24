@@ -513,6 +513,9 @@
           }
           return true;
         })[1]);
+      
+      const mapTag = (parent, latchGet, combine) =>
+        map(parent, (x) => combine(x, latchGet()));
 
       const observeE = parent => lazyEvent(() =>
         newEventPair([parent()], function* (that, {value}) {
