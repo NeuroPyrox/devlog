@@ -455,6 +455,23 @@
     })();
     
     const Combinators = (() => {
+      const eventLoop = () => {
+        let event = null;
+        const result = () => {
+          if (event === null) {
+            throw new Error("Must call [loop] on every [eventLoop]!");
+          }
+          return event();
+        };
+        result.loop = (setTo) => {
+          if (typeof setTo !== "function") {
+            throw new TypeError("setTo is not a function");
+          }
+          event = setTo;
+        };
+        return result;
+      };
+
       const input = (subscribe) => lazyEvent(() => {
         let sink, source;
         const unsubscribe = subscribe(x => Push.push(sink, x));
@@ -556,23 +573,6 @@
     }
 
     const FRP = (() => {
-      const eventLoop = () => {
-        let event = null;
-        const result = () => {
-          if (event === null) {
-            throw new Error("Must call [loop] on every [eventLoop]!");
-          }
-          return event();
-        };
-        result.loop = (setTo) => {
-          if (typeof setTo !== "function") {
-            throw new TypeError("setTo is not a function");
-          }
-          event = setTo;
-        };
-        return result;
-      };
-
       const input = (subscribe) =>
         lazyEvent(() => new Source(new Sink.Input(subscribe)));
       const never = k(neverSource);
