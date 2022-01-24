@@ -556,6 +556,9 @@
       const getClicks = (domNode) =>
         input((push) => domNode.addEventListener("click", push));
 
+      // TODO replace with behavior
+      const getInputValues = (domNode) => () => domNode.value;
+
       return {
         input,
         map,
