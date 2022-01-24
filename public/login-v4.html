@@ -553,6 +553,9 @@
         }
       })();
 
+      const getClicks = (domNode) =>
+        input((push) => domNode.addEventListener("click", push));
+
       return {
         input,
         map,
