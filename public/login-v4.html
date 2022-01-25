@@ -584,6 +584,22 @@
         getInputValues,
       };
     })();
+    const {
+      eventLoop,
+      never,
+      input,
+      map,
+      filter,
+      merge,
+      mapTag,
+      tag,
+      observeE,
+      output,
+      switchE,
+      mergeBind,
+      getClicks,
+      getInputValues,
+    } = Combinators;
     
     const neverSource = {
       derefSink: k(undefined),
@@ -681,22 +697,6 @@
         getInputValues,
       };
     })();
-    const {
-      eventLoop,
-      input,
-      never,
-      merge,
-      filter,
-      map,
-      mapTag,
-      tag,
-      observeE,
-      getClicks,
-      output,
-      switchE,
-      mergeBind,
-      getInputValues,
-    } = FRP;
 
     function* userDatabase({
       insertions,
