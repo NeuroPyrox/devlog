@@ -413,7 +413,7 @@
           Util.assert(child._isPushable());
           const parentLink = child._parents.add(this);
           const childLink = this._weakChildLinks.add(new WeakRef(parentLink));
-          this._parentLinkFinalizers.register(
+          Source._parentLinkFinalizers.register(
             parentLink,
             new WeakRef(childLink)
           );
