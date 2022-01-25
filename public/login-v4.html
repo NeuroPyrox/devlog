@@ -124,11 +124,11 @@
         isEmpty() {
           return this._next === this;
         }
-        
+
         getFirst() {
           return this._next;
         }
-        
+
         getLast() {
           return this._prev;
         }
@@ -371,7 +371,7 @@
             }
           }
         }
-        
+
         _switch(weakSegment) {
           if (!this._pullable) {
             return;
@@ -405,7 +405,7 @@
           this._sink = new WeakRef(sink);
           parents.forEach(parent => parent._addChild(this));
         }
-        
+
         _addChild(child) {
           if (!this._isPushable()) {
             return;
@@ -430,7 +430,7 @@
           }
           // [this._weakChildLinks] will soon get cleared by [this._parentLinkFinalizers].
         }
-        
+
         // Only used for switchE
         _switch(segment) {
           // Check if there's more than one parent.
@@ -453,7 +453,7 @@
         return [sink, source];
       };
     })();
-    
+
     const Combinators = (() => {
       const eventLoop = () => {
         let event = null;
@@ -471,7 +471,7 @@
         };
         return result;
       };
-      
+
       const never = k(newEventPair([], null)[1]);
 
       const input = (subscribe) => lazyEvent(() => {
@@ -513,10 +513,10 @@
           }
           return true;
         })[1]);
-      
+
       const mapTag = (parent, latchGet, combine) =>
         map(parent, (x) => combine(x, latchGet()));
-      
+
       const tag = (parent, latchGet) => map(parent, () => latchGet());
 
       const observeE = parent => lazyEvent(() =>
@@ -524,7 +524,7 @@
           yield Push.writeSink(that, yield Push.liftPull(value));
           return true;
         })[1]);
-      
+
       const output = Pull.output;
 
       const switchE = (() => {
@@ -566,7 +566,7 @@
 
       // TODO replace with behavior
       const getInputValues = (domNode) => () => domNode.value;
-      
+
       return {
         eventLoop,
         never,
