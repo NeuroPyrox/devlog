@@ -566,14 +566,22 @@
 
       // TODO replace with behavior
       const getInputValues = (domNode) => () => domNode.value;
-
+      
       return {
+        eventLoop,
+        never,
         input,
         map,
         filter,
         merge,
+        mapTag,
+        tag,
         observeE,
+        output,
         switchE,
+        mergeBind,
+        getClicks,
+        getInputValues,
       };
     })();
     
