@@ -553,6 +553,14 @@
         }
       })();
 
+      // TODO optimize with binary tree
+      function* mergeBind(eventOfEvent, f) {
+        let current = never;
+        const next = map(eventOfEvent, (event) => merge(f(event), current));
+        yield output(next, (event) => (current = event));
+        return yield* switchE(next);
+      }
+
       const getClicks = (domNode) =>
         input((push) => domNode.addEventListener("click", push));
 
@@ -643,14 +651,6 @@
         const source = new Source(sink);
         yield output(eventOfEvent, (event) => sink.setParent(event));
         return k(source);
-      }
-
-      // TODO optimize with binary tree
-      function* mergeBind(eventOfEvent, f) {
-        let current = never;
-        const next = map(eventOfEvent, (event) => merge(f(event), current));
-        yield output(next, (event) => (current = event));
-        return yield* switchE(next);
       }
 
       // TODO replace with behavior
