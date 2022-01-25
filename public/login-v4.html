@@ -236,7 +236,7 @@
           newEventPair([parent()], function* (that, {value}) {
             yield Push.enqueueAction(handle, value);
             return false;
-          })[1];
+          })[1]
         )
       };
       const output = Util.callMethod("output");
@@ -326,7 +326,7 @@
           this._weakParentLinks = maybeParents.map((maybeParent) =>
             maybeParent === undefined
               ? Util.weakRefUndefined
-              : new WeakRef(maybeParent._children.add(this));
+              : new WeakRef(maybeParent._children.add(this))
           );
           this._weakParents = weakParents;
           this._priority =
