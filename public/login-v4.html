@@ -448,8 +448,8 @@
         const parentSources = parents.map((parent) => parent());
         const sink = new Sink(parentSources.map((source) => source._sink), poll);
         const source = new Source(parentSources, sink);
-        sink._finalizers.register(sink, new WeakRef(source), unsubscribe);
-        source._finalizers.register(source, source._sink);
+        Sink._finalizers.register(sink, new WeakRef(source), unsubscribe);
+        Source._finalizers.register(source, source._sink);
         return [sink, source];
       };
     })();
