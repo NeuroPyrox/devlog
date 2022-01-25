@@ -485,13 +485,13 @@
       });
 
       const map = (parent, f) => lazyEvent(() =>
-        newEventPair([parent()], function* (that, {value}) {
+        newEventPair([parent], function* (that, {value}) {
           yield Push.writeSink(that, f(value));
           return true;
         })[1]);
 
       const filter = (parent, predicate) => lazyEvent(() =>
-        newEventPair([parent()], function* (that, {value}) {
+        newEventPair([parent], function* (that, {value}) {
           if (predicate(value)) {
             return false;
           }
@@ -500,7 +500,7 @@
         })[1]);
 
       const merge = (parentA, parentB, ABtoC = (a, b) => a, AtoC = a => a, BtoC = b => b) => lazyEvent(() =>
-        newEventPair([parentA(), parentB()], function* (that, parentAValue, parentBValue) {
+        newEventPair([parentA, parentB], function* (that, parentAValue, parentBValue) {
           if (parentAValue === undefined) {
             yield Push.writeSink(that, BtoC(parentBValue.value));
           } else if (parentBValue === undefined) {
@@ -520,7 +520,7 @@
       const tag = (parent, latchGet) => map(parent, () => latchGet());
 
       const observeE = parent => lazyEvent(() =>
-        newEventPair([parent()], function* (that, {value}) {
+        newEventPair([parent], function* (that, {value}) {
           yield Push.writeSink(that, yield Push.liftPull(value));
           return true;
         })[1]);
