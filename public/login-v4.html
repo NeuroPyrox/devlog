@@ -541,7 +541,7 @@
           weakSource.deref()?._switch(segmentSource);
         }
 
-        return parent => function*() {
+        return function*(parent) {
           // We're safe evaluating the event pair eagerly instead of using [lazyEvent]
           // because there are no parents yet.
           const [sink, source] = newEventPair([], poll);
