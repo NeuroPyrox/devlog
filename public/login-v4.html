@@ -297,10 +297,8 @@
             for (const sink of queue) {
               const childrenToPoll = yield* sink.poll();
               for (const child of childrenToPoll) {
-                if (child.isActive()) {
-                  // Mutating the queue while iterating over it.
-                  queue.push(child);
-                }
+                // Mutating the queue while iterating over it.
+                queue.push(child);
               }
             }
             yield (context) =>
