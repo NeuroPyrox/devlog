@@ -299,8 +299,9 @@
           (function* () {
             yield writeSink(sink, value);
             const queue = new Util.PriorityQueue();
-            // TODO don't push initial sink
-            queue.push(sink);
+            for (const childSink of sink.iterateChildren()) {
+              queue.push(childSink);
+            }
             for (const sink of queue) {
               const childrenToPoll = yield* sink.poll();
               for (const child of childrenToPoll) {
@@ -343,6 +344,10 @@
           this._poll = poll;
           this._unsubscribe = unsubscribe; // Only used for input events
           this._pullable = true;
+        }
+        
+        *iterateChildren() {
+          yield* this._children;
         }
 
         getPriority() {
@@ -481,10 +486,7 @@
       const input = (subscribe) => lazyEvent(() => {
         let sink, source;
         const unsubscribe = subscribe(x => Push.push(sink, x));
-        // TODO refactor so we're able to put an empty poll function.
-        [sink, source] = newEventPair([], function* (that) {
-          return true;
-        }, unsubscribe);
+        [sink, source] = newEventPair([], null, unsubscribe);
         return source;
       });
 
