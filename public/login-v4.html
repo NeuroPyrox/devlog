@@ -223,6 +223,9 @@
       Util.assert(eventConstructors.length === 0);
     };
 
+    // TODO garbage collection.
+    const outputs = [];
+    
     const Pull = (() => {
       const context = {
         // TODO activeness
@@ -232,12 +235,16 @@
         // Implementation-wise, there's no need to put this function
         // in the Pull monad, but we do it to make the semantics cleaner
         // and for the ability to control when the output starts.
-        output: (parent, handle) => lazyEvent(() =>
-          newEventPair([parent], function* (that, {value}) {
-            yield Push.enqueueAction(handle, value);
-            return false;
-          })[1]
-        )
+        output: (parent, handle) => {
+          const result = lazyEvent(() =>
+            newEventPair([parent], function* (that, {value}) {
+              yield Push.enqueueAction(handle, value);
+              return false;
+            })[1]
+          );
+          outputs.push(result);
+          return result;
+        }
       };
       const output = Util.callMethod("output");
 
