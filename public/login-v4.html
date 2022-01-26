@@ -496,7 +496,7 @@
 
       const filter = (parent, predicate) => lazyEvent(() =>
         newEventPair([parent], function* (that, {value}) {
-          if (predicate(value)) {
+          if (!predicate(value)) {
             return false;
           }
           yield Push.writeSink(that, value);
