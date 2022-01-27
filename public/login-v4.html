@@ -292,9 +292,12 @@
         liftPull(monadicValue) {
           return Pull.pullLazy(monadicValue);
         }
+        
+        doActions() {
+          this._actions.forEach(([handle, value]) => handle(value));
+        }
       }
 
-      const writeSink = Util.callMethod("writeSink");
       const readSink = Util.callMethod("readSink");
       const enqueueAction = Util.callMethod("enqueueAction");
       const liftPull = Util.callMethod("liftPull");
@@ -304,28 +307,28 @@
         Util.runMonad(
           new Context(),
           (function* () {
-            yield writeSink(sink, value);
+            yield context => context.writeSink(sink, value);
             const queue = new Util.PriorityQueue();
             for (const childSink of sink.iterateChildren()) {
               queue.push(childSink);
             }
             for (const sink of queue) {
-              const shouldPropagate = yield* sink.poll();
-              if (shouldPropagate) {
+              const value = yield* sink.poll();
+              if (value !== Util.nothing) {
+                yield context => context.writeSink(sink, value);
                 for (const child of sink.iterateChildren()) {
                   // Mutating the queue while iterating over it.
                   queue.push(child);
                 }
               }
             }
-            yield (context) =>
-              context._actions.forEach(([handle, value]) => handle(value));
+            yield (context) => context.doActions();
           })()
         );
         constructEvents();
       };
 
-      return { writeSink, readSink, enqueueAction, liftPull, push };
+      return { readSink, enqueueAction, liftPull, push };
     })();
 
     const newEventPair = (() => {
@@ -369,12 +372,7 @@
           for (const weakParent of this._weakParents) {
             parentValues.push(yield Push.readSink(weakParent.deref()));
           }
-          const value = yield* this._poll(...parentValues);
-          if (value === Util.nothing) {
-            return false;
-          }
-          yield Push.writeSink(this, value);
-          return true;
+          return yield* this._poll(...parentValues);
         }
 
         _onUnpullable() {
