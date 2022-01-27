@@ -303,10 +303,12 @@
               queue.push(childSink);
             }
             for (const sink of queue) {
-              const childrenToPoll = yield* sink.poll();
-              for (const child of childrenToPoll) {
-                // Mutating the queue while iterating over it.
-                queue.push(child);
+              const shouldPropagate = yield* sink.poll();
+              if (shouldPropagate) {
+                for (const child of sink.iterateChildren()) {
+                  // Mutating the queue while iterating over it.
+                  queue.push(child);
+                }
               }
             }
             yield (context) =>
@@ -346,6 +348,7 @@
           this._pullable = true;
         }
         
+        // TODO filter by activeness
         *iterateChildren() {
           yield* this._children;
         }
@@ -361,8 +364,7 @@
           }
           // TODO refactor to return a maybe value from this._poll.
           const shouldPropagate = yield* this._poll(this, ...parentValues);
-          // TODO filter by activeness
-          return shouldPropagate ? this._children : [];
+          return shouldPropagate;
         }
 
         _onUnpullable() {
