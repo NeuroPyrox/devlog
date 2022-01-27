@@ -237,9 +237,9 @@
         // and for the ability to control when the output starts.
         output: (parent, handle) => {
           const result = lazyEvent(() =>
-            newEventPair([parent], function* (that, {value}) {
+            newEventPair([parent], function* ({value}) {
               yield Push.enqueueAction(handle, value);
-              return false;
+              return null;
             })[1]
           );
           outputs.push(result);
@@ -362,7 +362,7 @@
           for (const weakParent of this._weakParents) {
             parentValues.push(yield Push.readSink(weakParent.deref()));
           }
-          const value = yield* this._poll(this, ...parentValues);
+          const value = yield* this._poll(...parentValues);
           if (value === null) {
             return false;
           }
@@ -496,12 +496,12 @@
       });
 
       const map = (parent, f) => lazyEvent(() =>
-        newEventPair([parent], function* (that, {value}) {
+        newEventPair([parent], function* ({value}) {
           return {value: f(value)};
         })[1]);
 
       const filter = (parent, predicate) => lazyEvent(() =>
-        newEventPair([parent], function* (that, {value}) {
+        newEventPair([parent], function* ({value}) {
           if (!predicate(value)) {
             return null;
           }
@@ -509,7 +509,7 @@
         })[1]);
 
       const merge = (parentA, parentB, ABtoC = (a, b) => a, AtoC = a => a, BtoC = b => b) => lazyEvent(() =>
-        newEventPair([parentA, parentB], function* (that, parentAValue, parentBValue) {
+        newEventPair([parentA, parentB], function* (parentAValue, parentBValue) {
           if (parentAValue === undefined) {
             return {value: BtoC(parentBValue.value)};
           }
@@ -525,14 +525,14 @@
       const tag = (parent, latchGet) => map(parent, () => latchGet());
 
       const observeE = parent => lazyEvent(() =>
-        newEventPair([parent], function* (that, {value}) {
+        newEventPair([parent], function* ({value}) {
           return {value: yield Push.liftPull(value)};
         })[1]);
 
       const output = Pull.output;
 
       const switchE = (() => {
-        const poll = function*(that, value) {
+        const poll = function*(value) {
           return value;
         }
 
