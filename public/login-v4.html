@@ -187,6 +187,9 @@
         }
         return step.value;
       };
+      
+      // Used when we want nullable values, but don't want the library user to create a null value.
+      const nothing = Symbol();
 
       return {
         PriorityQueue,
@@ -194,7 +197,8 @@
         ShrinkingList,
         weakRefUndefined,
         callMethod,
-        runMonad
+        runMonad,
+        nothing
       };
     })();
 
@@ -239,7 +243,7 @@
           const result = lazyEvent(() =>
             newEventPair([parent], function* ({value}) {
               yield Push.enqueueAction(handle, value);
-              return null;
+              return Util.nothing;
             })[1]
           );
           outputs.push(result);
@@ -363,10 +367,10 @@
             parentValues.push(yield Push.readSink(weakParent.deref()));
           }
           const value = yield* this._poll(...parentValues);
-          if (value === null) {
+          if (value === Util.nothing) {
             return false;
           }
-          yield Push.writeSink(this, value.value);
+          yield Push.writeSink(this, value);
           return true;
         }
 
@@ -497,26 +501,26 @@
 
       const map = (parent, f) => lazyEvent(() =>
         newEventPair([parent], function* ({value}) {
-          return {value: f(value)};
+          return f(value);
         })[1]);
 
       const filter = (parent, predicate) => lazyEvent(() =>
         newEventPair([parent], function* ({value}) {
           if (!predicate(value)) {
-            return null;
+            return Util.nothing;
           }
-          return {value};
+          return value;
         })[1]);
 
       const merge = (parentA, parentB, ABtoC = (a, b) => a, AtoC = a => a, BtoC = b => b) => lazyEvent(() =>
         newEventPair([parentA, parentB], function* (parentAValue, parentBValue) {
           if (parentAValue === undefined) {
-            return {value: BtoC(parentBValue.value)};
+            return BtoC(parentBValue.value);
           }
           if (parentBValue === undefined) {
-            return {value: AtoC(parentAValue.value)};
+            return AtoC(parentAValue.value);
           }
-          return {value: ABtoC(parentAValue.value, parentBValue.value)};
+          return ABtoC(parentAValue.value, parentBValue.value);
         })[1]);
 
       const mapTag = (parent, latchGet, combine) =>
@@ -526,13 +530,13 @@
 
       const observeE = parent => lazyEvent(() =>
         newEventPair([parent], function* ({value}) {
-          return {value: yield Push.liftPull(value)};
+          return yield Push.liftPull(value);
         })[1]);
 
       const output = Pull.output;
 
       const switchE = (() => {
-        const poll = function*(value) {
+        const poll = function*({value}) {
           return value;
         }
 
