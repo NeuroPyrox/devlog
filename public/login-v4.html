@@ -241,7 +241,7 @@
         // and for the ability to control when the output starts.
         output: (parent, handle) => {
           const result = lazyEvent(() =>
-            newEventPair([parent], function* ({value}) {
+            newEventPair([parent], function* (value) {
               yield Push.enqueueAction(handle, value);
               return Util.nothing;
             })[1]
@@ -274,12 +274,15 @@
         writeSink(sink, value) {
           // Store an object so that we can differentiate between
           // an unwritten sink and a sink that had [undefined] written to it.
-          // Essentially, it's an ad-hoc maybe monad.
           this._values.set(sink, { value });
         }
 
         readSink(sink) {
-          return this._values.get(sink);
+          const value = this._values.get(sink);
+          if (value === undefined) {
+            return Util.nothing;
+          }
+          return value.value;
         }
 
         enqueueAction(handle, value) {
@@ -500,12 +503,12 @@
       });
 
       const map = (parent, f) => lazyEvent(() =>
-        newEventPair([parent], function* ({value}) {
+        newEventPair([parent], function* (value) {
           return f(value);
         })[1]);
 
       const filter = (parent, predicate) => lazyEvent(() =>
-        newEventPair([parent], function* ({value}) {
+        newEventPair([parent], function* (value) {
           if (!predicate(value)) {
             return Util.nothing;
           }
@@ -514,13 +517,13 @@
 
       const merge = (parentA, parentB, ABtoC = (a, b) => a, AtoC = a => a, BtoC = b => b) => lazyEvent(() =>
         newEventPair([parentA, parentB], function* (parentAValue, parentBValue) {
-          if (parentAValue === undefined) {
-            return BtoC(parentBValue.value);
+          if (parentAValue === Util.nothing) {
+            return BtoC(parentBValue);
           }
-          if (parentBValue === undefined) {
-            return AtoC(parentAValue.value);
+          if (parentBValue === Util.nothing) {
+            return AtoC(parentAValue);
           }
-          return ABtoC(parentAValue.value, parentBValue.value);
+          return ABtoC(parentAValue, parentBValue);
         })[1]);
 
       const mapTag = (parent, latchGet, combine) =>
@@ -529,14 +532,14 @@
       const tag = (parent, latchGet) => map(parent, () => latchGet());
 
       const observeE = parent => lazyEvent(() =>
-        newEventPair([parent], function* ({value}) {
+        newEventPair([parent], function* (value) {
           return yield Push.liftPull(value);
         })[1]);
 
       const output = Pull.output;
 
       const switchE = (() => {
-        const poll = function*({value}) {
+        const poll = function*(value) {
           return value;
         }
 
