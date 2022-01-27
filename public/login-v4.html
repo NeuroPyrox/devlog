@@ -362,9 +362,12 @@
           for (const weakParent of this._weakParents) {
             parentValues.push(yield Push.readSink(weakParent.deref()));
           }
-          // TODO refactor to return a maybe value from this._poll.
-          const shouldPropagate = yield* this._poll(this, ...parentValues);
-          return shouldPropagate;
+          const value = yield* this._poll(this, ...parentValues);
+          if (value === null) {
+            return false;
+          }
+          yield Push.writeSink(this, value.value);
+          return true;
         }
 
         _onUnpullable() {
@@ -494,32 +497,26 @@
 
       const map = (parent, f) => lazyEvent(() =>
         newEventPair([parent], function* (that, {value}) {
-          yield Push.writeSink(that, f(value));
-          return true;
+          return {value: f(value)};
         })[1]);
 
       const filter = (parent, predicate) => lazyEvent(() =>
         newEventPair([parent], function* (that, {value}) {
           if (!predicate(value)) {
-            return false;
+            return null;
           }
-          yield Push.writeSink(that, value);
-          return true;
+          return {value};
         })[1]);
 
       const merge = (parentA, parentB, ABtoC = (a, b) => a, AtoC = a => a, BtoC = b => b) => lazyEvent(() =>
         newEventPair([parentA, parentB], function* (that, parentAValue, parentBValue) {
           if (parentAValue === undefined) {
-            yield Push.writeSink(that, BtoC(parentBValue.value));
-          } else if (parentBValue === undefined) {
-            yield Push.writeSink(that, AtoC(parentAValue.value));
-          } else {
-            yield Push.writeSink(
-              that,
-              ABtoC(parentAValue.value, parentBValue.value)
-            );
+            return {value: BtoC(parentBValue.value)};
           }
-          return true;
+          if (parentBValue === undefined) {
+            return {value: AtoC(parentAValue.value)};
+          }
+          return {value: ABtoC(parentAValue.value, parentBValue.value)};
         })[1]);
 
       const mapTag = (parent, latchGet, combine) =>
@@ -529,16 +526,14 @@
 
       const observeE = parent => lazyEvent(() =>
         newEventPair([parent], function* (that, {value}) {
-          yield Push.writeSink(that, yield Push.liftPull(value));
-          return true;
+          return {value: yield Push.liftPull(value)};
         })[1]);
 
       const output = Pull.output;
 
       const switchE = (() => {
-        const poll = function*(that, {value}) {
-          yield Push.writeSink(that, value);
-          return true;
+        const poll = function*(that, value) {
+          return value;
         }
 
         const switcherHandle = (sink, weakSource) => segment => {
