@@ -556,8 +556,12 @@
           const [sink, source] = newEventPair([], poll);
           const weakSource = new WeakRef(source); // Prevents memory leaks.
           const switcher = yield output(parent, switcherHandle(sink, weakSource));
-          // Won't add the source edge if unpushable.
-          eventConstructors.push(() => switcher()._addChild(source));
+          eventConstructors.push(() => {
+            const switcherSource = switcher();
+            if (switcherSource._isPushable()) {
+              switcherSource._addChild(source);
+            }
+          });
           return k(source);
         }
       })();
