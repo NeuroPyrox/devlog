@@ -536,11 +536,16 @@
         map(parent, (x) => combine(x, latchGet()));
 
       const tag = (parent, latchGet) => map(parent, () => latchGet());
-
-      const observeE = parent => lazyEvent(() =>
-        newEventPair([parent], function* (value) {
+      
+      const observeE = (parent, f) => lazyEvent(() => {
+        const parentSource = parent();
+        if (!parentSource._isPushable()) {
+          return never();
+        }
+        return newEventPair([parent], function* (value) {
           return yield Push.liftPull(value);
-        })[1]);
+        })[1];
+      });
 
       const output = Pull.output;
 
