@@ -511,9 +511,17 @@
       });
       
       const filter = (parent, predicate) => map(parent, value => predicate(value) ? value : Util.nothing);
-
-      const merge = (parentA, parentB, ABtoC = (a, b) => a, AtoC = a => a, BtoC = b => b) => lazyEvent(() =>
-        newEventPair([parentA, parentB], function* (parentAValue, parentBValue) {
+      
+      const merge = (parentA, parentB, ABtoC = (a, b) => a, AtoC = a => a, BtoC = b => b) => lazyEvent(() => {
+        const parentSourceA = parentA();
+        if (!parentSourceA._isPushable()) {
+          return map(parentB, BtoC)();
+        }
+        const parentSourceB = parentB();
+        if (!parentSourceB._isPushable()) {
+          return map(parentA, AtoC)();
+        }
+        return newEventPair([parentA, parentB], function* (parentAValue, parentBValue) {
           if (parentAValue === Util.nothing) {
             return BtoC(parentBValue);
           }
@@ -521,7 +529,8 @@
             return AtoC(parentAValue);
           }
           return ABtoC(parentAValue, parentBValue);
-        })[1]);
+        })[1];
+      });
 
       const mapTag = (parent, latchGet, combine) =>
         map(parent, (x) => combine(x, latchGet()));
