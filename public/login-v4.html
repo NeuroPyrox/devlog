@@ -338,20 +338,15 @@
         );
 
         constructor(weakParents, poll, unsubscribe) {
-          const maybeParents = weakParents.map((weakParent) => weakParent.deref());
-          const parents = maybeParents.filter(maybeParent => maybeParent !== undefined);
+          const parents = weakParents.map((weakParent) => weakParent.deref());
           this._children = new Util.ShrinkingList();
-          this._weakParentLinks = maybeParents.map((maybeParent) =>
-            maybeParent === undefined
-              ? Util.weakRefUndefined
-              : new WeakRef(maybeParent._children.add(this))
-          );
+          this._weakParentLinks = parents.map(parent => new WeakRef(parent._children.add(this)));
           this._weakParents = weakParents;
           this._priority =
             parents.length === 0
               ? 0
               : Math.max(
-                  ...parents.map((parentSink) => parentSink.getPriority())
+                  ...parents.map((parent) => parent.getPriority())
                 ) + 1;
           this._poll = poll;
           this._unsubscribe = unsubscribe; // Only used for input events
@@ -425,6 +420,7 @@
           parents.forEach(parent => parent._addChild(this));
         }
 
+        // TODO refactor so that [this._isPushable] is an assertion instead of a condition.
         _addChild(child) {
           if (!this._isPushable()) {
             return;
@@ -460,11 +456,11 @@
         }
       }
 
-      // Possible optimization: specialize the different cases of how many parents are alive.
       // Some of the event's parents may not be passed into this function but added later.
       // The only parents passed here are the ones that [poll] immediately depends on.
       return (parents, poll, unsubscribe = () => {}) => {
         const parentSources = parents.map((parent) => parent());
+        Util.assert(parentSources.every(parentSource => parentSource._isPushable()));
         const sink = new Sink(parentSources.map((source) => source._sink), poll, unsubscribe);
         const source = new Source(parentSources, sink);
         Sink._finalizers.register(sink, new WeakRef(source), unsubscribe);
