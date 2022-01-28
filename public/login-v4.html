@@ -490,7 +490,7 @@
         };
         return result;
       };
-
+      
       const never = k(newEventPair([], null)[1]);
 
       const input = (subscribe) => lazyEvent(() => {
@@ -500,14 +500,16 @@
         return source;
       });
       
-      const map = (parent, f) => lazyEvent(() => {
+      const singleParent = (parent, poll) => lazyEvent(() => {
         const parentSource = parent();
         if (!parentSource._isPushable()) {
           return never();
         }
-        return newEventPair([parent], function* (value) {
-          return f(value);
-        })[1];
+        return newEventPair([parent], poll)[1];
+      });
+      
+      const map = (parent, f) => singleParent(parent, function* (value) {
+        return f(value);
       });
       
       const filter = (parent, predicate) => map(parent, value => predicate(value) ? value : Util.nothing);
@@ -537,14 +539,8 @@
 
       const tag = (parent, latchGet) => map(parent, () => latchGet());
       
-      const observeE = (parent, f) => lazyEvent(() => {
-        const parentSource = parent();
-        if (!parentSource._isPushable()) {
-          return never();
-        }
-        return newEventPair([parent], function* (value) {
-          return yield Push.liftPull(value);
-        })[1];
+      const observeE = (parent) => singleParent(parent, function* (value) {
+        return yield Push.liftPull(value);
       });
 
       const output = Pull.output;
