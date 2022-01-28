@@ -509,14 +509,8 @@
           return f(value);
         })[1];
       });
-
-      const filter = (parent, predicate) => lazyEvent(() =>
-        newEventPair([parent], function* (value) {
-          if (!predicate(value)) {
-            return Util.nothing;
-          }
-          return value;
-        })[1]);
+      
+      const filter = (parent, predicate) => map(parent, value => predicate(value) ? value : Util.nothing);
 
       const merge = (parentA, parentB, ABtoC = (a, b) => a, AtoC = a => a, BtoC = b => b) => lazyEvent(() =>
         newEventPair([parentA, parentB], function* (parentAValue, parentBValue) {
