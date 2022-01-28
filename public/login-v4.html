@@ -240,12 +240,10 @@
         // in the Pull monad, but we do it to make the semantics cleaner
         // and for the ability to control when the output starts.
         output: (parent, handle) => {
-          const result = lazyEvent(() =>
-            newEventPair([parent], function* (value) {
-              yield Push.enqueueAction(handle, value);
-              return Util.nothing;
-            })[1]
-          );
+          const result = singleParentEvent(parent, function* (value) {
+            yield Push.enqueueAction(handle, value);
+            return Util.nothing;
+          });
           outputs.push(result);
           return result;
         }
@@ -468,6 +466,14 @@
         return [sink, source];
       };
     })();
+      
+    const singleParentEvent = (parent, poll) => lazyEvent(() => {
+      const parentSource = parent();
+      if (!parentSource._isPushable()) {
+        return never();
+      }
+      return newEventPair([parent], poll)[1];
+    });
 
     const Combinators = (() => {
       const eventLoop = () => {
@@ -496,27 +502,17 @@
         return source;
       });
       
-      const singleParent = (parent, poll) => lazyEvent(() => {
-        const parentSource = parent();
-        if (!parentSource._isPushable()) {
-          return never();
-        }
-        return newEventPair([parent], poll)[1];
-      });
-      
-      const map = (parent, f) => singleParent(parent, function* (value) {
+      const map = (parent, f) => singleParentEvent(parent, function* (value) {
         return f(value);
       });
       
       const filter = (parent, predicate) => map(parent, value => predicate(value) ? value : Util.nothing);
       
       const merge = (parentA, parentB, ABtoC = (a, b) => a, AtoC = a => a, BtoC = b => b) => lazyEvent(() => {
-        const parentSourceA = parentA();
-        if (!parentSourceA._isPushable()) {
+        if (!parentA()._isPushable()) {
           return map(parentB, BtoC)();
         }
-        const parentSourceB = parentB();
-        if (!parentSourceB._isPushable()) {
+        if (!parentB()._isPushable()) {
           return map(parentA, AtoC)();
         }
         return newEventPair([parentA, parentB], function* (parentAValue, parentBValue) {
@@ -535,7 +531,7 @@
 
       const tag = (parent, latchGet) => map(parent, () => latchGet());
       
-      const observeE = (parent) => singleParent(parent, function* (value) {
+      const observeE = (parent) => singleParentEvent(parent, function* (value) {
         return yield Push.liftPull(value);
       });
 
