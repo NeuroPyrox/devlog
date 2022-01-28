@@ -499,11 +499,16 @@
         [sink, source] = newEventPair([], null, unsubscribe);
         return source;
       });
-
-      const map = (parent, f) => lazyEvent(() =>
-        newEventPair([parent], function* (value) {
+      
+      const map = (parent, f) => lazyEvent(() => {
+        const parentSource = parent();
+        if (!parentSource._isPushable()) {
+          return never();
+        }
+        return newEventPair([parent], function* (value) {
           return f(value);
-        })[1]);
+        })[1];
+      });
 
       const filter = (parent, predicate) => lazyEvent(() =>
         newEventPair([parent], function* (value) {
