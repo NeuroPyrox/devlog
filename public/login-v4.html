@@ -163,12 +163,15 @@
         get() {
           return this._value;
         }
-
-        // TODO refactor so this is only called once per instance.
+        
         remove() {
-          if (this._value === null) {
-            return;
+          if (this._value !== null) {
+            this.removeOnce();
           }
+        }
+
+        removeOnce() {
+          assert(this._value !== null);
           assert(this._prev._next === this);
           assert(this._next._prev === this);
           this._prev._next = this._next;
@@ -379,7 +382,7 @@
 
         _onUnpullable() {
           for (const weakParentLink of this._weakParentLinks) {
-            weakParentLink.deref()?.remove();
+            weakParentLink.deref()?.removeOnce();
           }
           this._unsubscribe();
           this._pullable = false;
@@ -395,8 +398,9 @@
         }
 
         _switch(weakSegment) {
+          Util.assert(this.isPullable());
           for (const weakParentLink of this._weakParentLinks) {
-            weakParentLink.deref()?.remove();
+            weakParentLink.deref()?.removeOnce();
           }
           const segment = weakSegment.deref();
           if (segment === undefined) {
@@ -413,7 +417,7 @@
           weakSink.deref()?._onUnpullable()
         );
         static _parentLinkFinalizers = new FinalizationRegistry((weakChildLink) =>
-          weakChildLink.deref()?.remove()
+          weakChildLink.deref()?.removeOnce()
         );
 
         constructor(parents, sink) {
@@ -448,7 +452,7 @@
         _switch(segment) {
           // Check if there's more than one parent.
           if (this._parents.getLast() !== this._parents.getFirst()) {
-            this._parents.getLast().remove();
+            this._parents.getLast().removeOnce();
           }
           if (segment._isPushable()) {
             segment._addChild(this);
