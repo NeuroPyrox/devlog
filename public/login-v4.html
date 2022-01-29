@@ -164,11 +164,16 @@
           return this._value;
         }
 
+        // TODO refactor so this is only called once per instance.
         remove() {
+          if (this._value === null) {
+            return;
+          }
           assert(this._prev._next === this);
           assert(this._next._prev === this);
           this._prev._next = this._next;
           this._next._prev = this._prev;
+          this._value = null;
         }
       }
 
