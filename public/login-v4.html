@@ -404,6 +404,8 @@
           }
           const segment = weakSegment.deref();
           if (segment === undefined) {
+            this._weakParents = [];
+            this._weakParentLinks = [];
             return;
           }
           this._weakParents = [weakSegment];
