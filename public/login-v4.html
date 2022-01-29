@@ -359,6 +359,10 @@
         getPriority() {
           return this._priority;
         }
+        
+        isPullable() {
+          return this._pullable;
+        }
 
         *poll() {
           const parentValues = [];
@@ -386,17 +390,13 @@
         }
 
         _switch(weakSegment) {
-          if (!this._pullable) {
-            return;
+          for (const weakParentLink of this._weakParentLinks) {
+            weakParentLink.deref()?.remove();
           }
           const segment = weakSegment.deref();
           if (segment === undefined) {
             return;
           }
-          for (const weakParentLink of this._weakParentLinks) {
-            weakParentLink.deref()?.remove();
-          }
-          // TODO factor out an addChild function.
           this._weakParents = [weakSegment];
           this._weakParentLinks = [new WeakRef(segment._children.add(this))];
           segment._switchPriority(this._priority);
@@ -418,12 +418,8 @@
           parents.forEach(parent => parent._addChild(this));
         }
 
-        // TODO refactor so that [this._isPushable] is an assertion instead of a condition.
         _addChild(child) {
-          if (!this._isPushable()) {
-            return;
-          }
-          Util.assert(child._isPushable());
+          Util.assert(this._isPushable() && child._isPushable());
           const parentLink = child._parents.add(this);
           const childLink = this._weakChildLinks.add(new WeakRef(parentLink));
           Source._parentLinkFinalizers.register(
@@ -444,13 +440,14 @@
           // [this._weakChildLinks] will soon get cleared by [this._parentLinkFinalizers].
         }
 
-        // Only used for switchE
         _switch(segment) {
           // Check if there's more than one parent.
           if (this._parents.getLast() !== this._parents.getFirst()) {
             this._parents.getLast().remove();
           }
-          segment._addChild(this);
+          if (segment._isPushable()) {
+            segment._addChild(this);
+          }
         }
       }
 
@@ -543,11 +540,14 @@
         }
 
         const switcherHandle = (sink, weakSource) => segment => {
+          const source = weakSource.deref();
+          if (source === undefined) {
+            return;
+          }
           const segmentSource = segment(); // It's safe to construct events within output.
-          // If the segment is unpushable or the sink is unpullable, do nothing.
+          source._switch(segmentSource);
+          // TODO more encapsulation.
           sink._switch(segmentSource._sink);
-          // Will add the source edge because [sink] is pushable.
-          weakSource.deref()?._switch(segmentSource);
         }
 
         return function*(parent) {
