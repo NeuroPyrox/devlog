@@ -354,6 +354,8 @@
           this._weakParentLinks = parents.map(
             (parent) => new WeakRef(parent._children.add(this))
           );
+          this._activeChildren = new Util.ShrinkingList();
+          this._deactivators = [];
           this._priority =
             parents.length === 0
               ? 0
@@ -381,7 +383,15 @@
         }
         
         activate() {
-          // TODO
+          for (const weakParent of this._weakParents) {
+            const parent = weakParent.deref();
+            if (parent !== undefined) {
+              if (parent._deactivators.length === 0) {
+                parent.activate();
+              }
+              this._deactivators.push(new WeakRef(parent._activeChildren.add(this)));
+            }
+          }
         }
 
         switch(weakSegment) {
@@ -389,6 +399,7 @@
           for (const weakParentLink of this._weakParentLinks) {
             weakParentLink.deref()?.removeOnce();
           }
+          // TODO deactivate
           const segment = weakSegment.deref();
           if (segment === undefined) {
             this._weakParents = [];
@@ -397,6 +408,7 @@
           }
           this._weakParents = [weakSegment];
           this._weakParentLinks = [new WeakRef(segment._children.add(this))];
+          // TODO activate parents
           segment._switchPriority(this._priority);
         }
 
@@ -413,6 +425,7 @@
           for (const weakParentLink of this._weakParentLinks) {
             weakParentLink.deref()?.removeOnce();
           }
+          // TODO deactivate
           this._unsubscribe();
           this._pullable = false;
         }
