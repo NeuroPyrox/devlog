@@ -346,8 +346,8 @@
         constructor(weakParents, poll, unsubscribe) {
           const parents = weakParents.map((weakParent) => weakParent.deref());
           this._children = new Util.ShrinkingList();
-          this._weakParentLinks = parents.map(parent => new WeakRef(parent._children.add(this)));
           this._weakParents = weakParents;
+          this._weakParentLinks = parents.map(parent => new WeakRef(parent._children.add(this)));
           this._priority =
             parents.length === 0
               ? 0
@@ -366,10 +366,6 @@
 
         getPriority() {
           return this._priority;
-        }
-        
-        isPullable() {
-          return this._pullable;
         }
 
         *poll() {
@@ -397,8 +393,8 @@
           }
         }
 
-        _switch(weakSegment) {
-          Util.assert(this.isPullable());
+        switch(weakSegment) {
+          Util.assert(this._isPullable);
           for (const weakParentLink of this._weakParentLinks) {
             weakParentLink.deref()?.removeOnce();
           }
@@ -426,11 +422,11 @@
           this._weakChildLinks = new Util.ShrinkingList();
           this._parents = new Util.ShrinkingList();
           this._sink = new WeakRef(sink);
-          parents.forEach(parent => parent._addChild(this));
+          parents.forEach(parent => parent.addChild(this));
         }
 
-        _addChild(child) {
-          Util.assert(this._isPushable() && child._isPushable());
+        addChild(child) {
+          Util.assert(this.isPushable() && child.isPushable());
           const parentLink = child._parents.add(this);
           const childLink = this._weakChildLinks.add(new WeakRef(parentLink));
           Source._parentLinkFinalizers.register(
@@ -439,25 +435,25 @@
           );
         }
 
-        _isPushable() {
+        isPushable() {
           return this._sink.deref() !== undefined;
         }
 
         _onUnpushable() {
-          Util.assert(!this._isPushable());
+          Util.assert(!this.isPushable());
           for (const weakChildLink of this._weakChildLinks) {
             weakChildLink.deref()?.remove();
           }
           // [this._weakChildLinks] will soon get cleared by [this._parentLinkFinalizers].
         }
 
-        _switch(segment) {
+        switch(segment) {
           // Check if there's more than one parent.
           if (this._parents.getLast() !== this._parents.getFirst()) {
             this._parents.getLast().removeOnce();
           }
-          if (segment._isPushable()) {
-            segment._addChild(this);
+          if (segment.isPushable()) {
+            segment.addChild(this);
           }
         }
       }
@@ -466,7 +462,7 @@
       // The only parents passed here are the ones that [poll] immediately depends on.
       return (parents, poll, unsubscribe = () => {}) => {
         const parentSources = parents.map((parent) => parent());
-        Util.assert(parentSources.every(parentSource => parentSource._isPushable()));
+        Util.assert(parentSources.every(parentSource => parentSource.isPushable()));
         const sink = new Sink(parentSources.map((source) => source._sink), poll, unsubscribe);
         const source = new Source(parentSources, sink);
         Sink._finalizers.register(sink, new WeakRef(source), unsubscribe);
@@ -477,7 +473,7 @@
       
     const singleParentEvent = (parent, poll) => lazyEvent(() => {
       const parentSource = parent();
-      if (!parentSource._isPushable()) {
+      if (!parentSource.isPushable()) {
         return never();
       }
       return newEventPair([parent], poll)[1];
@@ -517,10 +513,10 @@
       const filter = (parent, predicate) => map(parent, value => predicate(value) ? value : Util.nothing);
       
       const merge = (parentA, parentB, ABtoC = (a, b) => a, AtoC = a => a, BtoC = b => b) => lazyEvent(() => {
-        if (!parentA()._isPushable()) {
+        if (!parentA().isPushable()) {
           return map(parentB, BtoC)();
         }
-        if (!parentB()._isPushable()) {
+        if (!parentB().isPushable()) {
           return map(parentA, AtoC)();
         }
         return newEventPair([parentA, parentB], function* (parentAValue, parentBValue) {
@@ -556,9 +552,9 @@
             return;
           }
           const segmentSource = segment(); // It's safe to construct events within output.
-          source._switch(segmentSource);
+          source.switch(segmentSource);
           // TODO more encapsulation.
-          sink._switch(segmentSource._sink);
+          sink.switch(segmentSource._sink);
         }
 
         return function*(parent) {
@@ -569,8 +565,8 @@
           const switcher = yield output(parent, switcherHandle(sink, weakSource));
           eventConstructors.push(() => {
             const switcherSource = switcher();
-            if (switcherSource._isPushable()) {
-              switcherSource._addChild(source);
+            if (switcherSource.isPushable()) {
+              switcherSource.addChild(source);
             }
           });
           return k(source);
