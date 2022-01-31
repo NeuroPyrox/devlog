@@ -247,14 +247,18 @@
         // Implementation-wise, there's no need to put this function
         // in the Pull monad, but we do it to make the semantics cleaner
         // and for the ability to control when the output starts.
-        output: (parent, handle) => {
-          const result = singleParentEvent(parent, function* (value) {
+        output: (parent, handle) => lazyEvent(() => {
+          if (!parent.isPushable()) {
+            return never();
+          }
+          const [sink, source] = newEventPair([parent()], function* (value) {
             yield Push.enqueueAction(handle, value);
             return Util.nothing;
           });
-          outputs.push(result);
-          return result;
-        },
+          sink.activate();
+          outputs.push(source);
+          return source;
+        }),
       };
       const output = Util.callMethod("output");
 
@@ -374,6 +378,10 @@
             parentValues.push(yield Push.readSink(weakParent.deref()));
           }
           return yield* this._poll(...parentValues);
+        }
+        
+        activate() {
+          // TODO
         }
 
         switch(weakSegment) {
