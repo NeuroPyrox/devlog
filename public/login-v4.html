@@ -163,7 +163,7 @@
         get() {
           return this._value;
         }
-        
+
         remove() {
           if (this._value !== null) {
             this.removeOnce();
@@ -195,7 +195,7 @@
         }
         return step.value;
       };
-      
+
       // Used when we want nullable values, but don't want the library user to create a null value.
       const nothing = Symbol();
 
@@ -206,7 +206,7 @@
         weakRefUndefined,
         callMethod,
         runMonad,
-        nothing
+        nothing,
       };
     })();
 
@@ -237,7 +237,7 @@
 
     // TODO garbage collection.
     const outputs = [];
-    
+
     const Pull = (() => {
       const context = {
         // TODO activeness
@@ -254,7 +254,7 @@
           });
           outputs.push(result);
           return result;
-        }
+        },
       };
       const output = Util.callMethod("output");
 
@@ -298,7 +298,7 @@
         liftPull(monadicValue) {
           return Pull.pullLazy(monadicValue);
         }
-        
+
         doActions() {
           this._actions.forEach(([handle, value]) => handle(value));
         }
@@ -313,7 +313,7 @@
         Util.runMonad(
           new Context(),
           (function* () {
-            yield context => context.writeSink(sink, value);
+            yield (context) => context.writeSink(sink, value);
             const queue = new Util.PriorityQueue();
             for (const childSink of sink.iterateChildren()) {
               queue.push(childSink);
@@ -321,7 +321,7 @@
             for (const sink of queue) {
               const value = yield* sink.poll();
               if (value !== Util.nothing) {
-                yield context => context.writeSink(sink, value);
+                yield (context) => context.writeSink(sink, value);
                 for (const child of sink.iterateChildren()) {
                   // Mutating the queue while iterating over it.
                   queue.push(child);
@@ -347,18 +347,18 @@
           const parents = weakParents.map((weakParent) => weakParent.deref());
           this._children = new Util.ShrinkingList();
           this._weakParents = weakParents;
-          this._weakParentLinks = parents.map(parent => new WeakRef(parent._children.add(this)));
+          this._weakParentLinks = parents.map(
+            (parent) => new WeakRef(parent._children.add(this))
+          );
           this._priority =
             parents.length === 0
               ? 0
-              : Math.max(
-                  ...parents.map((parent) => parent.getPriority())
-                ) + 1;
+              : Math.max(...parents.map((parent) => parent.getPriority())) + 1;
           this._poll = poll;
           this._unsubscribe = unsubscribe; // Only used for input events
           this._pullable = true;
         }
-        
+
         // TODO filter by activeness
         *iterateChildren() {
           yield* this._children;
@@ -414,15 +414,15 @@
         static _finalizers = new FinalizationRegistry((weakSink) =>
           weakSink.deref()?._onUnpullable()
         );
-        static _parentLinkFinalizers = new FinalizationRegistry((weakChildLink) =>
-          weakChildLink.deref()?.removeOnce()
+        static _parentLinkFinalizers = new FinalizationRegistry(
+          (weakChildLink) => weakChildLink.deref()?.removeOnce()
         );
 
         constructor(parents, sink) {
           this._weakChildLinks = new Util.ShrinkingList();
           this._parents = new Util.ShrinkingList();
           this._weakSink = new WeakRef(sink);
-          parents.forEach(parent => parent.addChild(this));
+          parents.forEach((parent) => parent.addChild(this));
         }
 
         addChild(child) {
@@ -438,7 +438,7 @@
         isPushable() {
           return this._weakSink.deref() !== undefined;
         }
-        
+
         getWeakSink() {
           return this._weakSink;
         }
@@ -466,22 +466,29 @@
       // The only parents passed here are the ones that [poll] immediately depends on.
       return (parents, poll, unsubscribe = () => {}) => {
         const parentSources = parents.map((parent) => parent());
-        Util.assert(parentSources.every(parentSource => parentSource.isPushable()));
-        const sink = new Sink(parentSources.map((source) => source.getWeakSink()), poll, unsubscribe);
+        Util.assert(
+          parentSources.every((parentSource) => parentSource.isPushable())
+        );
+        const sink = new Sink(
+          parentSources.map((source) => source.getWeakSink()),
+          poll,
+          unsubscribe
+        );
         const source = new Source(parentSources, sink);
         Sink._finalizers.register(sink, new WeakRef(source), unsubscribe);
         Source._finalizers.register(source, source.getWeakSink());
         return [sink, source];
       };
     })();
-      
-    const singleParentEvent = (parent, poll) => lazyEvent(() => {
-      const parentSource = parent();
-      if (!parentSource.isPushable()) {
-        return never();
-      }
-      return newEventPair([parent], poll)[1];
-    });
+
+    const singleParentEvent = (parent, poll) =>
+      lazyEvent(() => {
+        const parentSource = parent();
+        if (!parentSource.isPushable()) {
+          return never();
+        }
+        return newEventPair([parent], poll)[1];
+      });
 
     const Combinators = (() => {
       const eventLoop = () => {
@@ -500,57 +507,71 @@
         };
         return result;
       };
-      
+
       const never = k(newEventPair([], null)[1]);
 
-      const input = (subscribe) => lazyEvent(() => {
-        let sink, source;
-        const unsubscribe = subscribe(x => Push.push(sink, x));
-        [sink, source] = newEventPair([], null, unsubscribe);
-        return source;
-      });
-      
-      const map = (parent, f) => singleParentEvent(parent, function* (value) {
-        return f(value);
-      });
-      
-      const filter = (parent, predicate) => map(parent, value => predicate(value) ? value : Util.nothing);
-      
-      const merge = (parentA, parentB, ABtoC = (a, b) => a, AtoC = a => a, BtoC = b => b) => lazyEvent(() => {
-        if (!parentA().isPushable()) {
-          return map(parentB, BtoC)();
-        }
-        if (!parentB().isPushable()) {
-          return map(parentA, AtoC)();
-        }
-        return newEventPair([parentA, parentB], function* (parentAValue, parentBValue) {
-          if (parentAValue === Util.nothing) {
-            return BtoC(parentBValue);
+      const input = (subscribe) =>
+        lazyEvent(() => {
+          let sink, source;
+          const unsubscribe = subscribe((x) => Push.push(sink, x));
+          [sink, source] = newEventPair([], null, unsubscribe);
+          return source;
+        });
+
+      const map = (parent, f) =>
+        singleParentEvent(parent, function* (value) {
+          return f(value);
+        });
+
+      const filter = (parent, predicate) =>
+        map(parent, (value) => (predicate(value) ? value : Util.nothing));
+
+      const merge = (
+        parentA,
+        parentB,
+        ABtoC = (a, b) => a,
+        AtoC = (a) => a,
+        BtoC = (b) => b
+      ) =>
+        lazyEvent(() => {
+          if (!parentA().isPushable()) {
+            return map(parentB, BtoC)();
           }
-          if (parentBValue === Util.nothing) {
-            return AtoC(parentAValue);
+          if (!parentB().isPushable()) {
+            return map(parentA, AtoC)();
           }
-          return ABtoC(parentAValue, parentBValue);
-        })[1];
-      });
+          return newEventPair(
+            [parentA, parentB],
+            function* (parentAValue, parentBValue) {
+              if (parentAValue === Util.nothing) {
+                return BtoC(parentBValue);
+              }
+              if (parentBValue === Util.nothing) {
+                return AtoC(parentAValue);
+              }
+              return ABtoC(parentAValue, parentBValue);
+            }
+          )[1];
+        });
 
       const mapTag = (parent, latchGet, combine) =>
         map(parent, (x) => combine(x, latchGet()));
 
       const tag = (parent, latchGet) => map(parent, () => latchGet());
-      
-      const observeE = (parent) => singleParentEvent(parent, function* (value) {
-        return yield Push.liftPull(value);
-      });
+
+      const observeE = (parent) =>
+        singleParentEvent(parent, function* (value) {
+          return yield Push.liftPull(value);
+        });
 
       const output = Pull.output;
 
       const switchE = (() => {
-        const poll = function*(value) {
+        const poll = function* (value) {
           return value;
-        }
+        };
 
-        const switcherHandle = (sink, weakSource) => segment => {
+        const switcherHandle = (sink, weakSource) => (segment) => {
           const source = weakSource.deref();
           if (source === undefined) {
             return;
@@ -558,14 +579,17 @@
           const segmentSource = segment(); // It's safe to construct events within output.
           source.switch(segmentSource);
           sink.switch(segmentSource.getWeakSink());
-        }
+        };
 
-        return function*(parent) {
+        return function* (parent) {
           // We're safe evaluating the event pair eagerly instead of using [lazyEvent]
           // because there are no parents yet.
           const [sink, source] = newEventPair([], poll);
           const weakSource = new WeakRef(source); // Prevents memory leaks.
-          const switcher = yield output(parent, switcherHandle(sink, weakSource));
+          const switcher = yield output(
+            parent,
+            switcherHandle(sink, weakSource)
+          );
           eventConstructors.push(() => {
             const switcherSource = switcher();
             if (switcherSource.isPushable()) {
@@ -573,7 +597,7 @@
             }
           });
           return k(source);
-        }
+        };
       })();
 
       // TODO optimize with binary tree
