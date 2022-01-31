@@ -377,7 +377,7 @@
         }
 
         switch(weakSegment) {
-          Util.assert(this._isPullable);
+          Util.assert(this._pullable);
           for (const weakParentLink of this._weakParentLinks) {
             weakParentLink.deref()?.removeOnce();
           }
