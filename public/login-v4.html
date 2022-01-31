@@ -481,13 +481,9 @@
     })();
 
     const singleParentEvent = (parent, poll) =>
-      lazyEvent(() => {
-        const parentSource = parent();
-        if (!parentSource.isPushable()) {
-          return never();
-        }
-        return newEventPair([parent()], poll)[1];
-      });
+      lazyEvent(() =>
+        parent().isPushable() ? newEventPair([parent()], poll)[1] : never()
+      );
 
     const Combinators = (() => {
       const eventLoop = () => {
