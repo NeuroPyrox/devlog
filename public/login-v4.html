@@ -376,23 +376,6 @@
           return yield* this._poll(...parentValues);
         }
 
-        _onUnpullable() {
-          for (const weakParentLink of this._weakParentLinks) {
-            weakParentLink.deref()?.removeOnce();
-          }
-          this._unsubscribe();
-          this._pullable = false;
-        }
-
-        _switchPriority(childPriority) {
-          if (childPriority <= this._priority) {
-            this._priority = childPriority - 1;
-            for (const weakParent of this._weakParents) {
-              weakParent.deref()?._switchPriority(this._priority);
-            }
-          }
-        }
-
         switch(weakSegment) {
           Util.assert(this._isPullable);
           for (const weakParentLink of this._weakParentLinks) {
@@ -407,6 +390,23 @@
           this._weakParents = [weakSegment];
           this._weakParentLinks = [new WeakRef(segment._children.add(this))];
           segment._switchPriority(this._priority);
+        }
+
+        _switchPriority(childPriority) {
+          if (childPriority <= this._priority) {
+            this._priority = childPriority - 1;
+            for (const weakParent of this._weakParents) {
+              weakParent.deref()?._switchPriority(this._priority);
+            }
+          }
+        }
+
+        _onUnpullable() {
+          for (const weakParentLink of this._weakParentLinks) {
+            weakParentLink.deref()?.removeOnce();
+          }
+          this._unsubscribe();
+          this._pullable = false;
         }
       }
 
@@ -443,14 +443,6 @@
           return this._weakSink;
         }
 
-        _onUnpushable() {
-          Util.assert(!this.isPushable());
-          for (const weakChildLink of this._weakChildLinks) {
-            weakChildLink.deref()?.remove();
-          }
-          // [this._weakChildLinks] will soon get cleared by [this._parentLinkFinalizers].
-        }
-
         switch(segment) {
           // Check if there's more than one parent.
           if (this._parents.getLast() !== this._parents.getFirst()) {
@@ -459,6 +451,14 @@
           if (segment.isPushable()) {
             segment.addChild(this);
           }
+        }
+
+        _onUnpushable() {
+          Util.assert(!this.isPushable());
+          for (const weakChildLink of this._weakChildLinks) {
+            weakChildLink.deref()?.remove();
+          }
+          // [this._weakChildLinks] will soon get cleared by [this._parentLinkFinalizers].
         }
       }
 
