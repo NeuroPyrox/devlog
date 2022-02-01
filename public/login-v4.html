@@ -383,6 +383,8 @@
         }
         
         activate() {
+          Util.assert(this._activeChildren.isEmpty());
+          Util.assert(this._deactivators.length === 0);
           for (const weakParent of this._weakParents) {
             const parent = weakParent.deref();
             if (parent !== undefined) {
