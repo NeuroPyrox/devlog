@@ -388,7 +388,7 @@
           for (const weakParent of this._weakParents) {
             const parent = weakParent.deref();
             if (parent !== undefined) {
-              if (parent._activeChildren.length === 0) {
+              if (parent._activeChildren.isEmpty()) {
                 parent.activate();
               }
               this._deactivators.push(new WeakRef(parent._activeChildren.add(this)));
