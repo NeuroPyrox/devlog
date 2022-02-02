@@ -384,7 +384,6 @@
         }
 
         activate() {
-          Util.assert(this._activeChildren.isEmpty());
           Util.assert(this._deactivators.length === 0);
           for (const weakParent of this._weakParents) {
             const parent = weakParent.deref();
@@ -422,7 +421,7 @@
               this._weakParentLinks.length === 1
           );
           this._weakParentLinks[0].deref()?.removeOnce();
-          // TODO deactivate
+          this.deactivate();
           const segment = weakSegment.deref();
           if (segment === undefined) {
             this._weakParents = [];
@@ -431,7 +430,9 @@
           }
           this._weakParents = [weakSegment];
           this._weakParentLinks = [new WeakRef(segment._children.add(this))];
-          // TODO activate parents
+          if (!this._activeChildren.isEmpty()) {
+            this.activate();
+          }
           segment._switchPriority(this._priority);
         }
 
