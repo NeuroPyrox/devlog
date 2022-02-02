@@ -388,6 +388,7 @@
             const parent = weakParent.deref();
             if (parent !== undefined) {
               if (parent._activeChildren.isEmpty()) {
+                // From zero to one child.
                 parent.activate();
               }
               this._deactivators.push(
@@ -397,6 +398,7 @@
           }
         }
 
+        // TODO call before output GC.
         deactivate() {
           if (this._deactivators.length === 0) {
             return;
@@ -408,6 +410,7 @@
           for (const weakParent of this._weakParents) {
             const parent = weakParent.deref();
             if (parent !== undefined && parent._activeChildren.isEmpty()) {
+              // From one to zero children.
               parent.deactivate();
             }
           }
@@ -423,7 +426,7 @@
             if (parent === oldParent) {
               return;
             }
-            // If there's an old parent, and it's different, detach from it.
+            // If there's an [oldParent], and it's different, detach from it.
             this._weakParentLinks[0].deref()?.removeOnce();
             this.deactivate();
           }
@@ -433,7 +436,7 @@
             this._weakParentLinks = [];
             return;
           }
-          // Attach to new parent, the same way as in the constructor.
+          // Attach to new [parent], the same way as in the constructor.
           this._weakParents = [weakParent];
           this._weakParentLinks = [new WeakRef(parent._children.add(this))];
           // Upwards propagate activeness and priority.
@@ -452,6 +455,7 @@
           }
         }
 
+        // A longer version of the detachment step in [switch].
         _onUnpullable() {
           for (const weakParentLink of this._weakParentLinks) {
             weakParentLink.deref()?.removeOnce();
