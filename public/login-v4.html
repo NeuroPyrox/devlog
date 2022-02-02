@@ -366,9 +366,8 @@
           this._pullable = true;
         }
 
-        // TODO filter by activeness
         *iterateChildren() {
-          yield* this._children;
+          yield* this._activeChildren;
         }
 
         getPriority() {
