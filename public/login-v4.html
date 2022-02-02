@@ -395,6 +395,22 @@
             }
           }
         }
+        
+        deactivate() {
+          if (this._deactivators.length === 0) {
+            return;
+          }
+          for (const deactivator of this._deactivators) {
+            deactivator.deref()?.removeOnce();
+          }
+          this._deactivators = [];
+          for (const weakParent of this._weakParents) {
+            const parent = weakParent.deref();
+            if (parent !== undefined && parent._activeChildren.isEmpty()) {
+              parent.deactivate();
+            }
+          }
+        }
 
         switch(weakSegment) {
           Util.assert(this._pullable);
@@ -427,7 +443,7 @@
           for (const weakParentLink of this._weakParentLinks) {
             weakParentLink.deref()?.removeOnce();
           }
-          // TODO deactivate
+          this.deactivate();
           this._unsubscribe();
           this._pullable = false;
         }
