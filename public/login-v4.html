@@ -417,9 +417,15 @@
           Util.assert(this._pullable);
           Util.assert(this._weakParents.length === this._weakParentLinks.length);
           Util.assert(this._weakParents.length <= 1);
-          this._weakParentLinks[0]?.deref()?.removeOnce();
-          this.deactivate();
           const segment = weakSegment.deref();
+          if (this._weakParents.length === 1) {
+            const oldSegment = this._weakParents[0].deref();
+            if (segment === oldSegment) {
+              return;
+            }
+            this._weakParentLinks[0].deref()?.removeOnce();
+            this.deactivate();
+          }
           if (segment === undefined) {
             this._weakParents = [];
             this._weakParentLinks = [];
