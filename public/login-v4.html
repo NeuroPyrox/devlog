@@ -249,7 +249,7 @@
         // and for the ability to control when the output starts.
         output: (parent, handle) =>
           lazyEvent(() => {
-            if (!parent.isPushable()) {
+            if (!parent().isPushable()) {
               return never();
             }
             const [sink, source] = newEventPair([parent()], function* (value) {
