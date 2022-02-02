@@ -423,16 +423,20 @@
             if (segment === oldSegment) {
               return;
             }
+            // If there's an old parent, and it's different, detach from it.
             this._weakParentLinks[0].deref()?.removeOnce();
             this.deactivate();
           }
           if (segment === undefined) {
+            // Attach to nothing.
             this._weakParents = [];
             this._weakParentLinks = [];
             return;
           }
+          // Attach to new parent, the same way as in the constructor.
           this._weakParents = [weakSegment];
           this._weakParentLinks = [new WeakRef(segment._children.add(this))];
+          // Upwards propagate activeness and priority.
           if (!this._activeChildren.isEmpty()) {
             this.activate();
           }
