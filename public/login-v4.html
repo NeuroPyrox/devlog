@@ -413,10 +413,8 @@
         }
 
         switch(weakSegment) {
-          Util.assert(this._pullable);
-          for (const weakParentLink of this._weakParentLinks) {
-            weakParentLink.deref()?.removeOnce();
-          }
+          Util.assert(this._pullable && this._weakParents.length === 1 && this._weakParentLinks.length === 1);
+          this._weakParentLinks[0].deref()?.removeOnce();
           // TODO deactivate
           const segment = weakSegment.deref();
           if (segment === undefined) {
