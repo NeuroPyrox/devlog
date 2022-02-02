@@ -247,18 +247,19 @@
         // Implementation-wise, there's no need to put this function
         // in the Pull monad, but we do it to make the semantics cleaner
         // and for the ability to control when the output starts.
-        output: (parent, handle) => lazyEvent(() => {
-          if (!parent.isPushable()) {
-            return never();
-          }
-          const [sink, source] = newEventPair([parent()], function* (value) {
-            yield Push.enqueueAction(handle, value);
-            return Util.nothing;
-          });
-          sink.activate();
-          outputs.push(source);
-          return source;
-        }),
+        output: (parent, handle) =>
+          lazyEvent(() => {
+            if (!parent.isPushable()) {
+              return never();
+            }
+            const [sink, source] = newEventPair([parent()], function* (value) {
+              yield Push.enqueueAction(handle, value);
+              return Util.nothing;
+            });
+            sink.activate();
+            outputs.push(source);
+            return source;
+          }),
       };
       const output = Util.callMethod("output");
 
@@ -381,7 +382,7 @@
           }
           return yield* this._poll(...parentValues);
         }
-        
+
         activate() {
           Util.assert(this._activeChildren.isEmpty());
           Util.assert(this._deactivators.length === 0);
@@ -391,11 +392,13 @@
               if (parent._activeChildren.isEmpty()) {
                 parent.activate();
               }
-              this._deactivators.push(new WeakRef(parent._activeChildren.add(this)));
+              this._deactivators.push(
+                new WeakRef(parent._activeChildren.add(this))
+              );
             }
           }
         }
-        
+
         deactivate() {
           if (this._deactivators.length === 0) {
             return;
@@ -413,7 +416,11 @@
         }
 
         switch(weakSegment) {
-          Util.assert(this._pullable && this._weakParents.length === 1 && this._weakParentLinks.length === 1);
+          Util.assert(
+            this._pullable &&
+              this._weakParents.length === 1 &&
+              this._weakParentLinks.length === 1
+          );
           this._weakParentLinks[0].deref()?.removeOnce();
           // TODO deactivate
           const segment = weakSegment.deref();
