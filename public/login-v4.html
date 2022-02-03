@@ -398,8 +398,10 @@
           }
         }
 
+        // As deduced from the assertions:
         // Must be called before [_onUnpullable].
         // Cannot be called twice in a row.
+        // Can only be called on an [output] sink or from the recursion in [_deactivateSwitch].
         deactivate() {
           Util.assert(this._activeChildren.isEmpty());
           this._deactivateSwitch();
@@ -445,8 +447,7 @@
           this._deactivators = [];
           for (const weakParent of this._weakParents) {
             const parent = weakParent.deref();
-            // TODO do we really need to check if there's deactivators?
-            if (parent !== undefined && parent._activeChildren.isEmpty() && parent._deactivators.length !== 0) {
+            if (parent !== undefined && parent._activeChildren.isEmpty() && parent._weakParents.length !== 0) {
               // From one to zero children.
               parent.deactivate();
             }
