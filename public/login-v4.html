@@ -423,19 +423,20 @@
           if (parent === oldParent) {
             return;
           }
+          // Detach from [oldParent].
           if (oldParent !== undefined) {
             this._weakParentLinks[0].deref()?.removeOnce();
             if (this._deactivators.length !== 0) {
               this._deactivateSwitch();
             }
           }
+          // Attach to [parent].
+          // Set [_weakParents, _weakParentLinks] like the constructor does.
           if (parent === undefined) {
-            // Attach to nothing.
             this._weakParents = [];
             this._weakParentLinks = [];
             return;
           }
-          // Attach to new [parent], the same way as in the constructor.
           this._weakParents = [weakParent];
           this._weakParentLinks = [new WeakRef(parent._children.add(this))];
           // Upwards propagate activeness and priority.
