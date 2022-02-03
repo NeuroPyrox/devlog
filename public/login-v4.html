@@ -398,18 +398,18 @@
           }
         }
 
-        // TODO call before output GC.
+        // Must be called before [_onUnpullable].
+        // Cannot be called twice in a row.
         deactivate() {
-          if (this._deactivators.length === 0) {
-            return;
-          }
+          Util.assert(this._activeChildren.isEmpty());
+          Util.assert(this._deactivators.length !== 0);
           for (const deactivator of this._deactivators) {
             deactivator.deref()?.removeOnce();
           }
           this._deactivators = [];
           for (const weakParent of this._weakParents) {
             const parent = weakParent.deref();
-            if (parent !== undefined && parent._activeChildren.isEmpty()) {
+            if (parent !== undefined && parent._activeChildren.isEmpty() && parent._deactivators.length !== 0) {
               // From one to zero children.
               parent.deactivate();
             }
@@ -428,7 +428,9 @@
             }
             // If there's an [oldParent], and it's different, detach from it.
             this._weakParentLinks[0].deref()?.removeOnce();
-            this.deactivate();
+            if (this._deactivators.length !== 0) {
+              this.deactivate();
+            }
           }
           if (parent === undefined) {
             // Attach to nothing.
@@ -455,12 +457,12 @@
           }
         }
 
-        // A longer version of the detachment step in [switch].
         _onUnpullable() {
+          Util.assert(this._activeChildren.isEmpty());
+          Util.assert(this._deactivators.length === 0);
           for (const weakParentLink of this._weakParentLinks) {
             weakParentLink.deref()?.removeOnce();
           }
-          this.deactivate();
           this._unsubscribe();
           this._pullable = false;
         }
