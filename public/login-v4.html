@@ -343,6 +343,12 @@
     })();
 
     const newEventPair = (() => {
+      
+      // The only variables that are used for something other than resource management are:
+      //   [_activeChildren, _priority, _poll]
+      // There are 2 clusters of subtly interconnected logic:
+      //   [_children, _weakParents, _weakParentLinks]
+      //   [_activeChildren, _deactivators]
       class Sink {
         static _finalizers = new FinalizationRegistry((weakSource) =>
           weakSource.deref()?._onUnpushable()
