@@ -388,6 +388,7 @@
           return yield* this._poll(...parentValues);
         }
 
+        // TODO refactor
         activate() {
           Util.assert(this._deactivators.length === 0);
           for (const weakParent of this._weakParents) {
@@ -417,6 +418,13 @@
           Util.assert(this._pullable);
           Util.assert(this._weakParents.length === this._weakParentLinks.length);
           Util.assert(this._weakParents.length <= 1);
+          // 0: no parent, 1: defined parent, 2: undefined parent, eq: early exit if old=new
+          // 0->1           attach1
+          // 0->2 eq
+          // 1->1 eq detach attach1
+          // 1->2    detach attach2
+          // 2->1           attach1
+          // 2->2 eq
           const parent = weakParent.deref();
           // The case where [oldParent === undefined] is very interesting.
           const oldParent = this._weakParents[0]?.deref();
