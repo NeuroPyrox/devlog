@@ -240,9 +240,9 @@
 
     const Pull = (() => {
       const context = {
-        // TODO activeness
+        // Do stop the output, call [source.getWeakSink().deref()?.deactivate()].
         // When the return value loses all its references,
-        // we contractually assume that calling [handle] no longer has any side effects,
+        // we assert that the sink is not active,
         // and later the output gets garbage collected.
         // Implementation-wise, there's no need to put this function
         // in the Pull monad, but we do it to make the semantics cleaner
@@ -313,7 +313,6 @@
       const enqueueAction = Util.callMethod("enqueueAction");
       const liftPull = Util.callMethod("liftPull");
 
-      // TODO check if sink is active
       const push = (sink, value) => {
         Util.runMonad(
           new Context(),
