@@ -420,11 +420,11 @@
           Util.assert(this._weakParents.length === this._weakParentLinks.length);
           Util.assert(this._weakParents.length <= 1);
           // 0: no parent, 1: defined parent, 2: undefined parent, eq: early exit if old=new
-          // 0->1           attach1
+          // 0->1            attach1
           // 0->2 eq
-          // 1->1 eq detach attach1
-          // 1->2    detach attach2
-          // 2->1           attach1
+          // 1->1 eq detach1 attach1
+          // 1->2    detach1 attach2
+          // 2->1    detach2 attach1
           // 2->2 eq
           const parent = weakParent.deref();
           // The case where [oldParent === undefined] is very interesting.
@@ -432,7 +432,10 @@
           if (parent === oldParent) {
             return;
           }
-          if (oldParent !== undefined) {
+          if (oldParent === undefined) {
+            // This branch is redundant if [this._weakParents.length === 0].
+            this._deactivators = [];
+          } else {
             // Detach from [oldParent].
             this._weakParentLinks[0].deref()?.removeOnce();
             if (this._deactivators.length !== 0) {
