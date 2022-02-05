@@ -414,6 +414,7 @@
           this._deactivateSwitch();
         }
 
+        // Sets [_weakParents, _weakParentLinks] like the constructor does.
         switch(weakParent) {
           Util.assert(this._pullable);
           Util.assert(this._weakParents.length === this._weakParentLinks.length);
@@ -431,20 +432,20 @@
           if (parent === oldParent) {
             return;
           }
-          // Detach from [oldParent].
           if (oldParent !== undefined) {
+            // Detach from [oldParent].
             this._weakParentLinks[0].deref()?.removeOnce();
             if (this._deactivators.length !== 0) {
               this._deactivateSwitch();
             }
+            if (parent === undefined) {
+              // Attach to [undefined].
+              this._weakParents = [];
+              this._weakParentLinks = [];
+              return;
+            }
           }
           // Attach to [parent].
-          // Set [_weakParents, _weakParentLinks] like the constructor does.
-          if (parent === undefined) {
-            this._weakParents = [];
-            this._weakParentLinks = [];
-            return;
-          }
           this._weakParents = [weakParent];
           this._weakParentLinks = [new WeakRef(parent._children.add(this))];
           // Upwards propagate activeness and priority.
