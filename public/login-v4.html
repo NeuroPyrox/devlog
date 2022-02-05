@@ -320,14 +320,14 @@
           (function* () {
             yield (context) => context.writeSink(sink, value);
             const queue = new Util.PriorityQueue();
-            for (const childSink of sink.iterateChildren()) {
+            for (const childSink of sink.iterateActiveChildren()) {
               queue.push(childSink);
             }
             for (const sink of queue) {
               const value = yield* sink.poll();
               if (value !== Util.nothing) {
                 yield (context) => context.writeSink(sink, value);
-                for (const child of sink.iterateChildren()) {
+                for (const child of sink.iterateActiveChildren()) {
                   // Mutating the queue while iterating over it.
                   queue.push(child);
                 }
@@ -371,7 +371,7 @@
           this._pullable = true;
         }
 
-        *iterateChildren() {
+        *iterateActiveChildren() {
           yield* this._activeChildren;
         }
 
