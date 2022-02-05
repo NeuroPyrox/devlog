@@ -390,14 +390,14 @@
         // Must only call on [output] sinks.
         // The assertion only weakly enforces this.
         activate() {
-          Util.assert(this._children.length === 0);
+          Util.assert(this._children.isEmpty());
           this._activate();
         }
 
         // Must only call on [output] sinks.
         // The assertion only weakly enforces this.
         deactivate() {
-          Util.assert(this._children.length === 0);
+          Util.assert(this._children.isEmpty());
           this._deactivate();
         }
 
