@@ -250,7 +250,7 @@
         output: (parent, handle) =>
           lazyEvent(() => {
             const parentSource = parent();
-            if (!source.isPushable()) {
+            if (!parentSource.isPushable()) {
               return neverSource;
             }
             const [sink, source] = newEventPair([parentSource], function* (value) {
