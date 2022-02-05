@@ -387,30 +387,18 @@
           return yield* this._poll(...parentValues);
         }
 
-        // TODO refactor
+        // Must only call on [output] sinks.
+        // The assertion only weakly enforces this.
         activate() {
-          Util.assert(this._deactivators.length === 0);
-          for (const weakParent of this._weakParents) {
-            const parent = weakParent.deref();
-            if (parent !== undefined) {
-              if (parent._activeChildren.isEmpty()) {
-                // From zero to one child.
-                parent.activate();
-              }
-              this._deactivators.push(
-                new WeakRef(parent._activeChildren.add(this))
-              );
-            }
-          }
+          Util.assert(this._children.length === 0);
+          this._activate();
         }
 
-        // As deduced from the assertions:
-        // Must be called before [_onUnpullable].
-        // Cannot be called twice in a row.
-        // Can only be called on an [output] sink or from the recursion in [_deactivateSwitch].
+        // Must only call on [output] sinks.
+        // The assertion only weakly enforces this.
         deactivate() {
-          Util.assert(this._activeChildren.isEmpty());
-          this._deactivateSwitch();
+          Util.assert(this._children.length === 0);
+          this._deactivate();
         }
 
         // Sets [_weakParents, _weakParentLinks] like the constructor does.
@@ -440,7 +428,7 @@
             // Detach from [oldParent].
             this._weakParentLinks[0].deref()?.removeOnce();
             if (this._deactivators.length !== 0) {
-              this._deactivateSwitch();
+              this._deactivate();
             }
             if (parent === undefined) {
               // Attach to [undefined].
@@ -454,12 +442,28 @@
           this._weakParentLinks = [new WeakRef(parent._children.add(this))];
           // Upwards propagate activeness and priority.
           if (!this._activeChildren.isEmpty()) {
-            this.activate();
+            this._activate();
           }
           parent._switchPriority(this._priority);
         }
+        
+        _activate() {
+          Util.assert(this._deactivators.length === 0);
+          for (const weakParent of this._weakParents) {
+            const parent = weakParent.deref();
+            if (parent !== undefined) {
+              if (parent._activeChildren.isEmpty()) {
+                // From zero to one child.
+                parent._activate();
+              }
+              this._deactivators.push(
+                new WeakRef(parent._activeChildren.add(this))
+              );
+            }
+          }
+        }
 
-        _deactivateSwitch() {
+        _deactivate() {
           Util.assert(this._deactivators.length !== 0);
           for (const deactivator of this._deactivators) {
             deactivator.deref()?.removeOnce();
@@ -473,7 +477,7 @@
               parent._weakParents.length !== 0
             ) {
               // From one to zero children.
-              parent.deactivate();
+              parent._deactivate();
             }
           }
         }
