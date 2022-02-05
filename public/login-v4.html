@@ -343,7 +343,6 @@
     })();
 
     const newEventPair = (() => {
-      
       // The only variables that are used for something other than resource management are:
       //   [_activeChildren, _priority, _poll]
       // There are 2 clusters of subtly interconnected logic:
@@ -417,7 +416,9 @@
         // Sets [_weakParents, _weakParentLinks] like the constructor does.
         switch(weakParent) {
           Util.assert(this._pullable);
-          Util.assert(this._weakParents.length === this._weakParentLinks.length);
+          Util.assert(
+            this._weakParents.length === this._weakParentLinks.length
+          );
           Util.assert(this._weakParents.length <= 1);
           // 0: no parent, 1: defined parent, 2: undefined parent, eq: early exit if old=new
           // 0->1            attach1
@@ -457,7 +458,7 @@
           }
           parent._switchPriority(this._priority);
         }
-        
+
         _deactivateSwitch() {
           Util.assert(this._deactivators.length !== 0);
           for (const deactivator of this._deactivators) {
@@ -466,7 +467,11 @@
           this._deactivators = [];
           for (const weakParent of this._weakParents) {
             const parent = weakParent.deref();
-            if (parent !== undefined && parent._activeChildren.isEmpty() && parent._weakParents.length !== 0) {
+            if (
+              parent !== undefined &&
+              parent._activeChildren.isEmpty() &&
+              parent._weakParents.length !== 0
+            ) {
               // From one to zero children.
               parent.deactivate();
             }
