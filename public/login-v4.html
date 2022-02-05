@@ -249,10 +249,11 @@
         // and for the ability to control when the output starts.
         output: (parent, handle) =>
           lazyEvent(() => {
-            if (!parent().isPushable()) {
+            const parentSource = parent();
+            if (!source.isPushable()) {
               return never();
             }
-            const [sink, source] = newEventPair([parent()], function* (value) {
+            const [sink, source] = newEventPair([parentSource], function* (value) {
               yield Push.enqueueAction(handle, value);
               return Util.nothing;
             });
@@ -572,9 +573,10 @@
     })();
 
     const singleParentEvent = (parent, poll) =>
-      lazyEvent(() =>
-        parent().isPushable() ? newEventPair([parent()], poll)[1] : never()
-      );
+      lazyEvent(() => {
+        const parentSource = parent();
+        return parentSource.isPushable() ? newEventPair([parentSource], poll)[1] : never();
+      });
 
     const Combinators = (() => {
       const eventLoop = () => {
