@@ -240,7 +240,7 @@
 
     const Pull = (() => {
       const context = {
-        // Do stop the output, call [source.getWeakSink().deref()?.deactivate()].
+        // To stop the output, call [source.getWeakSink().deref()?.deactivate()].
         // When the return value loses all its references,
         // we assert that the sink is not active,
         // and later the output gets garbage collected.
@@ -251,7 +251,7 @@
           lazyEvent(() => {
             const parentSource = parent();
             if (!source.isPushable()) {
-              return never();
+              return neverSource;
             }
             const [sink, source] = newEventPair([parentSource], function* (value) {
               yield Push.enqueueAction(handle, value);
@@ -342,7 +342,7 @@
       return { readSink, enqueueAction, liftPull, push };
     })();
 
-    const newEventPair = (() => {
+    const {newEventPair, neverSource} = (() => {
       // The only variables that are used for something other than resource management are:
       //   [_activeChildren, _priority, _poll]
       // There are 2 clusters of subtly interconnected logic:
@@ -556,7 +556,7 @@
 
       // Some of the event's parents may not be passed into this function but added later.
       // The only parents passed here are the ones that [poll] immediately depends on.
-      return (parentSources, poll, unsubscribe = () => {}) => {
+      const newEventPair = (parentSources, poll, unsubscribe = () => {}) => {
         Util.assert(
           parentSources.every((parentSource) => parentSource.isPushable())
         );
@@ -570,12 +570,19 @@
         Source._finalizers.register(source, source.getWeakSink());
         return [sink, source];
       };
+      
+      const neverSource = {
+        isPushable: k(false),
+        getWeakSink: k(Util.weakRefUndefined)
+      };
+      
+      return {newEventPair, neverSource};
     })();
 
     const singleParentEvent = (parent, poll) =>
       lazyEvent(() => {
         const parentSource = parent();
-        return parentSource.isPushable() ? newEventPair([parentSource], poll)[1] : never();
+        return parentSource.isPushable() ? newEventPair([parentSource], poll)[1] : neverSource;
       });
 
     const Combinators = (() => {
@@ -596,7 +603,7 @@
         return result;
       };
 
-      const never = k(newEventPair([], null)[1]);
+      const never = k(neverSource);
 
       const input = (subscribe) =>
         lazyEvent(() => {
