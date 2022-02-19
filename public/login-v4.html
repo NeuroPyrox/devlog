@@ -493,10 +493,13 @@
 
         _onUnpullable() {
           Util.assert(this._activeChildren.isEmpty());
-          Util.assert(this._deactivators.length === 0);
+          if (this._deactivators.length !== 0) {
+            this._deactivate();
+          }
           for (const weakParentLink of this._weakParentLinks) {
             weakParentLink.deref()?.removeOnce();
           }
+          this._weakParents = [];
           this._unsubscribe();
           this._pullable = false;
         }
