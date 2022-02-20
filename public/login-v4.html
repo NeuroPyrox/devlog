@@ -423,13 +423,14 @@
           }
           if (oldParent === undefined) {
             // This branch is redundant if [this._weakParents.length === 0].
+            // Simulates the effect of [this._deactivate()].
             this._deactivators = [];
           } else {
             // Detach from [oldParent].
-            this._weakParentLinks[0].deref()?.removeOnce();
             if (this._deactivators.length !== 0) {
               this._deactivate();
             }
+            this._weakParentLinks[0].deref()?.removeOnce();
             if (parent === undefined) {
               // Attach to [undefined].
               this._weakParents = [];
