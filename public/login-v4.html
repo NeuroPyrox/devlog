@@ -394,10 +394,11 @@
           this._activate();
         }
 
-        // Must only call on [output] sinks.
-        // The assertion only weakly enforces this.
+        // Must only call on active [output] sinks.
+        // The assertions only weakly enforce this.
         deactivate() {
           Util.assert(this._children.isEmpty());
+          Util.assert(this._deactivators.length !== 0);
           this._deactivate();
         }
 
@@ -427,9 +428,7 @@
             this._deactivators = [];
           } else {
             // Detach from [oldParent].
-            if (this._deactivators.length !== 0) {
-              this._deactivate();
-            }
+            this._deactivate();
             this._weakParentLinks[0].deref()?.removeOnce();
             if (parent === undefined) {
               // Attach to [undefined].
@@ -465,7 +464,9 @@
         }
 
         _deactivate() {
-          Util.assert(this._deactivators.length !== 0);
+          if (this._deactivators.length === 0) {
+            return;
+          }
           for (const deactivator of this._deactivators) {
             deactivator.deref()?.removeOnce();
           }
@@ -474,8 +475,7 @@
             const parent = weakParent.deref();
             if (
               parent !== undefined &&
-              parent._activeChildren.isEmpty() &&
-              parent._weakParents.length !== 0
+              parent._activeChildren.isEmpty()
             ) {
               // From one to zero children.
               parent._deactivate();
@@ -494,9 +494,7 @@
 
         _onUnpullable() {
           Util.assert(this._activeChildren.isEmpty());
-          if (this._deactivators.length !== 0) {
-            this._deactivate();
-          }
+          this._deactivate();
           for (const weakParentLink of this._weakParentLinks) {
             weakParentLink.deref()?.removeOnce();
           }
