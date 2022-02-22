@@ -493,7 +493,6 @@
         }
 
         _onUnpullable() {
-          Util.assert(this._activeChildren.isEmpty());
           this._deactivate();
           for (const weakParentLink of this._weakParentLinks) {
             weakParentLink.deref()?.removeOnce();
