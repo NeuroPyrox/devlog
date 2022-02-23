@@ -441,7 +441,8 @@
           this._weakParents = [weakParent];
           this._weakParentLinks = [new WeakRef(parent._children.add(this))];
           // Upwards propagate activeness and priority.
-          if (!this._activeChildren.isEmpty()) {
+          const isActive = !this._activeChildren.isEmpty();
+          if (isActive) {
             this._activate();
           }
           parent._switchPriority(this._priority);
