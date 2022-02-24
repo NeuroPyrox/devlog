@@ -387,7 +387,7 @@
           return yield* this._poll(...parentValues);
         }
 
-        // Must only call on [output] sinks.
+        // Must only call on inactive [output] sinks.
         // The assertion only weakly enforces this.
         activate() {
           Util.assert(this._children.isEmpty());
@@ -448,6 +448,7 @@
           parent._switchPriority(this._priority);
         }
         
+        // Can't call twice in a row
         _activate() {
           Util.assert(this._deactivators.length === 0);
           for (const weakParent of this._weakParents) {
@@ -464,6 +465,7 @@
           }
         }
 
+        // Can call twice in a row
         _deactivate() {
           if (this._deactivators.length === 0) {
             return;
