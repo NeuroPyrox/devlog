@@ -421,12 +421,12 @@
           if (parent === oldParent) {
             return;
           }
+          // Detach from [oldParent].
           if (oldParent === undefined) {
             // This branch is redundant if [this._weakParents.length === 0].
             // Simulates the effect of [this._deactivate()].
             this._deactivators = [];
           } else {
-            // Detach from [oldParent].
             this._deactivate();
             this._weakParentLinks[0].deref()?.removeOnce();
             if (parent === undefined) {
@@ -459,6 +459,7 @@
           }
         }
         
+        // Can call more than once if [this._weakParents.length === 0].
         _activateOnce() {
           Util.assert(this._deactivators.length === 0);
           for (const weakParent of this._weakParents) {
@@ -485,11 +486,11 @@
             const parent = weakParent.deref();
             if (
               parent !== undefined &&
-              parent._activeChildren.isEmpty()
+              parent._activeChildren.isEmpty() &&
+              parent._weakParents.length !== 0
             ) {
               // From one to zero children.
-              // Use [_deactivate] instead of [_deactivateOnce] to account for [parent._weakParents.length === 0].
-              parent._deactivate();
+              parent._deactivateOnce();
             }
           }
         }
