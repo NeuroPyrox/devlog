@@ -388,18 +388,17 @@
         }
 
         // Must only call on inactive [output] sinks.
-        // The assertion only weakly enforces this.
+        // The assertions only weakly enforce this.
         activate() {
           Util.assert(this._children.isEmpty());
-          this._activate();
+          this._activateOnce();
         }
 
         // Must only call on active [output] sinks.
         // The assertions only weakly enforce this.
         deactivate() {
           Util.assert(this._children.isEmpty());
-          Util.assert(this._deactivators.length !== 0);
-          this._deactivate();
+          this._deactivateOnce();
         }
 
         // Sets [_weakParents, _weakParentLinks] like the constructor does.
@@ -443,20 +442,31 @@
           // Upwards propagate activeness and priority.
           const isActive = !this._activeChildren.isEmpty();
           if (isActive) {
-            this._activate();
+            this._activateOnce();
           }
           parent._switchPriority(this._priority);
         }
         
-        // Can't call twice in a row
         _activate() {
+          if (this._deactivators.length === 0) {
+            this._activateOnce();
+          }
+        }
+
+        _deactivate() {
+          if (this._deactivators.length !== 0) {
+            this._deactivateOnce();
+          }
+        }
+        
+        _activateOnce() {
           Util.assert(this._deactivators.length === 0);
           for (const weakParent of this._weakParents) {
             const parent = weakParent.deref();
             if (parent !== undefined) {
               if (parent._activeChildren.isEmpty()) {
                 // From zero to one child.
-                parent._activate();
+                parent._activateOnce();
               }
               this._deactivators.push(
                 new WeakRef(parent._activeChildren.add(this))
@@ -464,12 +474,9 @@
             }
           }
         }
-
-        // Can call twice in a row
-        _deactivate() {
-          if (this._deactivators.length === 0) {
-            return;
-          }
+        
+        _deactivateOnce() {
+          Util.assert(this._deactivators.length !== 0);
           for (const deactivator of this._deactivators) {
             deactivator.deref()?.removeOnce();
           }
@@ -481,6 +488,7 @@
               parent._activeChildren.isEmpty()
             ) {
               // From one to zero children.
+              // Use [_deactivate] instead of [_deactivateOnce] to account for [parent._weakParents.length === 0].
               parent._deactivate();
             }
           }
