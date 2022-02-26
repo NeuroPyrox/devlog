@@ -253,10 +253,13 @@
             if (!parentSource.isPushable()) {
               return neverSource;
             }
-            const [sink, source] = newEventPair([parentSource], function* (value) {
-              yield Push.enqueueAction(handle, value);
-              return Util.nothing;
-            });
+            const [sink, source] = newEventPair(
+              [parentSource],
+              function* (value) {
+                yield Push.enqueueAction(handle, value);
+                return Util.nothing;
+              }
+            );
             sink.activate();
             outputs.push(source);
             return source;
@@ -342,7 +345,7 @@
       return { readSink, enqueueAction, liftPull, push };
     })();
 
-    const {newEventPair, neverSource} = (() => {
+    const { newEventPair, neverSource } = (() => {
       // The only variables that are used for something other than resource management are:
       //   [_activeChildren, _priority, _poll]
       // There are 2 clusters of subtly interconnected logic:
@@ -446,7 +449,7 @@
           }
           parent._switchPriority(this._priority);
         }
-        
+
         _activate() {
           if (this._deactivators.length === 0) {
             this._activateOnce();
@@ -458,7 +461,7 @@
             this._deactivateOnce();
           }
         }
-        
+
         // Can call more than once if [this._weakParents.length === 0].
         _activateOnce() {
           Util.assert(this._deactivators.length === 0);
@@ -475,7 +478,7 @@
             }
           }
         }
-        
+
         _deactivateOnce() {
           Util.assert(this._deactivators.length !== 0);
           for (const deactivator of this._deactivators) {
@@ -583,19 +586,21 @@
         Source._finalizers.register(source, source.getWeakSink());
         return [sink, source];
       };
-      
+
       const neverSource = {
         isPushable: k(false),
-        getWeakSink: k(Util.weakRefUndefined)
+        getWeakSink: k(Util.weakRefUndefined),
       };
-      
-      return {newEventPair, neverSource};
+
+      return { newEventPair, neverSource };
     })();
 
     const singleParentEvent = (parent, poll) =>
       lazyEvent(() => {
         const parentSource = parent();
-        return parentSource.isPushable() ? newEventPair([parentSource], poll)[1] : neverSource;
+        return parentSource.isPushable()
+          ? newEventPair([parentSource], poll)[1]
+          : neverSource;
       });
 
     const Combinators = (() => {
