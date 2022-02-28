@@ -351,7 +351,7 @@
       // There are 2 clusters of subtly interconnected logic:
       //   [_children, _weakParents, _weakParentLinks]
       //   [_activeChildren, _deactivators]
-      class Sink {
+      class EventSink {
         static _finalizers = new FinalizationRegistry((weakSource) =>
           weakSource.deref()?._onUnpushable()
         );
@@ -517,6 +517,26 @@
           this._pullable = false;
         }
       }
+      
+      class BehaviorSink {
+        static _finalizers = new FinalizationRegistry((weakSource) =>
+          weakSource.deref()?._onUnpushable()
+        );
+
+        constructor(weakParents, poll, unsubscribe) {
+          const parents = weakParents.map((weakParent) => weakParent.deref());
+          this._children = new Util.ShrinkingList();
+          this._weakParents = weakParents;
+          this._weakParentLinks = parents.map(
+            (parent) => new WeakRef(parent._children.add(this))
+          );
+          this._priority =
+            parents.length === 0
+              ? 0
+              : Math.max(...parents.map((parent) => parent.getPriority())) + 1;
+          this._poll = poll;
+        }
+      }
 
       class Source {
         static _finalizers = new FinalizationRegistry((weakSink) =>
@@ -576,13 +596,13 @@
         Util.assert(
           parentSources.every((parentSource) => parentSource.isPushable())
         );
-        const sink = new Sink(
+        const sink = new EventSink(
           parentSources.map((source) => source.getWeakSink()),
           poll,
           unsubscribe
         );
         const source = new Source(parentSources, sink);
-        Sink._finalizers.register(sink, new WeakRef(source), unsubscribe);
+        EventSink._finalizers.register(sink, new WeakRef(source), unsubscribe);
         Source._finalizers.register(source, source.getWeakSink());
         return [sink, source];
       };
