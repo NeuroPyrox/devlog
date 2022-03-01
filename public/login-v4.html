@@ -346,6 +346,26 @@
     })();
 
     const { newEventPair, neverSource } = (() => {
+      class Sink {
+        // TODO merge unsubscribe into weakParents
+        constructor(weakParents, unsubscribe) {
+          this._children = new Util.ShrinkingList();
+          this._weakParents = weakParents;
+          this._weakParentLinks = parents.map(
+            (parent) => new WeakRef(parent._children.add(this))
+          );
+          this._unsubscribe = unsubscribe; // Only used for input events
+        }
+
+        _onUnpullable() {
+          for (const weakParentLink of this._weakParentLinks) {
+            weakParentLink.deref()?.removeOnce();
+          }
+          this._weakParents = []; // TODO do we need this line?
+          this._unsubscribe();
+        }
+      }
+      
       // The only variables that are used for something other than resource management are:
       //   [_activeChildren, _priority, _poll]
       // There are 2 clusters of subtly interconnected logic:
