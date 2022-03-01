@@ -349,6 +349,7 @@
       class Sink {
         // TODO merge unsubscribe into weakParents
         constructor(weakParents, unsubscribe) {
+          const parents = weakParents.map((weakParent) => weakParent.deref());
           this._children = new Util.ShrinkingList();
           this._weakParents = weakParents;
           this._weakParentLinks = parents.map(
