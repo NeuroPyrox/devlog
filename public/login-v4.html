@@ -561,6 +561,13 @@
               : Math.max(...parents.map((parent) => parent.getPriority())) + 1;
           this._poll = poll;
         }
+
+        _onUnpullable() {
+          for (const weakParentLink of this._weakParentLinks) {
+            weakParentLink.deref()?.removeOnce();
+          }
+          this._weakParents = [];
+        }
       }
 
       class Source {
