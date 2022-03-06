@@ -548,7 +548,7 @@
           weakSource.deref()?._onUnpushable()
         );
 
-        constructor(weakParents, poll, unsubscribe) {
+        constructor(weakParents, poll) {
           const parents = weakParents.map((weakParent) => weakParent.deref());
           this._children = new Util.ShrinkingList();
           this._weakParents = weakParents;
@@ -638,13 +638,27 @@
         Source._finalizers.register(source, source.getWeakSink());
         return [sink, source];
       };
+      
+      const newBehaviorPair = (parentSources, poll) => {
+        Util.assert(
+          parentSources.every((parentSource) => parentSource.isPushable())
+        );
+        const sink = new BehaviorSink(
+          parentSources.map((source) => source.getWeakSink()),
+          poll
+        );
+        const source = new Source(parentSources, sink);
+        BehaviorSink._finalizers.register(sink, new WeakRef(source));
+        Source._finalizers.register(source, source.getWeakSink());
+        return [sink, source];
+      }
 
       const neverSource = {
         isPushable: k(false),
         getWeakSink: k(Util.weakRefUndefined),
       };
 
-      return { newEventPair, neverSource };
+      return { newEventPair, newBehaviorPair, neverSource };
     })();
 
     const singleParentEvent = (parent, poll) =>
