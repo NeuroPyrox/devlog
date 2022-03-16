@@ -346,6 +346,13 @@
     })();
 
     const { newEventPair, neverSource } = (() => {
+      const sinkFinalizers = new FinalizationRegistry((weakSource) =>
+        weakSource.deref()?._onUnpushable()
+      );
+      const sourceFinalizers = new FinalizationRegistry((weakSink) =>
+        weakSink.deref()?._onUnpullable()
+      );
+      
       class Sink {
         // TODO merge unsubscribe into weakParents
         constructor(weakParents, unsubscribe) {
@@ -377,10 +384,6 @@
       //   [_children, _weakParents, _weakParentLinks]
       //   [_activeChildren, _deactivators]
       class EventSink {
-        static _finalizers = new FinalizationRegistry((weakSource) =>
-          weakSource.deref()?._onUnpushable()
-        );
-
         constructor(weakParents, poll, unsubscribe) {
           const parents = weakParents.map((weakParent) => weakParent.deref());
           this._children = new Util.ShrinkingList();
@@ -544,10 +547,6 @@
       }
       
       class BehaviorSink {
-        static _finalizers = new FinalizationRegistry((weakSource) =>
-          weakSource.deref()?._onUnpushable()
-        );
-
         constructor(weakParents, poll) {
           const parents = weakParents.map((weakParent) => weakParent.deref());
           this._children = new Util.ShrinkingList();
@@ -571,9 +570,6 @@
       }
 
       class Source {
-        static _finalizers = new FinalizationRegistry((weakSink) =>
-          weakSink.deref()?._onUnpullable()
-        );
         static _parentLinkFinalizers = new FinalizationRegistry(
           (weakChildLink) => weakChildLink.deref()?.removeOnce()
         );
@@ -634,8 +630,8 @@
           unsubscribe
         );
         const source = new Source(parentSources, sink);
-        EventSink._finalizers.register(sink, new WeakRef(source));
-        Source._finalizers.register(source, source.getWeakSink());
+        sinkFinalizers.register(sink, new WeakRef(source));
+        sourceFinalizers.register(source, source.getWeakSink());
         return [sink, source];
       };
       
@@ -648,8 +644,8 @@
           poll
         );
         const source = new Source(parentSources, sink);
-        BehaviorSink._finalizers.register(sink, new WeakRef(source));
-        Source._finalizers.register(source, source.getWeakSink());
+        sinkFinalizers.register(sink, new WeakRef(source));
+        sourceFinalizers.register(source, source.getWeakSink());
         return [sink, source];
       }
 
