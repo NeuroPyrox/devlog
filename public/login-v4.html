@@ -774,6 +774,24 @@
           return k(source);
         };
       })();
+      
+      const stepper = (() => {
+        const poll = undefined;
+        
+        return function*(head, tail) {
+          const [sink, source] = newBehaviorPair([], poll);
+          const modulator = yield output(tail, value => {
+            // Enqueue the behavior update within the push monad
+          });
+          eventConstructors.push(() => {
+            const modulatorSource = modulator();
+            if (modulatorSource.isPushable()) {
+              modulatorSource.addChild(source);
+            }
+          })
+          return k(source);
+        }
+      })();
 
       // TODO optimize with binary tree
       function* mergeBind(eventOfEvent, f) {
