@@ -547,7 +547,7 @@
       }
       
       class BehaviorSink {
-        constructor(weakParents, poll) {
+        constructor(weakParents, initialValue, poll) {
           const parents = weakParents.map((weakParent) => weakParent.deref());
           this._children = new Util.ShrinkingList();
           this._weakParents = weakParents;
@@ -635,12 +635,13 @@
         return [sink, source];
       };
       
-      const newBehaviorPair = (parentSources, poll) => {
+      const newBehaviorPair = (parentSources, initialValue, poll) => {
         Util.assert(
           parentSources.every((parentSource) => parentSource.isPushable())
         );
         const sink = new BehaviorSink(
           parentSources.map((source) => source.getWeakSink()),
+          initialValue,
           poll
         );
         const source = new Source(parentSources, sink);
@@ -778,9 +779,9 @@
       const stepper = (() => {
         const poll = undefined;
         
-        return function*(head, tail) {
-          const [sink, source] = newBehaviorPair([], poll);
-          const modulator = yield output(tail, value => {
+        return function*(initialValue, newValues) {
+          const [sink, source] = newBehaviorPair([], initialValue, poll);
+          const modulator = yield output(newValues, value => {
             // Enqueue the behavior update within the push monad
           });
           eventConstructors.push(() => {
