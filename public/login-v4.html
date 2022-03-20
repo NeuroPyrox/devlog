@@ -345,7 +345,7 @@
       return { readSink, enqueueAction, liftPull, push };
     })();
 
-    const { newEventPair, neverSource } = (() => {
+    const { newEventPair, newBehaviorPair, neverSource } = (() => {
       const sinkFinalizers = new FinalizationRegistry((weakSource) =>
         weakSource.deref()?._onUnpushable()
       );
