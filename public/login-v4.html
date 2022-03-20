@@ -777,19 +777,22 @@
       })();
       
       const stepper = (() => {
-        const poll = undefined; // TODO
+        // This function is factored out to prevent memory leaks.
+        // We don't want the sinks to reference any sources.
+        const sourceLinker = (modulator, source) => () => {
+          const switcherSource = switcher();
+          if (switcherSource.isPushable()) {
+            switcherSource.addChild(source);
+          }
+        }
         
         return function*(initialValue, newValues) {
-          const [sink, source] = newBehaviorPair([], initialValue, poll);
+          // TODO define poll
+          const [sink, source] = newBehaviorPair([], initialValue, undefined);
           const modulator = yield output(newValues, value => {
             // Enqueue the behavior update within the push monad
           });
-          eventConstructors.push(() => {
-            const modulatorSource = modulator();
-            if (modulatorSource.isPushable()) {
-              modulatorSource.addChild(source);
-            }
-          })
+          eventConstructors.push(sourceLinker(modulator, source));
           return k(source);
         }
       })();
