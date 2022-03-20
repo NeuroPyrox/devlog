@@ -743,41 +743,41 @@
       const output = Pull.output;
 
       const switchE = (() => {
-        const poll = function* (value) {
-          return value;
-        };
-
-        const switcherHandle = (sink, weakSource) => (parent) => {
-          const source = weakSource.deref();
-          if (source === undefined) {
-            return;
+        // This function is factored out to prevent memory leaks.
+        // We don't want the sinks to reference any sources.
+        const sourceLinker = (modulator, source) => () => {
+          const switcherSource = switcher();
+          if (switcherSource.isPushable()) {
+            switcherSource.addChild(source);
           }
-          const parentSource = parent(); // It's safe to construct events within output.
-          source.switch(parentSource);
-          sink.switch(parentSource.getWeakSink());
-        };
+        }
 
         return function* (parent) {
           // We're safe evaluating the event pair eagerly instead of using [lazyEvent]
           // because there are no parents yet.
-          const [sink, source] = newEventPair([], poll);
-          const weakSource = new WeakRef(source); // Prevents memory leaks.
-          const switcher = yield output(
-            parent,
-            switcherHandle(sink, weakSource)
-          );
-          eventConstructors.push(() => {
-            const switcherSource = switcher();
-            if (switcherSource.isPushable()) {
-              switcherSource.addChild(source);
-            }
+          const [sink, source] = newEventPair([], function* (value) {
+            return value;
           });
+          const weakSource = new WeakRef(source); // Prevents memory leaks.
+          const modulator = yield output(
+            parent,
+            (parent) => {
+              const source = weakSource.deref();
+              if (source === undefined) {
+                return;
+              }
+              const parentSource = parent(); // It's safe to construct events within output.
+              source.switch(parentSource);
+              sink.switch(parentSource.getWeakSink());
+            }
+          );
+          eventConstructors.push(sourceLinker(modulator, source));
           return k(source);
         };
       })();
       
       const stepper = (() => {
-        const poll = undefined;
+        const poll = undefined; // TODO
         
         return function*(initialValue, newValues) {
           const [sink, source] = newBehaviorPair([], initialValue, poll);
