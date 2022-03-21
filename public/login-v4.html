@@ -748,9 +748,9 @@
         // This function is factored out to prevent memory leaks.
         // We don't want the sinks to reference any sources.
         const sourceLinker = (modulator, source) => () => {
-          const switcherSource = switcher();
-          if (switcherSource.isPushable()) {
-            switcherSource.addChild(source);
+          const modulatorSource = modulator();
+          if (modulatorSource.isPushable()) {
+            modulatorSource.addChild(source);
           }
         }
 
@@ -782,9 +782,9 @@
         // These functions are factored out to prevent memory leaks.
         // We don't want the sinks to reference any sources.
         const sourceLinker = (modulator, source) => () => {
-          const switcherSource = switcher();
-          if (switcherSource.isPushable()) {
-            switcherSource.addChild(source);
+          const modulatorSource = modulator();
+          if (modulatorSource.isPushable()) {
+            modulatorSource.addChild(source);
           }
         }
         const stepperModulator = (parent, target) => lazyEvent(() => {
