@@ -261,7 +261,7 @@
               }
             );
             sink.activate();
-            outputs.push(source);
+            outputs.push(source); // TODO remove
             return source;
           }),
       };
@@ -730,9 +730,11 @@
           )[1];
         });
 
+      // TODO switch to behavior
       const mapTag = (parent, latchGet, combine) =>
         map(parent, (x) => combine(x, latchGet()));
 
+      // TODO switch to behavior
       const tag = (parent, latchGet) => map(parent, () => latchGet());
 
       const observeE = (parent) =>
@@ -777,7 +779,7 @@
       })();
       
       const stepper = (() => {
-        // This function is factored out to prevent memory leaks.
+        // These functions are factored out to prevent memory leaks.
         // We don't want the sinks to reference any sources.
         const sourceLinker = (modulator, source) => () => {
           const switcherSource = switcher();
@@ -785,13 +787,26 @@
             switcherSource.addChild(source);
           }
         }
+        const stepperModulator = (parent, target) => lazyEvent(() => {
+          const parentSource = parent();
+          if (!parentSource.isPushable()) {
+            return neverSource;
+          }
+          const [sink, source] = newEventPair(
+            [parentSource],
+            function* (value) {
+              yield Push.setBehavior(target, value);
+              return Util.nothing;
+            }
+          );
+          sink.activate();
+          return source;
+        });
         
         return function*(initialValue, newValues) {
           // TODO define poll
           const [sink, source] = newBehaviorPair([], initialValue, undefined);
-          const modulator = yield output(newValues, value => {
-            // Enqueue the behavior update within the push monad
-          });
+          const modulator = stepperModulator(newValues, sink);
           eventConstructors.push(sourceLinker(modulator, source));
           return k(source);
         }
