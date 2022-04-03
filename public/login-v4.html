@@ -731,7 +731,8 @@
         });
 
       // TODO
-      const mapTagB = undefined;
+      const mapTagB = (event, behavior, combine) =>
+        map(event, (x) => combine(x, behavior.getCurrentValue()));
       const mapTag = (parent, latchGet, combine) =>
         map(parent, (x) => combine(x, latchGet()));
 
