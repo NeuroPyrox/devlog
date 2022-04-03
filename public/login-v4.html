@@ -783,8 +783,7 @@
       const stepper = (() => {
         // These functions are factored out to prevent memory leaks.
         // We don't want the sinks to reference any sources.
-        const sourceLinker = (modulator, source) => () => {
-          const modulatorSource = modulator();
+        const sourceLinker = (modulatorSource, source) => () => {
           if (modulatorSource.isPushable()) {
             modulatorSource.addChild(source);
           }
@@ -808,8 +807,8 @@
         return function*(initialValue, newValues) {
           // TODO define poll
           const [sink, source] = newBehaviorPair([], initialValue, undefined);
-          const modulator = stepperModulator(newValues, sink);
-          eventConstructors.push(sourceLinker(modulator, source));
+          const modulatorSource = stepperModulator(newValues, sink);
+          eventConstructors.push(sourceLinker(modulatorSource, source));
           return k(source);
         }
       })();
