@@ -23,6 +23,7 @@
   (router      /echo                        /server.js)
   (router      /17-may-2020                 .js)
   (json        /site.webmanifest            .js)
+  (json        /monte-carlo                 .js)
   (json        /sql-counter                 /index.js)
   (json        /sexpr-mutations             .js)
   (json        /actor-rules                 .js)
