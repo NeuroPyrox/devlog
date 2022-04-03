@@ -730,7 +730,8 @@
           )[1];
         });
 
-      // TODO switch to behavior
+      // TODO
+      const mapTagB = undefined;
       const mapTag = (parent, latchGet, combine) =>
         map(parent, (x) => combine(x, latchGet()));
 
@@ -833,6 +834,7 @@
         map,
         filter,
         merge,
+        mapTagB,
         mapTag,
         tag,
         observeE,
@@ -887,9 +889,9 @@
         protoFindUsername(table, 0, table.length, username);
 
       const signups = filter(
-        map(signupAttempts, (user) => {
-          const index = findUsername(internalTable, user.username);
-          const foundUser = internalTable[index];
+        mapTagB(signupAttempts, internalTableB, (user, table) => {
+          const index = findUsername(table, user.username);
+          const foundUser = table[index];
           if (foundUser === undefined || foundUser.username !== user.username) {
             return [index, user];
           }
