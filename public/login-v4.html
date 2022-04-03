@@ -886,7 +886,7 @@
       const findUsername = (table, username) =>
         protoFindUsername(table, 0, table.length, username);
 
-      let signups = filter(
+      const signups = filter(
         map(signupAttempts, (user) => {
           const index = findUsername(internalTable, user.username);
           const foundUser = internalTable[index];
