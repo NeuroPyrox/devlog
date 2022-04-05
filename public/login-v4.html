@@ -307,6 +307,11 @@
         liftPull(monadicValue) {
           return Pull.pullLazy(monadicValue);
         }
+        
+        // TODO make separate PushEvents and PushBehaviors monads
+        setBehavior(target, value) {
+          throw "Not implemented";
+        }
 
         doActions() {
           this._actions.forEach(([handle, value]) => handle(value));
@@ -316,6 +321,7 @@
       const readSink = Util.callMethod("readSink");
       const enqueueAction = Util.callMethod("enqueueAction");
       const liftPull = Util.callMethod("liftPull");
+      const setBehavior = Util.callMethod("setBehavior");
 
       const push = (sink, value) => {
         Util.runMonad(
@@ -342,7 +348,7 @@
         constructEvents();
       };
 
-      return { readSink, enqueueAction, liftPull, push };
+      return { readSink, enqueueAction, liftPull, setBehavior, push };
     })();
 
     const { newEventPair, newBehaviorPair, neverSource } = (() => {
