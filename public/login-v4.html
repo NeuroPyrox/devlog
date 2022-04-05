@@ -762,11 +762,11 @@
           const [sink, source] = newEventPair([], function* (value) {
             return value;
           });
-          const weakSource = new WeakRef(source); // Prevents memory leaks.
+          const weakSource = new WeakRef(source);
           const modulator = yield output(
             parent,
             (parent) => {
-              const source = weakSource.deref();
+              const source = weakSource.deref(); // Weakness prevents memory leaks.
               if (source === undefined) {
                 return;
               }
@@ -783,7 +783,8 @@
       const stepper = (() => {
         // These functions are factored out to prevent memory leaks.
         // We don't want the sinks to reference any sources.
-        const sourceLinker = (modulatorSource, source) => () => {
+        const sourceLinker = (modulator, source) => () => {
+          const modulatorSource = modulator();
           if (modulatorSource.isPushable()) {
             modulatorSource.addChild(source);
           }
@@ -804,11 +805,12 @@
           return source;
         });
         
+        // TODO lift boundary cases up the call stack
         return function*(initialValue, newValues) {
           // TODO define poll
           const [sink, source] = newBehaviorPair([], initialValue, undefined);
-          const modulatorSource = stepperModulator(newValues, sink);
-          eventConstructors.push(sourceLinker(modulatorSource, source));
+          const modulator = stepperModulator(newValues, sink);
+          eventConstructors.push(sourceLinker(modulator, source));
           return k(source);
         }
       })();
