@@ -557,6 +557,46 @@
           this._weakParents = [];
         }
       }
+      
+      class BehaviorSource {
+        constructor(parents, sink, initialValue) {
+          this._weakChildLinks = new Util.ShrinkingList();
+          this._parents = new Util.ShrinkingList();
+          this._weakSink = new WeakRef(sink);
+          parents.forEach((parent) => parent.addChild(this));
+          this._value = initialValue;
+        }
+
+        addChild(child) {
+          Util.assert(this.isPushable() && child.isPushable());
+          const parentLink = child._parents.add(this);
+          const childLink = this._weakChildLinks.add(new WeakRef(parentLink));
+          sourceLinkFinalizers.register(
+            parentLink,
+            new WeakRef(childLink)
+          );
+        }
+
+        isPushable() {
+          return this._weakSink.deref() !== undefined;
+        }
+
+        getWeakSink() {
+          return this._weakSink;
+        }
+        
+        getCurrentValue() {
+          return this._value;
+        }
+
+        _onUnpushable() {
+          Util.assert(!this.isPushable());
+          for (const weakChildLink of this._weakChildLinks) {
+            weakChildLink.deref()?.remove();
+          }
+          // [this._weakChildLinks] will soon get cleared by [this._parentLinkFinalizers].
+        }
+      }
 
       class Source {
         constructor(parents, sink) {
@@ -629,7 +669,7 @@
           initialValue,
           poll
         );
-        const source = new Source(parentSources, sink);
+        const source = new BehaviorSource(parentSources, sink, initialValue);
         sinkFinalizers.register(sink, new WeakRef(source));
         sourceFinalizers.register(source, source.getWeakSink());
         return [sink, source];
@@ -717,7 +757,7 @@
 
       // TODO
       const mapTagB = (event, behavior, combine) =>
-        map(event, (x) => combine(x, behavior.getCurrentValue()));
+        map(event, (x) => combine(x, behavior().getCurrentValue()));
       const mapTag = (parent, latchGet, combine) =>
         map(parent, (x) => combine(x, latchGet()));
 
