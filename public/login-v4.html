@@ -359,31 +359,6 @@
         weakSink.deref()?._onUnpullable()
       );
       
-      class Sink {
-        // TODO merge unsubscribe into weakParents
-        constructor(weakParents, unsubscribe) {
-          const parents = weakParents.map((weakParent) => weakParent.deref());
-          this._children = new Util.ShrinkingList();
-          this._weakParents = weakParents;
-          this._weakParentLinks = parents.map(
-            (parent) => new WeakRef(parent._children.add(this))
-          );
-          this._unsubscribe = unsubscribe; // Only used for input events
-        }
-        
-        removeParents() {
-          for (const weakParentLink of this._weakParentLinks) {
-            weakParentLink.deref()?.removeOnce();
-          }
-          this._weakParents = []; // TODO do we need this line?
-        }
-
-        _onUnpullable() {
-          this.removeParents();
-          this._unsubscribe();
-        }
-      }
-      
       // The only variables that are used for something other than resource management are:
       //   [_activeChildren, _priority, _poll]
       // There are 2 clusters of subtly interconnected logic:
@@ -565,6 +540,11 @@
               ? 0
               : Math.max(...parents.map((parent) => parent.getPriority())) + 1;
           this._poll = poll;
+          this._value = initialValue;
+        }
+        
+        getCurrentValue() {
+          return this._value;
         }
 
         _onUnpullable() {
