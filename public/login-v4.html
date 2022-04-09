@@ -358,6 +358,9 @@
       const sourceFinalizers = new FinalizationRegistry((weakSink) =>
         weakSink.deref()?._onUnpullable()
       );
+      const sourceLinkFinalizers = new FinalizationRegistry(
+        (weakChildLink) => weakChildLink.deref()?.removeOnce()
+      );
       
       // The only variables that are used for something other than resource management are:
       //   [_activeChildren, _priority, _poll]
@@ -556,10 +559,6 @@
       }
 
       class Source {
-        static _parentLinkFinalizers = new FinalizationRegistry(
-          (weakChildLink) => weakChildLink.deref()?.removeOnce()
-        );
-
         constructor(parents, sink) {
           this._weakChildLinks = new Util.ShrinkingList();
           this._parents = new Util.ShrinkingList();
@@ -571,7 +570,7 @@
           Util.assert(this.isPushable() && child.isPushable());
           const parentLink = child._parents.add(this);
           const childLink = this._weakChildLinks.add(new WeakRef(parentLink));
-          Source._parentLinkFinalizers.register(
+          sourceLinkFinalizers.register(
             parentLink,
             new WeakRef(childLink)
           );
