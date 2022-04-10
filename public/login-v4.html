@@ -954,11 +954,12 @@
         insertions,
         (x) => x[0] === "changePassword"
       );
-      const passwordChanges = map(
+      const passwordChanges = mapTagB(
         changePasswordInsertions,
-        ([, index, password]) => ({
+        internalTableB
+        ([, index, password], table) => ({
           index,
-          username: internalTable[index].username,
+          username: table[index].username,
           password,
         })
       );
