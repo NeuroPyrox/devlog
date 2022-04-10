@@ -976,8 +976,8 @@
       yield output(clears, (_) => (internalTable = []));
 
       const tryLogins = (event) =>
-        map(event, ({ username, password }) => {
-          const foundUser = internalTable[findUsername(internalTable, username)];
+        mapTagB(event, internalTableB, ({ username, password }, table) => {
+          const foundUser = table[findUsername(table, username)];
           return (
             foundUser !== undefined &&
             foundUser.username === username &&
