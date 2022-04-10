@@ -967,8 +967,8 @@
         passwordChanges,
         ({ index, password }) => (internalTable[index].password = password)
       );
-      const removedUsers = map(usernamesToRemove, (username) => ({
-        index: findUsername(internalTable, username),
+      const removedUsers = mapTagB(usernamesToRemove, internalTableB, (username, table) => ({
+        index: findUsername(table, username),
         username,
       }));
       yield output(removedUsers, ({ index }) => internalTable.splice(index, 1));
