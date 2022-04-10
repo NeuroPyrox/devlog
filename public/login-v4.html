@@ -761,7 +761,9 @@
       const mapTag = (parent, latchGet, combine) =>
         map(parent, (x) => combine(x, latchGet()));
 
-      // TODO switch to behavior
+      // TODO
+      const tagB = (event, behavior) =>
+        map(event, () => behavior().getCurrentValue());
       const tag = (parent, latchGet) => map(parent, () => latchGet());
 
       const observeE = (parent) =>
@@ -863,6 +865,7 @@
         merge,
         mapTagB,
         mapTag,
+        tagB,
         tag,
         observeE,
         output,
@@ -882,6 +885,7 @@
       merge,
       mapTagB,
       mapTag,
+      tagB,
       tag,
       observeE,
       output,
@@ -956,7 +960,7 @@
       );
       const passwordChanges = mapTagB(
         changePasswordInsertions,
-        internalTableB
+        internalTableB,
         ([, index, password], table) => ({
           index,
           username: table[index].username,
@@ -972,7 +976,7 @@
         username,
       }));
       yield output(removedUsers, ({ index }) => internalTable.splice(index, 1));
-      clears = filter(clears, (_) => internalTable.length !== 0);
+      clears = filter(tagB(clears, internalTableB), (table) => table.length !== 0);
       yield output(clears, (_) => (internalTable = []));
 
       const tryLogins = (event) =>
