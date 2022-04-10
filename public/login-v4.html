@@ -931,9 +931,9 @@
         internalTable.splice(index, 0, user)
       );
 
-      insertions = map(insertions, ({ username, password }) => {
-        const index = findUsername(internalTable, username);
-        const foundUser = internalTable[index];
+      insertions = mapTagB(insertions, internalTableB, ({ username, password }, table) => {
+        const index = findUsername(table, username);
+        const foundUser = table[index];
         if (foundUser === undefined || foundUser.username !== username) {
           return ["createUser", index, { username, password }];
         }
