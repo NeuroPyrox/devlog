@@ -529,6 +529,68 @@
           this._pullable = false;
         }
       }
+
+      class Source {
+        constructor(parents, sink) {
+          this._weakChildLinks = new Util.ShrinkingList();
+          this._parents = new Util.ShrinkingList();
+          this._weakSink = new WeakRef(sink);
+          parents.forEach((parent) => parent.addChild(this));
+        }
+
+        addChild(child) {
+          Util.assert(this.isPushable() && child.isPushable());
+          const parentLink = child._parents.add(this);
+          const childLink = this._weakChildLinks.add(new WeakRef(parentLink));
+          sourceLinkFinalizers.register(
+            parentLink,
+            new WeakRef(childLink)
+          );
+        }
+
+        isPushable() {
+          return this._weakSink.deref() !== undefined;
+        }
+
+        getWeakSink() {
+          return this._weakSink;
+        }
+
+        switch(parent) {
+          // Check if there's more than one parent.
+          if (this._parents.getLast() !== this._parents.getFirst()) {
+            this._parents.getLast().removeOnce();
+          }
+          if (parent.isPushable()) {
+            parent.addChild(this);
+          }
+        }
+
+        _onUnpushable() {
+          Util.assert(!this.isPushable());
+          for (const weakChildLink of this._weakChildLinks) {
+            weakChildLink.deref()?.remove();
+          }
+          // [this._weakChildLinks] will soon get cleared by [this._parentLinkFinalizers].
+        }
+      }
+
+      // Some of the event's parents may not be passed into this function but added later.
+      // The only parents passed here are the ones that [poll] immediately depends on.
+      const newEventPair = (parentSources, poll, unsubscribe = () => {}) => {
+        Util.assert(
+          parentSources.every((parentSource) => parentSource.isPushable())
+        );
+        const sink = new EventSink(
+          parentSources.map((source) => source.getWeakSink()),
+          poll,
+          unsubscribe
+        );
+        const source = new Source(parentSources, sink);
+        sinkFinalizers.register(sink, new WeakRef(source));
+        sourceFinalizers.register(source, source.getWeakSink());
+        return [sink, source];
+      };
       
       class BehaviorSink {
         constructor(weakParents, initialValue, poll) {
@@ -597,68 +659,6 @@
           // [this._weakChildLinks] will soon get cleared by [this._parentLinkFinalizers].
         }
       }
-
-      class Source {
-        constructor(parents, sink) {
-          this._weakChildLinks = new Util.ShrinkingList();
-          this._parents = new Util.ShrinkingList();
-          this._weakSink = new WeakRef(sink);
-          parents.forEach((parent) => parent.addChild(this));
-        }
-
-        addChild(child) {
-          Util.assert(this.isPushable() && child.isPushable());
-          const parentLink = child._parents.add(this);
-          const childLink = this._weakChildLinks.add(new WeakRef(parentLink));
-          sourceLinkFinalizers.register(
-            parentLink,
-            new WeakRef(childLink)
-          );
-        }
-
-        isPushable() {
-          return this._weakSink.deref() !== undefined;
-        }
-
-        getWeakSink() {
-          return this._weakSink;
-        }
-
-        switch(parent) {
-          // Check if there's more than one parent.
-          if (this._parents.getLast() !== this._parents.getFirst()) {
-            this._parents.getLast().removeOnce();
-          }
-          if (parent.isPushable()) {
-            parent.addChild(this);
-          }
-        }
-
-        _onUnpushable() {
-          Util.assert(!this.isPushable());
-          for (const weakChildLink of this._weakChildLinks) {
-            weakChildLink.deref()?.remove();
-          }
-          // [this._weakChildLinks] will soon get cleared by [this._parentLinkFinalizers].
-        }
-      }
-
-      // Some of the event's parents may not be passed into this function but added later.
-      // The only parents passed here are the ones that [poll] immediately depends on.
-      const newEventPair = (parentSources, poll, unsubscribe = () => {}) => {
-        Util.assert(
-          parentSources.every((parentSource) => parentSource.isPushable())
-        );
-        const sink = new EventSink(
-          parentSources.map((source) => source.getWeakSink()),
-          poll,
-          unsubscribe
-        );
-        const source = new Source(parentSources, sink);
-        sinkFinalizers.register(sink, new WeakRef(source));
-        sourceFinalizers.register(source, source.getWeakSink());
-        return [sink, source];
-      };
       
       const newBehaviorPair = (parentSources, initialValue, poll) => {
         Util.assert(
