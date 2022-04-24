@@ -605,11 +605,7 @@
               ? 0
               : Math.max(...parents.map((parent) => parent.getPriority())) + 1;
           this._poll = poll;
-          this._value = initialValue;
-        }
-        
-        getCurrentValue() {
-          return this._value;
+          this._weakVariable = new WeakRef({thunk: () => initialValue});
         }
 
         _onUnpullable() {
@@ -621,12 +617,12 @@
       }
       
       class BehaviorSource {
-        constructor(parents, sink, initialValue) {
+        constructor(parents, sink) {
           this._weakChildLinks = new Util.ShrinkingList();
           this._parents = new Util.ShrinkingList();
           this._weakSink = new WeakRef(sink);
           parents.forEach((parent) => parent.addChild(this));
-          this._value = initialValue;
+          this._variable = sink._weakVariable.deref();
         }
 
         addChild(child) {
@@ -648,7 +644,7 @@
         }
         
         getCurrentValue() {
-          return this._value;
+          return this._variable.thunk();
         }
 
         _onUnpushable() {
@@ -669,7 +665,7 @@
           initialValue,
           poll
         );
-        const source = new BehaviorSource(parentSources, sink, initialValue);
+        const source = new BehaviorSource(parentSources, sink);
         sinkFinalizers.register(sink, new WeakRef(source));
         sourceFinalizers.register(source, source.getWeakSink());
         return [sink, source];
