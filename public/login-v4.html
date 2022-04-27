@@ -20,53 +20,53 @@
       // TODO learn how imports work so I can use a library instead of this custom implementation.
       class PriorityQueue {
         constructor() {
-          this._array = [];
+          this._heap = [];
         }
 
         push(value) {
-          let index = this._array.length;
-          // Special cases of the loop below, so we can avoid writing this._array.push(null)
+          let index = this._heap.length;
+          // Special cases of the loop below, so we can avoid writing this._heap.push(null)
           if (index === 0) {
-            this._array.push(value);
+            this._heap.push(value);
             return;
           }
           const parentIndex = Math.floor((index - 1) / 2);
-          const parent = this._array[parentIndex];
+          const parent = this._heap[parentIndex];
           if (parent.getPriority() <= value.getPriority()) {
-            this._array.push(value);
+            this._heap.push(value);
             return;
           }
-          this._array.push(parent);
+          this._heap.push(parent);
           index = parentIndex;
 
           // This is where the real logic is
           while (0 < index) {
             const parentIndex = Math.floor((index - 1) / 2);
-            const parent = this._array[parentIndex];
+            const parent = this._heap[parentIndex];
 
             if (parent.getPriority() <= value.getPriority()) break;
 
-            this._array[index] = parent;
+            this._heap[index] = parent;
             index = parentIndex;
           }
 
-          this._array[index] = value;
+          this._heap[index] = value;
         }
 
         next() {
-          switch (this._array.length) {
+          switch (this._heap.length) {
             case 0:
               return { done: true };
             case 1:
               return {
-                value: this._array.pop(),
+                value: this._heap.pop(),
                 done: false,
               };
           }
-          const value = this._array[0];
+          const value = this._heap[0];
 
           const index = 0;
-          const end = this._array.pop();
+          const end = this._heap.pop();
 
           // Insert [end] back into the array, starting from the root and working down towards the leaves.
           while (true) {
@@ -76,7 +76,7 @@
 
             // swap = minPriority(swap, leftChild)
             const leftIndex = 2 * index + 1;
-            const leftChild = this._array[leftIndex];
+            const leftChild = this._heap[leftIndex];
             if (leftChild && leftChild.priority < swap.priority) {
               swapIndex = leftIndex;
               swap = leftChild;
@@ -84,13 +84,13 @@
 
             // swap = minPriority(swap, rightChild)
             const rightIndex = leftIndex + 1;
-            const rightChild = this._array[rightIndex];
+            const rightChild = this._heap[rightIndex];
             if (rightChild && rightChild.priority < swap.priority) {
               swapIndex = rightIndex;
               swap = rightChild;
             }
 
-            this._array[index] = swap;
+            this._heap[index] = swap;
             if (swapIndex === index) break;
             index = swapIndex;
           }
