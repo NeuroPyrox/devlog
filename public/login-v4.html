@@ -19,8 +19,10 @@
     const Util = (() => {
       // TODO learn how imports work so I can use a library instead of this custom implementation.
       class Heap {
-        constructor() {
+        // [comparator(a, b)] means [a] will be popped before [b].
+        constructor(comparator) {
           this._heap = [];
+          this._compare = comparator;
         }
 
         push(value) {
@@ -32,7 +34,7 @@
           }
           const parentIndex = Math.floor((index - 1) / 2);
           const parent = this._heap[parentIndex];
-          if (parent.getPriority() <= value.getPriority()) {
+          if (!this._compare(value, parent)) {
             this._heap.push(value);
             return;
           }
@@ -44,7 +46,7 @@
             const parentIndex = Math.floor((index - 1) / 2);
             const parent = this._heap[parentIndex];
 
-            if (parent.getPriority() <= value.getPriority()) break;
+            if (!this._compare(value, parent)) break;
 
             this._heap[index] = parent;
             index = parentIndex;
@@ -77,7 +79,7 @@
             // swap = minPriority(swap, leftChild)
             const leftIndex = 2 * index + 1;
             const leftChild = this._heap[leftIndex];
-            if (leftChild && leftChild.priority < swap.priority) {
+            if (leftChild && this._compare(leftChild, swap)) {
               swapIndex = leftIndex;
               swap = leftChild;
             }
@@ -85,7 +87,7 @@
             // swap = minPriority(swap, rightChild)
             const rightIndex = leftIndex + 1;
             const rightChild = this._heap[rightIndex];
-            if (rightChild && rightChild.priority < swap.priority) {
+            if (rightChild && this._compare(rightChild, swap)) {
               swapIndex = rightIndex;
               swap = rightChild;
             }
@@ -330,7 +332,7 @@
           new Context(),
           (function* () {
             yield (context) => context.writeSink(sink, value);
-            const heap = new Util.Heap();
+            const heap = new Util.Heap((a, b) => a.getPriority() < b.getPriority());
             for (const childSink of sink.iterateActiveChildren()) {
               heap.push(childSink);
             }
