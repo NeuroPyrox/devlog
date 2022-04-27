@@ -18,7 +18,7 @@
     const k = (x) => () => x;
     const Util = (() => {
       // TODO learn how imports work so I can use a library instead of this custom implementation.
-      class PriorityQueue {
+      class Heap {
         constructor() {
           this._heap = [];
         }
@@ -90,6 +90,7 @@
               swap = rightChild;
             }
 
+            // Perform the swap
             this._heap[index] = swap;
             if (swapIndex === index) break;
             index = swapIndex;
@@ -201,7 +202,7 @@
       const nothing = Symbol();
 
       return {
-        PriorityQueue,
+        Heap,
         assert,
         ShrinkingList,
         weakRefUndefined,
@@ -329,17 +330,17 @@
           new Context(),
           (function* () {
             yield (context) => context.writeSink(sink, value);
-            const queue = new Util.PriorityQueue();
+            const heap = new Util.Heap();
             for (const childSink of sink.iterateActiveChildren()) {
-              queue.push(childSink);
+              heap.push(childSink);
             }
-            for (const sink of queue) {
+            for (const sink of heap) {
               const value = yield* sink.poll();
               if (value !== Util.nothing) {
                 yield (context) => context.writeSink(sink, value);
                 for (const child of sink.iterateActiveChildren()) {
-                  // Mutating the queue while iterating over it.
-                  queue.push(child);
+                  // Mutating the heap while iterating over it.
+                  heap.push(child);
                 }
               }
             }
