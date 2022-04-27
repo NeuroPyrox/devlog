@@ -68,11 +68,13 @@
           const index = 0;
           const end = this._array.pop();
 
+          // Insert [end] back into the array, starting from the root and working down towards the leaves.
           while (true) {
+            // Which node will replace the one at [index].
             const swapIndex = index;
             const swap = end;
 
-            // swap = min(swap, leftChild)
+            // swap = minPriority(swap, leftChild)
             const leftIndex = 2 * index + 1;
             const leftChild = this._array[leftIndex];
             if (leftChild && leftChild.priority < swap.priority) {
@@ -80,7 +82,7 @@
               swap = leftChild;
             }
 
-            // swap = min(swap, rightChild)
+            // swap = minPriority(swap, rightChild)
             const rightIndex = leftIndex + 1;
             const rightChild = this._array[rightIndex];
             if (rightChild && rightChild.priority < swap.priority) {
@@ -88,12 +90,11 @@
               swap = rightChild;
             }
 
-            if (swapIndex === index) break;
             this._array[index] = swap;
+            if (swapIndex === index) break;
             index = swapIndex;
           }
 
-          this._array[index] = end;
           return { value, done: false };
         }
 
