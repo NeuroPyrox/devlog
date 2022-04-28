@@ -15,7 +15,7 @@
   </head>
   <body></body>
   <script type="module">
-    import Heap from "https://cdn.jsdelivr.net/gh/NeuroPyrox/heap/heap.min.js";
+    import Heap from "https://cdn.jsdelivr.net/gh/NeuroPyrox/heap/heap.js";
     const k = (x) => () => x;
     const Util = (() => {
       const assert = (condition) => {
@@ -222,7 +222,7 @@
         liftPull(monadicValue) {
           return Pull.pullLazy(monadicValue);
         }
-        
+
         // TODO make separate PushEvents and PushBehaviors monads
         setBehavior(target, value) {
           throw "Not implemented";
@@ -273,10 +273,10 @@
       const sourceFinalizers = new FinalizationRegistry((weakSink) =>
         weakSink.deref()?._onUnpullable()
       );
-      const sourceLinkFinalizers = new FinalizationRegistry(
-        (weakChildLink) => weakChildLink.deref()?.removeOnce()
+      const sourceLinkFinalizers = new FinalizationRegistry((weakChildLink) =>
+        weakChildLink.deref()?.removeOnce()
       );
-      
+
       // The only variables that are used for something other than resource management are:
       //   [_activeChildren, _priority, _poll]
       // There are 2 clusters of subtly interconnected logic:
@@ -457,10 +457,7 @@
           Util.assert(this.isPushable() && child.isPushable());
           const parentLink = child._parents.add(this);
           const childLink = this._weakChildLinks.add(new WeakRef(parentLink));
-          sourceLinkFinalizers.register(
-            parentLink,
-            new WeakRef(childLink)
-          );
+          sourceLinkFinalizers.register(parentLink, new WeakRef(childLink));
         }
 
         isPushable() {
@@ -506,7 +503,7 @@
         sourceFinalizers.register(source, source.getWeakSink());
         return [sink, source];
       };
-      
+
       class BehaviorSink {
         constructor(weakParents, initialValue, poll) {
           const parents = weakParents.map((weakParent) => weakParent.deref());
@@ -520,7 +517,7 @@
               ? 0
               : Math.max(...parents.map((parent) => parent.getPriority())) + 1;
           this._poll = poll;
-          this._weakVariable = new WeakRef({thunk: () => initialValue});
+          this._weakVariable = new WeakRef({ thunk: () => initialValue });
         }
 
         _onUnpullable() {
@@ -530,7 +527,7 @@
           this._weakParents = [];
         }
       }
-      
+
       class BehaviorSource {
         constructor(parents, sink) {
           this._weakChildLinks = new Util.ShrinkingList();
@@ -544,10 +541,7 @@
           Util.assert(this.isPushable() && child.isPushable());
           const parentLink = child._parents.add(this);
           const childLink = this._weakChildLinks.add(new WeakRef(parentLink));
-          sourceLinkFinalizers.register(
-            parentLink,
-            new WeakRef(childLink)
-          );
+          sourceLinkFinalizers.register(parentLink, new WeakRef(childLink));
         }
 
         isPushable() {
@@ -557,7 +551,7 @@
         getWeakSink() {
           return this._weakSink;
         }
-        
+
         getCurrentValue() {
           return this._variable.thunk();
         }
@@ -570,7 +564,7 @@
           // [this._weakChildLinks] will soon get cleared by [this._parentLinkFinalizers].
         }
       }
-      
+
       const newBehaviorPair = (parentSources, initialValue, poll) => {
         Util.assert(
           parentSources.every((parentSource) => parentSource.isPushable())
@@ -584,7 +578,7 @@
         sinkFinalizers.register(sink, new WeakRef(source));
         sourceFinalizers.register(source, source.getWeakSink());
         return [sink, source];
-      }
+      };
 
       const neverSource = {
         isPushable: k(false),
@@ -692,7 +686,7 @@
           if (modulatorSource.isPushable()) {
             modulatorSource.addChild(source);
           }
-        }
+        };
 
         return function* (parent) {
           // We're safe evaluating the event pair eagerly instead of using [lazyEvent]
@@ -701,23 +695,20 @@
             return value;
           });
           const weakSource = new WeakRef(source);
-          const modulator = yield output(
-            parent,
-            (parent) => {
-              const source = weakSource.deref(); // Weakness prevents memory leaks.
-              if (source === undefined) {
-                return;
-              }
-              const parentSource = parent(); // It's safe to construct events within output.
-              source.switch(parentSource);
-              sink.switch(parentSource.getWeakSink());
+          const modulator = yield output(parent, (parent) => {
+            const source = weakSource.deref(); // Weakness prevents memory leaks.
+            if (source === undefined) {
+              return;
             }
-          );
+            const parentSource = parent(); // It's safe to construct events within output.
+            source.switch(parentSource);
+            sink.switch(parentSource.getWeakSink());
+          });
           eventConstructors.push(sourceLinker(modulator, source));
           return k(source);
         };
       })();
-      
+
       const stepper = (() => {
         // These functions are factored out to prevent memory leaks.
         // We don't want the sinks to reference any sources.
@@ -726,31 +717,32 @@
           if (modulatorSource.isPushable()) {
             modulatorSource.addChild(source);
           }
-        }
-        const stepperModulator = (parent, target) => lazyEvent(() => {
-          const parentSource = parent();
-          if (!parentSource.isPushable()) {
-            return neverSource;
-          }
-          const [sink, source] = newEventPair(
-            [parentSource],
-            function* (value) {
-              yield Push.setBehavior(target, value);
-              return Util.nothing;
+        };
+        const stepperModulator = (parent, target) =>
+          lazyEvent(() => {
+            const parentSource = parent();
+            if (!parentSource.isPushable()) {
+              return neverSource;
             }
-          );
-          sink.activate();
-          return source;
-        });
-        
+            const [sink, source] = newEventPair(
+              [parentSource],
+              function* (value) {
+                yield Push.setBehavior(target, value);
+                return Util.nothing;
+              }
+            );
+            sink.activate();
+            return source;
+          });
+
         // TODO lift boundary cases up the call stack
-        return function*(initialValue, newValues) {
+        return function* (initialValue, newValues) {
           // TODO define poll
           const [sink, source] = newBehaviorPair([], initialValue, undefined);
           const modulator = stepperModulator(newValues, sink);
           eventConstructors.push(sourceLinker(modulator, source));
           return k(source);
-        }
+        };
       })();
 
       // TODO optimize with binary tree
@@ -846,17 +838,21 @@
         internalTable.splice(index, 0, user)
       );
 
-      insertions = mapTagB(insertions, internalTableB, ({ username, password }, table) => {
-        const index = findUsername(table, username);
-        const foundUser = table[index];
-        if (foundUser === undefined || foundUser.username !== username) {
-          return ["createUser", index, { username, password }];
+      insertions = mapTagB(
+        insertions,
+        internalTableB,
+        ({ username, password }, table) => {
+          const index = findUsername(table, username);
+          const foundUser = table[index];
+          if (foundUser === undefined || foundUser.username !== username) {
+            return ["createUser", index, { username, password }];
+          }
+          if (foundUser.password !== password) {
+            return ["changePassword", index, password];
+          }
+          return [];
         }
-        if (foundUser.password !== password) {
-          return ["changePassword", index, password];
-        }
-        return [];
-      });
+      );
       const createUserInsertions = map(
         filter(insertions, (x) => x[0] === "createUser"),
         ([, index, user]) => [index, user]
@@ -882,12 +878,19 @@
         passwordChanges,
         ({ index, password }) => (internalTable[index].password = password)
       );
-      const removedUsers = mapTagB(usernamesToRemove, internalTableB, (username, table) => ({
-        index: findUsername(table, username),
-        username,
-      }));
+      const removedUsers = mapTagB(
+        usernamesToRemove,
+        internalTableB,
+        (username, table) => ({
+          index: findUsername(table, username),
+          username,
+        })
+      );
       yield output(removedUsers, ({ index }) => internalTable.splice(index, 1));
-      clears = filter(tagB(clears, internalTableB), (table) => table.length !== 0);
+      clears = filter(
+        tagB(clears, internalTableB),
+        (table) => table.length !== 0
+      );
       yield output(clears, (_) => (internalTable = []));
 
       const tryLogins = (event) =>
