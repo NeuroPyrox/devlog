@@ -710,37 +710,28 @@
       })();
 
       const stepper = (() => {
-        // These functions are factored out to prevent memory leaks.
-        // We don't want the sinks to reference any sources.
-        const sourceLinker = (modulator, source) => () => {
-          const modulatorSource = modulator();
-          if (modulatorSource.isPushable()) {
-            modulatorSource.addChild(source);
-          }
-        };
-        const stepperModulator = (parent, target) =>
+        const stepperModulator = (newValues, sink, source) =>
           lazyEvent(() => {
-            const parentSource = parent();
+            const parentSource = newValues();
             if (!parentSource.isPushable()) {
               return neverSource;
             }
-            const [sink, source] = newEventPair(
+            const [modSink, modSource] = newEventPair(
               [parentSource],
               function* (value) {
-                yield Push.setBehavior(target, value);
+                yield Push.setBehavior(sink, value);
                 return Util.nothing;
               }
             );
-            sink.activate();
-            return source;
+            modSink.activate();
+            modSource.addChild(source);
           });
 
         // TODO lift boundary cases up the call stack
         return function* (initialValue, newValues) {
           // TODO define poll
           const [sink, source] = newBehaviorPair([], initialValue, undefined);
-          const modulator = stepperModulator(newValues, sink);
-          eventConstructors.push(sourceLinker(modulator, source));
+          stepperModulator(newValues, sink, source);
           return k(source);
         };
       })();
