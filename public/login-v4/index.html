@@ -571,45 +571,51 @@
         });
 
       const output = Pull.output;
-
-      const switchE = (() => {
-        // This function is factored out to prevent memory leaks.
-        // We don't want the sinks to reference any sources.
-        const sourceLinker = (modulator, source) => () => {
-          const modulatorSource = modulator();
-          if (modulatorSource.isPushable()) {
-            modulatorSource.addChild(source);
+      
+      function* switchE(newParents) {
+        // We're safe evaluating the event pair eagerly instead of using [lazyEvent]
+        // because there are no parents yet.
+        const [sink, source] = newEventPair([], function* (value) {
+          return value;
+        });
+        lazyEvent(() => {
+          const newParentsSource = newParents();
+          if (!newParentsSource.isPushable()) {
+            return;
           }
-        };
-
-        return function* (parent) {
-          // We're safe evaluating the event pair eagerly instead of using [lazyEvent]
-          // because there are no parents yet.
-          const [sink, source] = newEventPair([], function* (value) {
-            return value;
-          });
           const weakSource = new WeakRef(source);
-          const modulator = yield output(parent, (parent) => {
-            const source = weakSource.deref(); // Weakness prevents memory leaks.
-            if (source === undefined) {
-              return;
+          const [modSink, modSource] = newEventPair(
+            [newParentsSource],
+            function* (newParent) {
+              const source = weakSource.deref(); // Weakness prevents memory leaks.
+              if (source !== undefined) {
+                yield Push.enqueueAction((newParent) => {
+                  const newParentSource = newParent(); // It's only safe to construct events after event propagation. TODO document why.
+                  source.switch(newParentSource);
+                  sink.switch(newParentSource.getWeakSink());
+                }, newParent);
+              }
+              return Util.nothing;
             }
-            const parentSource = parent(); // It's safe to construct events within output.
-            source.switch(parentSource);
-            sink.switch(parentSource.getWeakSink());
-          });
-          eventConstructors.push(sourceLinker(modulator, source));
-          return k(source);
-        };
-      })();
+          );
+          // TODO does the order of these 2 statements matter?
+          modSink.activate();
+          modSource.addChild(source);
+        });
+        return k(source);
+      }
       
       // TODO lift boundary cases up the call stack
       function* stepper(initialValue, newValues) {
         // TODO define poll
+        // We're safe evaluating the behavior pair eagerly instead of using [lazyEvent]
+        // because there are no parents yet.
         const [sink, source] = newBehaviorPair([], initialValue, undefined);
         lazyEvent(() => {
           const parentSource = newValues();
-          if (!parentSource.isPushable()) return;
+          if (!parentSource.isPushable()) {
+            return;
+          }
           const [modSink, modSource] = newEventPair(
             [parentSource],
             function* (value) {
