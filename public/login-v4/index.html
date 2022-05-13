@@ -602,33 +602,27 @@
           return k(source);
         };
       })();
-
-      const stepper = (() => {
-        const stepperModulator = (newValues, sink, source) =>
-          lazyEvent(() => {
-            const parentSource = newValues();
-            if (!parentSource.isPushable()) {
-              return neverSource;
+      
+      // TODO lift boundary cases up the call stack
+      function* stepper(initialValue, newValues) {
+        // TODO define poll
+        const [sink, source] = newBehaviorPair([], initialValue, undefined);
+        lazyEvent(() => {
+          const parentSource = newValues();
+          if (!parentSource.isPushable()) return;
+          const [modSink, modSource] = newEventPair(
+            [parentSource],
+            function* (value) {
+              yield Push.setBehavior(sink, value);
+              return Util.nothing;
             }
-            const [modSink, modSource] = newEventPair(
-              [parentSource],
-              function* (value) {
-                yield Push.setBehavior(sink, value);
-                return Util.nothing;
-              }
-            );
-            modSink.activate();
-            modSource.addChild(source);
-          });
-
-        // TODO lift boundary cases up the call stack
-        return function* (initialValue, newValues) {
-          // TODO define poll
-          const [sink, source] = newBehaviorPair([], initialValue, undefined);
-          stepperModulator(newValues, sink, source);
-          return k(source);
-        };
-      })();
+          );
+          // TODO does the order of these 2 statements matter?
+          modSink.activate();
+          modSource.addChild(source);
+        });
+        return k(source);
+      }
 
       // TODO optimize with binary tree
       function* mergeBind(eventOfEvent, f) {
