@@ -18,6 +18,9 @@
     import Heap from "https://cdn.jsdelivr.net/gh/NeuroPyrox/heap/heap.js";
     import * as Util from "./util.js";
     const k = (x) => () => x;
+    
+    // TODO add assertions on which functions can be called during which stages.
+    // Lifecycle: pull constructEvents (push constructEvents)
 
     let eventConstructors = [];
     const lazyEvent = (thunk) => {
@@ -76,13 +79,13 @@
       };
       const output = Util.callMethod("output");
 
-      // The return value is used by observeE.
+      // The return value is used by [observeE].
       const pullLazy = (monadicValue) => Util.runMonad(context, monadicValue());
       // TODO once we implement the html monad, remove the return value.
       const pull = (monadicValue) => {
         const result = pullLazy(monadicValue);
         constructEvents();
-        return result;
+        return result; // Used to return [start] from [main].
       };
 
       return { output, pullLazy, pull };
