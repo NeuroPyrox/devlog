@@ -20,9 +20,13 @@
     const k = (x) => () => x;
     
     // TODO add assertions on which functions can be called during which stages.
-    // Lifecycle: pull constructEvents (push constructEvents)
+    // TODO factor behaviors into the lifecycle.
+    // Lifecycle: out, pull, constructEvents, repeat(out, push, constructEvents)
 
     let eventConstructors = [];
+    // TODO see if some uses can do without tracking processing.
+    // Always callable for non-monadic events and behaviors because
+    // non-monadic ones won't affect state until [constructEvents].
     const lazyEvent = (thunk) => {
       const result = () => {
         if (thunk.processing) {
@@ -39,7 +43,7 @@
       eventConstructors.push(result);
       return result;
     };
-    // Only called on startup and at the end of push monads.
+    // Only called on startup and at the end after the [Push] monad.
     const constructEvents = () => {
       const temp = eventConstructors;
       eventConstructors = [];
@@ -76,8 +80,25 @@
             outputs.push(source); // TODO remove
             return source;
           }),
+        loop: () => {
+          let event = null;
+          const result = () => {
+            if (event === null) {
+              throw new Error("Must call [loop.loop] on every [loop]!");
+            }
+            return event();
+          };
+          result.loop = (setTo) => {
+            if (typeof setTo !== "function") {
+              throw new TypeError("setTo is not a function");
+            }
+            event = setTo;
+          };
+          return result;
+        }
       };
       const output = Util.callMethod("output");
+      const loop = Util.callMethod("loop")(); // = (object) => object.loop()
 
       // The return value is used by [observeE].
       const pullLazy = (monadicValue) => Util.runMonad(context, monadicValue());
@@ -88,7 +109,7 @@
         return result; // Used to return [start] from [main].
       };
 
-      return { output, pullLazy, pull };
+      return { output, loop, pullLazy, pull };
     })();
 
     const Push = (() => {
@@ -494,23 +515,6 @@
       });
 
     const Combinators = (() => {
-      const eventLoop = () => {
-        let event = null;
-        const result = () => {
-          if (event === null) {
-            throw new Error("Must call [loop] on every [eventLoop]!");
-          }
-          return event();
-        };
-        result.loop = (setTo) => {
-          if (typeof setTo !== "function") {
-            throw new TypeError("setTo is not a function");
-          }
-          event = setTo;
-        };
-        return result;
-      };
-
       const never = k(neverSource);
 
       const input = (subscribe) =>
@@ -648,7 +652,6 @@
       const getInputValues = (domNode) => () => domNode.value;
 
       return {
-        eventLoop,
         never,
         input,
         map,
@@ -668,7 +671,6 @@
       };
     })();
     const {
-      eventLoop,
       never,
       input,
       map,
@@ -895,7 +897,7 @@
         ({ username, password }) => username !== "" && password !== ""
       );
 
-      const usernamesToRemove = eventLoop();
+      const usernamesToRemove = yield Pull.loop;
 
       const { createdUsers, passwordChanges, removedUsers, clears, tryLogins } =
         yield* userDatabase({
@@ -946,7 +948,7 @@
 
     // Pull monad
     function* main() {
-      const signupAttempts = eventLoop();
+      const signupAttempts = yield Pull.loop;
 
       //div(yield* userTable(signupAttempts).var("userTable"), slot(loginDiv))
       const { userTableDiv, passwordChanges, removedUsers, clears, tryLogins } =
@@ -1103,7 +1105,7 @@
       const startPage = input((p) => (publishStartPage = p));
       const start = (_) => publishStartPage(createLoginDiv);
 
-      const authPages = eventLoop();
+      const authPages = yield Pull.loop;
       const appPages = observeE(merge(authPages, startPage));
 
       yield output(appPages, ([appDiv, ,]) => {
