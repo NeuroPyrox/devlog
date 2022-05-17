@@ -21,24 +21,26 @@
     
     // TODO add assertions on which functions can be called during which stages.
     // TODO factor behaviors into the lifecycle.
+    // TODO make topology changes more explicit.
     // Lifecycle: out, pull, constructEvents, repeat(out, push, constructEvents)
 
     let eventConstructors = [];
-    // TODO see if some uses can do without tracking processing.
     // Always callable for non-monadic events and behaviors because
     // non-monadic ones won't affect state until [constructEvents].
     const lazyEvent = (thunk) => {
+      const state = "start";
       const result = () => {
-        if (thunk.processing) {
-          throw new Error("Illegal circular event dependency");
+        switch (state) {
+          case "start":
+            state = "middle";
+            thunk = thunk(); // Overwrite thunk to free memory. TODO test if it actually frees memory.
+            state = "end";
+            return thunk;
+          case "middle":
+            throw new Error("Illegal circular dependency");
+          case "end":
+            return thunk;
         }
-        if (!thunk.done) {
-          const temp = thunk;
-          thunk = { processing: true };
-          const value = temp();
-          thunk = { done: true, value };
-        }
-        return thunk.value;
       };
       eventConstructors.push(result);
       return result;
@@ -235,6 +237,7 @@
           return yield* this._poll(...parentValues);
         }
 
+        // TODO when can this be called?
         // Must only call on inactive [output] sinks.
         // The assertions only weakly enforce this.
         activate() {
@@ -242,6 +245,7 @@
           this._activateOnce();
         }
 
+        // TODO when can this be called?
         // Must only call on active [output] sinks.
         // The assertions only weakly enforce this.
         deactivate() {
@@ -249,6 +253,7 @@
           this._deactivateOnce();
         }
 
+        // TODO when can this be called?
         // Sets [_weakParents, _weakParentLinks] like the constructor does.
         switch(weakParent) {
           Util.assert(this._pullable);
@@ -371,6 +376,7 @@
           parents.forEach((parent) => parent.addChild(this));
         }
 
+        // TODO when can this be called?
         addChild(child) {
           Util.assert(this.isPushable() && child.isPushable());
           const parentLink = child._parents.add(this);
@@ -382,10 +388,12 @@
           return this._weakSink.deref() !== undefined;
         }
 
+        // TODO when can this be called?
         getWeakSink() {
           return this._weakSink;
         }
 
+        // TODO when can this be called?
         switch(parent) {
           // Check if there's more than one parent.
           if (this._parents.getLast() !== this._parents.getFirst()) {
@@ -517,6 +525,7 @@
     const Combinators = (() => {
       const never = k(neverSource);
 
+      // This is lazy because the output won't be used until [constructEvents].
       const input = (subscribe) =>
         lazyEvent(() => {
           let sink, source;
@@ -579,6 +588,7 @@
 
       const output = Pull.output;
       
+      // Loopable
       function* switchE(newParents) {
         // We're safe evaluating the event pair eagerly instead of using [lazyEvent]
         // because there are no parents yet.
