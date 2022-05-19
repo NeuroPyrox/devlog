@@ -19,7 +19,8 @@
     import * as Util from "./util.js";
     const k = (x) => () => x;
     
-    // TODO add assertions on which functions can be called during which stages.
+    // TODO what are the atomic operations on the graph?
+    // TODO add assertions on which functions can be called dkuring which stages.
     // TODO factor behaviors into the lifecycle.
     // TODO make topology changes more explicit.
     // Lifecycle: out, pull, constructEvents, repeat(out, push, constructEvents)
@@ -27,8 +28,9 @@
     let eventConstructors = [];
     // Always callable for non-monadic events and behaviors because
     // non-monadic ones won't affect state until [constructEvents].
+    // Can [result] be called outside of [constructEvents]?
     const lazyEvent = (thunk) => {
-      const state = "start";
+      let state = "start";
       const result = () => {
         switch (state) {
           case "start":
@@ -157,8 +159,12 @@
       const enqueueAction = Util.callMethod("enqueueAction");
       const liftPull = Util.callMethod("liftPull");
       const setBehavior = Util.callMethod("setBehavior");
+      
+      let currentlyPushing = false;
 
       const push = (sink, value) => {
+        Util.assert(!currentlyPushing);
+        currentlyPushing = true;
         Util.runMonad(
           new Context(),
           (function* () {
@@ -181,6 +187,7 @@
           })()
         );
         constructEvents();
+        currentlyPushing = false;
       };
 
       return { readSink, enqueueAction, liftPull, setBehavior, push };
