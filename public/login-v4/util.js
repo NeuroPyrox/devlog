@@ -95,6 +95,26 @@ const runMonad = (context, generator) => {
 // Used when we want nullable values, but don't want the library user to create a null value.
 const nothing = Symbol();
 
+const unnestable = (f) => {
+  let running = false;
+  return (...args) => {
+    // TODO better error message
+    assert(!running);
+    running = true;
+    const result = f(...args);
+    running = false;
+    return result;
+  };
+};
+
+const memoize = (f) => () => {
+  if (!f.done) {
+    // Overwrite [f] to free memory. TODO test if it actually frees memory.
+    f = { done: true, value: f() };
+  }
+  return f.value;
+};
+
 export {
   assert,
   ShrinkingList,
@@ -102,4 +122,6 @@ export {
   callMethod,
   runMonad,
   nothing,
+  unnestable,
+  memoize,
 };
