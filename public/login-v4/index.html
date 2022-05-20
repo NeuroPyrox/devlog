@@ -26,10 +26,12 @@
     // Lifecycle: out, pull, constructEvents, repeat(out, push, constructEvents)
     
     // TODO integrate
+    // The order of composition between [Util.memoize] and [Util.unnestable] doesn't matter,
+    // but [Util.memoize(Util.unnestable(...))] seems like it'd be more efficient.
     const lazyConstructor = (f, ...args) => {
       return {
-        _construct: Util.unnestable(
-          Util.memoize(() => f(...args.map((arg) => arg._construct())))
+        _construct: Util.memoize(
+          Util.unnestable(() => f(...args.map((arg) => arg._construct())))
         ),
       };
     };
@@ -39,8 +41,9 @@
     // non-monadic ones won't affect state until [constructEvents].
     // Can [result] be called outside of [constructEvents]?
     const lazyEvent = (thunk) => {
-      // TODO does the order of nesting matter?
-      const result = Util.unnestable(Util.memoize(thunk));
+      // The order of composition between [Util.memoize] and [Util.unnestable] doesn't matter,
+      // but [Util.memoize(Util.unnestable(...))] seems like it'd be more efficient.
+      const result = Util.memoize(Util.unnestable(thunk));
       eventConstructors.push(result);
       return result;
     };
