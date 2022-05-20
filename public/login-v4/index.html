@@ -24,27 +24,21 @@
     // TODO factor behaviors into the lifecycle.
     // TODO make topology changes more explicit.
     // Lifecycle: out, pull, constructEvents, repeat(out, push, constructEvents)
-    
-    // TODO integrate
-    // The order of composition between [Util.memoize] and [Util.unnestable] doesn't matter,
-    // but [Util.memoize(Util.unnestable(...))] seems like it'd be more efficient.
-    const lazyConstructor = (f, ...args) => {
-      return {
+
+    let eventConstructors = [];
+    // Kind of like [queueMicrotask], but they only get executed after [push] or [pull].
+    // Always callable for non-monadic events and behaviors because
+    // non-monadic ones won't affect state until [constructEvents]. TODO this comment might be outdated.
+    // TODO Can [result] be called outside of [constructEvents]?
+    const lazyEvent = (f, ...args) => {
+      // The order of composition between [Util.memoize] and [Util.unnestable] doesn't matter,
+      // but [Util.memoize(Util.unnestable(...))] seems like it'd be more efficient.
+      const result = {
         _construct: Util.memoize(
           Util.unnestable(() => f(...args.map((arg) => arg._construct())))
         ),
       };
-    };
-
-    let eventConstructors = [];
-    // Always callable for non-monadic events and behaviors because
-    // non-monadic ones won't affect state until [constructEvents].
-    // Can [result] be called outside of [constructEvents]?
-    const lazyEvent = (thunk) => {
-      // The order of composition between [Util.memoize] and [Util.unnestable] doesn't matter,
-      // but [Util.memoize(Util.unnestable(...))] seems like it'd be more efficient.
-      const result = Util.memoize(Util.unnestable(thunk));
-      eventConstructors.push(result);
+      eventConstructors.push(() => result._construct());
       return result;
     };
     // Only called on startup and at the end after the [Push] monad.
@@ -68,8 +62,7 @@
         // in the Pull monad, but we do it to make the semantics cleaner
         // and for the ability to control when the output starts.
         output: (parent, handle) =>
-          lazyEvent(() => {
-            const parentSource = parent();
+          lazyEvent((parentSource) => {
             if (!parentSource.isPushable()) {
               return neverSource;
             }
@@ -83,15 +76,16 @@
             sink.activate();
             outputs.push(source); // TODO remove
             return source;
-          }),
+          }, parent),
         loop: () => {
-          let event = null;
+          let event = null; // TODO rename more accurately
           const result = () => {
             if (event === null) {
               throw new Error("Must call [loop.loop] on every [loop]!");
             }
             return event();
           };
+          // TODO change type
           result.loop = (setTo) => {
             if (typeof setTo !== "function") {
               throw new TypeError("setTo is not a function");
@@ -517,16 +511,18 @@
     })();
 
     const singleParentEvent = (parent, poll) =>
-      lazyEvent(() => {
-        const parentSource = parent();
-        return parentSource.isPushable()
-          ? newEventPair([parentSource], poll)[1]
-          : neverSource;
-      });
+      lazyEvent(
+        (parentSource) =>
+          parentSource.isPushable()
+            ? newEventPair([parentSource], poll)[1]
+            : neverSource,
+        parent
+      );
 
     const Combinators = (() => {
       const never = k(neverSource);
 
+      // TODO do we need to put any restrictions on when this is called?
       // This is lazy because the output won't be used until [constructEvents].
       const input = (subscribe) =>
         lazyEvent(() => {
@@ -551,15 +547,15 @@
         AtoC = (a) => a,
         BtoC = (b) => b
       ) =>
-        lazyEvent(() => {
-          if (!parentA().isPushable()) {
+        lazyEvent((parentASource, parentBSource) => {
+          if (!parentASource.isPushable()) {
             return map(parentB, BtoC)();
           }
-          if (!parentB().isPushable()) {
+          if (!parentBSource.isPushable()) {
             return map(parentA, AtoC)();
           }
           return newEventPair(
-            [parentA(), parentB()],
+            [parentASource, parentBSource],
             function* (parentAValue, parentBValue) {
               if (parentAValue === Util.nothing) {
                 return BtoC(parentBValue);
@@ -570,7 +566,7 @@
               return ABtoC(parentAValue, parentBValue);
             }
           )[1];
-        });
+        }, parentA, parentB);
 
       // TODO
       const mapTagB = (event, behavior, combine) =>
@@ -597,8 +593,7 @@
         const [sink, source] = newEventPair([], function* (value) {
           return value;
         });
-        lazyEvent(() => {
-          const newParentsSource = newParents();
+        lazyEvent((newParentsSource) => {
           if (!newParentsSource.isPushable()) {
             return;
           }
@@ -620,7 +615,7 @@
           // TODO does the order of these 2 statements matter?
           modSink.activate();
           modSource.addChild(source);
-        });
+        }, newParents);
         return k(source);
       }
 
@@ -630,8 +625,7 @@
         // We're safe evaluating the behavior pair eagerly instead of using [lazyEvent]
         // because there are no parents yet.
         const [sink, source] = newBehaviorPair([], initialValue, undefined);
-        lazyEvent(() => {
-          const parentSource = newValues();
+        lazyEvent((parentSource) => {
           if (!parentSource.isPushable()) {
             return;
           }
@@ -645,7 +639,7 @@
           // TODO does the order of these 2 statements matter?
           modSink.activate();
           modSource.addChild(source);
-        });
+        }, newValues);
         return k(source);
       }
 
