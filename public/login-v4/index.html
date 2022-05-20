@@ -18,18 +18,28 @@
     import Heap from "https://cdn.jsdelivr.net/gh/NeuroPyrox/heap/heap.js";
     import * as Util from "./util.js";
     const k = (x) => () => x;
-    
+
     // TODO what are the atomic operations on the graph?
     // TODO add assertions on which functions can be called dkuring which stages.
     // TODO factor behaviors into the lifecycle.
     // TODO make topology changes more explicit.
     // Lifecycle: out, pull, constructEvents, repeat(out, push, constructEvents)
+    
+    // TODO integrate
+    const lazyConstructor = (f, ...args) => {
+      return {
+        _construct: Util.unnestable(
+          Util.memoize(() => f(...args.map((arg) => arg._construct())))
+        ),
+      };
+    };
 
     let eventConstructors = [];
     // Always callable for non-monadic events and behaviors because
     // non-monadic ones won't affect state until [constructEvents].
     // Can [result] be called outside of [constructEvents]?
     const lazyEvent = (thunk) => {
+      // TODO does the order of nesting matter?
       const result = Util.unnestable(Util.memoize(thunk));
       eventConstructors.push(result);
       return result;
@@ -86,7 +96,7 @@
             event = setTo;
           };
           return result;
-        }
+        },
       };
       const output = Util.callMethod("output");
       const loop = Util.callMethod("loop")(); // = (object) => object.loop()
@@ -146,7 +156,7 @@
       const enqueueAction = Util.callMethod("enqueueAction");
       const liftPull = Util.callMethod("liftPull");
       const setBehavior = Util.callMethod("setBehavior");
-      
+
       const push = Util.unnestable((sink, value) => {
         Util.runMonad(
           new Context(),
@@ -576,7 +586,7 @@
         });
 
       const output = Pull.output;
-      
+
       // Loopable
       function* switchE(newParents) {
         // We're safe evaluating the event pair eagerly instead of using [lazyEvent]
@@ -610,7 +620,7 @@
         });
         return k(source);
       }
-      
+
       // TODO lift boundary cases up the call stack
       function* stepper(initialValue, newValues) {
         // TODO define poll
