@@ -19,18 +19,24 @@
     import * as Util from "./util.js";
     const k = (x) => () => x;
 
+    // TODO update comments with [constructEvents].
     // TODO what are the atomic operations on the graph?
     // TODO add assertions on which functions can be called dkuring which stages.
     // TODO factor behaviors into the lifecycle.
     // TODO make topology changes more explicit.
     // Lifecycle: out, pull, constructEvents, repeat(out, push, constructEvents)
 
-    let eventConstructors = [];
+    let eventConstructors = null;
     // Kind of like [queueMicrotask], but they only get executed after [push] or [pull].
     // Always callable for non-monadic events and behaviors because
     // non-monadic ones won't affect state until [constructEvents]. TODO this comment might be outdated.
     // TODO Can [result] be called outside of [constructEvents]?
     const lazyEvent = (f, ...args) => {
+      if(eventConstructors === null) {
+        return {
+          _construct: k(f(...args))
+        };
+      }
       // The order of composition between [Util.memoize] and [Util.unnestable] doesn't matter,
       // but [Util.memoize(Util.unnestable(...))] seems like it'd be more efficient.
       const result = {
@@ -41,13 +47,18 @@
       eventConstructors.push(() => result._construct());
       return result;
     };
-    // Only called on startup and at the end after the [Push] monad.
-    const constructEvents = () => {
+    // Only called on startup and in the [Push] monad.
+    const delayConstructionDuring = f => (...args) => {
+      eventConstructors = [];
+      const result = f(...args);
       const temp = eventConstructors;
       eventConstructors = [];
       temp.forEach((f) => f());
+      // TODO make this assertion more direct
       Util.assert(eventConstructors.length === 0);
-    };
+      eventConstructors = null;
+      return result;
+    }
 
     // TODO garbage collection.
     const outputs = [];
@@ -98,14 +109,11 @@
       const output = Util.callMethod("output");
       const loop = Util.callMethod("loop")(); // = (object) => object.loop()
 
+      // TODO add assertions on lifecycle
       // The return value is used by [observeE].
       const pullLazy = (monadicValue) => Util.runMonad(context, monadicValue());
       // TODO once we implement the html monad, remove the return value.
-      const pull = (monadicValue) => {
-        const result = pullLazy(monadicValue);
-        constructEvents();
-        return result; // Used to return [start] from [main].
-      };
+      const pull = delayConstructionDuring(pullLazy);
 
       return { output, loop, pullLazy, pull };
     })();
@@ -154,7 +162,7 @@
       const liftPull = Util.callMethod("liftPull");
       const setBehavior = Util.callMethod("setBehavior");
 
-      const push = Util.unnestable((sink, value) => {
+      const push = Util.unnestable(delayConstructionDuring((sink, value) =>
         Util.runMonad(
           new Context(),
           (function* () {
@@ -175,9 +183,8 @@
             }
             yield (context) => context.doActions();
           })()
-        );
-        constructEvents();
-      });
+        )
+      ));
 
       return { readSink, enqueueAction, liftPull, setBehavior, push };
     })();
