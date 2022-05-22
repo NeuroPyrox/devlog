@@ -32,9 +32,11 @@
     // non-monadic ones won't affect state until [constructEvents]. TODO this comment might be outdated.
     // TODO Can [result] be called outside of [constructEvents]?
     const lazyEvent = (f, ...args) => {
-      if(eventConstructors === null) {
+      args.forEach(console.log);
+      args.forEach((arg) => Util.assert(arg._construct, arg));
+      if (eventConstructors === null) {
         return {
-          _construct: k(f(...args))
+          _construct: k(f(...args)),
         };
       }
       // The order of composition between [Util.memoize] and [Util.unnestable] doesn't matter,
@@ -48,17 +50,19 @@
       return result;
     };
     // Only called on startup and in the [Push] monad.
-    const delayConstructionDuring = f => (...args) => {
-      eventConstructors = [];
-      const result = f(...args);
-      const temp = eventConstructors;
-      eventConstructors = [];
-      temp.forEach((f) => f());
-      // TODO make this assertion more direct
-      Util.assert(eventConstructors.length === 0);
-      eventConstructors = null;
-      return result;
-    }
+    const delayConstructionDuring =
+      (f) =>
+      (...args) => {
+        eventConstructors = [];
+        const result = f(...args);
+        const temp = eventConstructors;
+        eventConstructors = [];
+        temp.forEach((f) => f());
+        // TODO make this assertion more direct
+        Util.assert(eventConstructors.length === 0);
+        eventConstructors = null;
+        return result;
+      };
 
     // TODO garbage collection.
     const outputs = [];
@@ -89,19 +93,15 @@
             return source;
           }, parent),
         loop: () => {
-          let event = null; // TODO rename more accurately
-          const result = () => {
-            if (event === null) {
+          // TODO Get rid of direct references to [_construct].
+          const result = {
+            _construct: () => {
               throw new Error("Must call [loop.loop] on every [loop]!");
-            }
-            return event();
+            },
           };
-          // TODO change type
           result.loop = (setTo) => {
-            if (typeof setTo !== "function") {
-              throw new TypeError("setTo is not a function");
-            }
-            event = setTo;
+            Util.assert(setTo._construct);
+            result._construct = setTo._construct;
           };
           return result;
         },
@@ -162,29 +162,33 @@
       const liftPull = Util.callMethod("liftPull");
       const setBehavior = Util.callMethod("setBehavior");
 
-      const push = Util.unnestable(delayConstructionDuring((sink, value) =>
-        Util.runMonad(
-          new Context(),
-          (function* () {
-            yield (context) => context.writeSink(sink, value);
-            const heap = new Heap((a, b) => a.getPriority() < b.getPriority());
-            for (const childSink of sink.iterateActiveChildren()) {
-              heap.push(childSink);
-            }
-            for (const sink of heap) {
-              const value = yield* sink.poll();
-              if (value !== Util.nothing) {
-                yield (context) => context.writeSink(sink, value);
-                for (const child of sink.iterateActiveChildren()) {
-                  // Mutating the heap while iterating over it.
-                  heap.push(child);
+      const push = Util.unnestable(
+        delayConstructionDuring((sink, value) =>
+          Util.runMonad(
+            new Context(),
+            (function* () {
+              yield (context) => context.writeSink(sink, value);
+              const heap = new Heap(
+                (a, b) => a.getPriority() < b.getPriority()
+              );
+              for (const childSink of sink.iterateActiveChildren()) {
+                heap.push(childSink);
+              }
+              for (const sink of heap) {
+                const value = yield* sink.poll();
+                if (value !== Util.nothing) {
+                  yield (context) => context.writeSink(sink, value);
+                  for (const child of sink.iterateActiveChildren()) {
+                    // Mutating the heap while iterating over it.
+                    heap.push(child);
+                  }
                 }
               }
-            }
-            yield (context) => context.doActions();
-          })()
+              yield (context) => context.doActions();
+            })()
+          )
         )
-      ));
+      );
 
       return { readSink, enqueueAction, liftPull, setBehavior, push };
     })();
@@ -527,7 +531,7 @@
       );
 
     const Combinators = (() => {
-      const never = k(neverSource);
+      const never = { _construct: k(neverSource) };
 
       // TODO do we need to put any restrictions on when this is called?
       // This is lazy because the output won't be used until [constructEvents].
@@ -554,26 +558,30 @@
         AtoC = (a) => a,
         BtoC = (b) => b
       ) =>
-        lazyEvent((parentASource, parentBSource) => {
-          if (!parentASource.isPushable()) {
-            return map(parentB, BtoC)();
-          }
-          if (!parentBSource.isPushable()) {
-            return map(parentA, AtoC)();
-          }
-          return newEventPair(
-            [parentASource, parentBSource],
-            function* (parentAValue, parentBValue) {
-              if (parentAValue === Util.nothing) {
-                return BtoC(parentBValue);
-              }
-              if (parentBValue === Util.nothing) {
-                return AtoC(parentAValue);
-              }
-              return ABtoC(parentAValue, parentBValue);
+        lazyEvent(
+          (parentASource, parentBSource) => {
+            if (!parentASource.isPushable()) {
+              return map(parentB, BtoC)();
             }
-          )[1];
-        }, parentA, parentB);
+            if (!parentBSource.isPushable()) {
+              return map(parentA, AtoC)();
+            }
+            return newEventPair(
+              [parentASource, parentBSource],
+              function* (parentAValue, parentBValue) {
+                if (parentAValue === Util.nothing) {
+                  return BtoC(parentBValue);
+                }
+                if (parentBValue === Util.nothing) {
+                  return AtoC(parentAValue);
+                }
+                return ABtoC(parentAValue, parentBValue);
+              }
+            )[1];
+          },
+          parentA,
+          parentB
+        );
 
       // TODO
       const mapTagB = (event, behavior, combine) =>
@@ -623,7 +631,7 @@
           modSink.activate();
           modSource.addChild(source);
         }, newParents);
-        return k(source);
+        return { _construct: k(source) };
       }
 
       // TODO lift boundary cases up the call stack
@@ -647,7 +655,7 @@
           modSink.activate();
           modSource.addChild(source);
         }, newValues);
-        return k(source);
+        return { _construct: k(source) };
       }
 
       // TODO optimize with binary tree
