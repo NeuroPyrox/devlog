@@ -583,8 +583,15 @@
         );
 
       // TODO
-      const mapTagB = (event, behavior, combine) =>
-        map(event, (x) => combine(x, behavior().getCurrentValue()));
+      // TODO are there any possible short circuits based on [behavior]'s state?
+      const mapTagB = (event, behavior, combine) => lazyEvent((eventSource, behaviorSource) => {
+        if (!eventSource.isPushable()) {
+          return neverSource;
+        }
+        return newEventPair([eventSource], function*(value) {
+          return combine(value, behaviorSource.getCurrentValue());
+        })
+      }, event, behavior);
       const mapTag = (parent, latchGet, combine) =>
         map(parent, (x) => combine(x, latchGet()));
 
