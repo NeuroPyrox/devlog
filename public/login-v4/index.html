@@ -119,6 +119,7 @@
     })();
 
     const Push = (() => {
+      // TODO rename to state
       class Context {
         constructor() {
           this._values = new WeakMap();
@@ -157,38 +158,33 @@
         }
       }
 
+      // TODO minimize exports
       const readSink = Util.callMethod("readSink");
       const enqueueAction = Util.callMethod("enqueueAction");
       const liftPull = Util.callMethod("liftPull");
       const setBehavior = Util.callMethod("setBehavior");
 
-      const push = Util.unnestable(
-        delayConstructionDuring((sink, value) =>
-          Util.runMonad(
-            new Context(),
-            (function* () {
-              yield (context) => context.writeSink(sink, value);
-              const heap = new Heap(
-                (a, b) => a.getPriority() < b.getPriority()
-              );
-              for (const childSink of sink.iterateActiveChildren()) {
-                heap.push(childSink);
+      const push = Util.unnestable((sink, value) => {
+        const context = new Context();
+        context.writeSink(sink, value);
+        const heap = new Heap((a, b) => a.getPriority() < b.getPriority());
+        for (const childSink of sink.iterateActiveChildren()) {
+          heap.push(childSink);
+        }
+        delayConstructionDuring(() => {
+          for (const sink of heap) {
+            const value = Util.runMonad(context, sink.poll());
+            if (value !== Util.nothing) {
+              context.writeSink(sink, value);
+              for (const child of sink.iterateActiveChildren()) {
+                // Mutating the heap while iterating over it.
+                heap.push(child);
               }
-              for (const sink of heap) {
-                const value = yield* sink.poll();
-                if (value !== Util.nothing) {
-                  yield (context) => context.writeSink(sink, value);
-                  for (const child of sink.iterateActiveChildren()) {
-                    // Mutating the heap while iterating over it.
-                    heap.push(child);
-                  }
-                }
-              }
-              yield (context) => context.doActions();
-            })()
-          )
-        )
-      );
+            }
+          }
+        })();
+        context.doActions();
+      });
 
       return { readSink, enqueueAction, liftPull, setBehavior, push };
     })();
