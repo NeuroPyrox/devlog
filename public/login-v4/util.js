@@ -115,6 +115,11 @@ const memoize = (f) => () => {
   return f.value;
 };
 
+const log = (x) => {
+  console.log(x);
+  return x;
+};
+
 export {
   assert,
   ShrinkingList,
@@ -124,4 +129,5 @@ export {
   nothing,
   unnestable,
   memoize,
+  log,
 };
