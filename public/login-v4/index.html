@@ -31,6 +31,7 @@
     // Always callable for non-monadic events and behaviors because
     // non-monadic ones won't affect state until [constructEvents]. TODO this comment might be outdated.
     // TODO Can [result] be called outside of [constructEvents]?
+    // TODO rename
     const lazyEvent = (f, ...args) => {
       args.forEach(console.log);
       args.forEach((arg) => Util.assert(arg._construct, arg));
@@ -140,11 +141,13 @@
           return value.value;
         }
 
+        // TODO replace with [lazyEvent]
         enqueueAction(handle, value) {
           this._actions.push([handle, value]);
         }
 
         liftPull(monadicValue) {
+          // TODO have the recent changes made this outdated?
           return Pull.pullLazy(monadicValue);
         }
 
@@ -158,7 +161,6 @@
         }
       }
 
-      // TODO minimize exports
       const readSink = Util.callMethod("readSink");
       const enqueueAction = Util.callMethod("enqueueAction");
       const liftPull = Util.callMethod("liftPull");
@@ -171,6 +173,7 @@
         for (const childSink of sink.iterateActiveChildren()) {
           heap.push(childSink);
         }
+        // Construction is unsafe while iterating over active children.
         delayConstructionDuring(() => {
           for (const sink of heap) {
             const value = Util.runMonad(context, sink.poll());
@@ -614,8 +617,7 @@
             function* (newParent) {
               const source = weakSource.deref(); // Weakness prevents memory leaks.
               if (source !== undefined) {
-                yield Push.enqueueAction((newParent) => {
-                  const newParentSource = newParent(); // It's only safe to construct events after event propagation. TODO document why.
+                lazyEvent((newParentSource) => {
                   source.switch(newParentSource);
                   sink.switch(newParentSource.getWeakSink());
                 }, newParent);
