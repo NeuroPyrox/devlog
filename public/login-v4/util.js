@@ -84,6 +84,7 @@ const callMethod =
   (object) =>
     object[field](...args);
 
+// TODO use symbols
 const runMonad = (context, generator) => {
   let step = generator.next();
   while (!step.done) {
