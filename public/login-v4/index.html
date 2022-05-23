@@ -19,6 +19,8 @@
     import * as Util from "./util.js";
     const k = (x) => () => x;
 
+    // TODO make a graph over time of the call stack and which functions are callable.
+    // TODO consolidate all lifecycle assertions under one module.
     // TODO update comments with [constructEvents].
     // TODO what are the atomic operations on the graph?
     // TODO add assertions on which functions can be called dkuring which stages.
@@ -26,11 +28,13 @@
     // TODO make topology changes more explicit.
     // Lifecycle: out, pull, constructEvents, repeat(out, push, constructEvents)
 
-    let eventConstructors = null;
-    // Kind of like [queueMicrotask], but the tasks only get deferred during [delayConstructionDuring].
+    let eventConstructors = "eager";
+    // Kind of like [queueMicrotask], but the tasks only get delayed during [delayConstructionDuring].
     const lazyConstructor = (f, ...args) => {
+      Util.assert(eventConstructors !== "constructing");
       args.forEach((arg) => Util.assert(arg._construct, arg));
-      if (eventConstructors === null) {
+      // We allow construction outside of [delayConstructionDuring] to improve garbage collection.
+      if (eventConstructors === "eager") {
         return {
           _construct: k(f(...args)),
         };
@@ -52,11 +56,9 @@
         eventConstructors = [];
         const result = f(...args);
         const temp = eventConstructors;
-        eventConstructors = [];
+        eventConstructors = "constructing";
         temp.forEach((constructor) => constructor._construct());
-        // TODO make this assertion more direct
-        Util.assert(eventConstructors.length === 0);
-        eventConstructors = null;
+        eventConstructors = "eager";
         return result;
       };
 
@@ -370,6 +372,7 @@
         }
       }
 
+      // TODO rename
       class Source {
         constructor(parents, sink) {
           this._weakChildLinks = new Util.ShrinkingList();
@@ -521,11 +524,10 @@
     const Combinators = (() => {
       const never = { _construct: k(neverSource) };
 
-      // TODO do we need to put any restrictions on when this is called?
-      // This is lazy because the output won't be used until [constructEvents].
       const input = (subscribe) =>
         lazyConstructor(() => {
           let sink, source;
+          // TODO what can go wrong if [subscribe] disobeys the protocol?
           const unsubscribe = subscribe((x) => Push.push(sink, x));
           [sink, source] = newEventPair([], null, unsubscribe);
           return source;
