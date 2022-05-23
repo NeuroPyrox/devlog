@@ -589,18 +589,12 @@
 
       // TODO
       // TODO are there any possible short circuits based on [behavior]'s state?
-      // This could be refactored in terms of [map] if [lazyEvent] was monadic,
-      // but this would be the only call site of the monad.
       const mapTagB = (event, behavior, combine) =>
         lazyEvent(
-          (eventSource, behaviorSource) => {
-            if (!eventSource.isPushable()) {
-              return neverSource;
-            }
-            return newEventPair([eventSource], function* (value) {
-              return combine(value, behaviorSource.getCurrentValue());
-            })[1];
-          },
+          (eventSource, behaviorSource) =>
+            mapSource(eventSource, (x) =>
+              combine(x, behaviorSource.getCurrentValue())
+            ),
           event,
           behavior
         );
