@@ -421,6 +421,7 @@
       // Some of the event's parents may not be passed into this function but added later.
       // The only parents passed here are the ones that [poll] immediately depends on.
       const newEventPair = (parentSources, poll, unsubscribe = () => {}) => {
+        // TODO why do we have this assertion?
         Util.assert(
           parentSources.every((parentSource) => parentSource.isPushable())
         );
@@ -497,6 +498,7 @@
       }
 
       const newBehaviorPair = (parentSources, initialValue, poll) => {
+        // TODO why do we have this assertion?
         Util.assert(
           parentSources.every((parentSource) => parentSource.isPushable())
         );
@@ -518,15 +520,6 @@
 
       return { newEventPair, newBehaviorPair, neverSource };
     })();
-
-    const singleParentEvent = (parent, poll) =>
-      lazyEvent(
-        (parentSource) =>
-          parentSource.isPushable()
-            ? newEventPair([parentSource], poll)[1]
-            : neverSource,
-        parent
-      );
 
     const Combinators = (() => {
       const never = { _construct: k(neverSource) };
@@ -606,9 +599,15 @@
       const tag = (parent, latchGet) => map(parent, () => latchGet());
 
       const observeE = (parent) =>
-        singleParentEvent(parent, function* (value) {
-          return yield Push.liftPull(value);
-        });
+        lazyEvent(
+          (parentSource) =>
+            parentSource.isPushable()
+              ? newEventPair([parentSource], function* (value) {
+                  return yield Push.liftPull(value);
+                })[1]
+              : neverSource,
+          parent
+        );
 
       const output = Pull.output;
 
