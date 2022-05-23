@@ -550,9 +550,7 @@
           ? pushableMapSource(parentSource, f)
           : neverSource;
       const map = (parent, f) =>
-        singleParentEvent(parent, function* (value) {
-          return f(value);
-        });
+        lazyEvent((parentSource) => mapSource(parentSource, f), parent);
 
       const filter = (parent, predicate) =>
         map(parent, (value) => (predicate(value) ? value : Util.nothing));
