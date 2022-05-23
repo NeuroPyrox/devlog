@@ -39,8 +39,8 @@
     // scriptInitialization----         Push.push--------------
 
     let eventConstructors = "eager";
-    const constConstructor = x => ({
-      _construct: k(x)
+    const constConstructor = (x) => ({
+      _construct: k(x),
     });
     // Kind of like [queueMicrotask], but the tasks only get delayed during [delayConstructionDuring].
     const lazyConstructor = (f, ...args) => {
@@ -58,6 +58,20 @@
         ),
       };
       eventConstructors.push(result);
+      return result;
+    };
+    const lazyLoop = () => {
+      Util.assert(eventConstructors !== "constructing");
+      Util.assert(eventConstructors !== "eager");
+      const result = {
+        _construct: () => {
+          throw new Error("Must call [loop.loop] on every [loop]!");
+        },
+      };
+      result.loop = (setTo) => {
+        Util.assert(setTo._construct);
+        result._construct = setTo._construct;
+      };
       return result;
     };
     // TODO make private
@@ -105,19 +119,7 @@
             outputs.push(source); // TODO remove
             return source;
           }, parent),
-        loop: () => {
-          // TODO Get rid of direct references to [_construct].
-          const result = {
-            _construct: () => {
-              throw new Error("Must call [loop.loop] on every [loop]!");
-            },
-          };
-          result.loop = (setTo) => {
-            Util.assert(setTo._construct);
-            result._construct = setTo._construct;
-          };
-          return result;
-        },
+        loop: lazyLoop,
       };
       const output = Util.callMethod("output");
       const loop = Util.callMethod("loop")(); // = (object) => object.loop()
