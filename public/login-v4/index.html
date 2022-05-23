@@ -541,11 +541,13 @@
           return source;
         });
 
+      const pushableMapSource = (pushableParentSource, f) =>
+        newEventPair([pushableParentSource], function* (value) {
+          return f(value);
+        })[1];
       const mapSource = (parentSource, f) =>
         parentSource.isPushable()
-          ? newEventPair([parentSource], function* (value) {
-              return f(value);
-            })[1]
+          ? pushableMapSource(parentSource, f)
           : neverSource;
       const map = (parent, f) =>
         singleParentEvent(parent, function* (value) {
@@ -568,7 +570,7 @@
               return mapSource(parentBSource, BtoC);
             }
             if (!parentBSource.isPushable()) {
-              return mapSource(parentASource, AtoC);
+              return pushableMapSource(parentASource, AtoC);
             }
             return newEventPair(
               [parentASource, parentBSource],
