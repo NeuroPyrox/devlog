@@ -30,9 +30,7 @@
     // Kind of like [queueMicrotask], but they only get executed after [push] or [pull].
     // Always callable for non-monadic events and behaviors because
     // non-monadic ones won't affect state until [constructEvents]. TODO this comment might be outdated.
-    // TODO Can [result] be called outside of [constructEvents]?
-    // TODO rename
-    const lazyEvent = (f, ...args) => {
+    const lazyConstructor = (f, ...args) => {
       args.forEach((arg) => Util.assert(arg._construct, arg));
       if (eventConstructors === null) {
         return {
@@ -77,7 +75,7 @@
         // in the Pull monad, but we do it to make the semantics cleaner
         // and for the ability to control when the output starts.
         output: (parent, handle) =>
-          lazyEvent((parentSource) => {
+          lazyConstructor((parentSource) => {
             if (!parentSource.isPushable()) {
               return neverSource;
             }
@@ -140,7 +138,7 @@
           return value.value;
         }
 
-        // TODO replace with [lazyEvent]
+        // TODO replace with [lazyConstructor]
         enqueueAction(handle, value) {
           this._actions.push([handle, value]);
         }
@@ -191,6 +189,7 @@
       return { readSink, enqueueAction, liftPull, setBehavior, push };
     })();
 
+    // TODO restrict surface area by making mutations monadic
     const { newEventPair, newBehaviorPair, neverSource } = (() => {
       const sinkFinalizers = new FinalizationRegistry((weakSource) =>
         weakSource.deref()?._onUnpushable()
@@ -527,7 +526,7 @@
       // TODO do we need to put any restrictions on when this is called?
       // This is lazy because the output won't be used until [constructEvents].
       const input = (subscribe) =>
-        lazyEvent(() => {
+        lazyConstructor(() => {
           let sink, source;
           const unsubscribe = subscribe((x) => Push.push(sink, x));
           [sink, source] = newEventPair([], null, unsubscribe);
@@ -543,7 +542,7 @@
           ? pushableMapSource(parentSource, f)
           : neverSource;
       const map = (parent, f) =>
-        lazyEvent((parentSource) => mapSource(parentSource, f), parent);
+        lazyConstructor((parentSource) => mapSource(parentSource, f), parent);
 
       const filter = (parent, predicate) =>
         map(parent, (value) => (predicate(value) ? value : Util.nothing));
@@ -555,7 +554,7 @@
         AtoC = (a) => a,
         BtoC = (b) => b
       ) =>
-        lazyEvent(
+        lazyConstructor(
           (parentASource, parentBSource) => {
             if (!parentASource.isPushable()) {
               return mapSource(parentBSource, BtoC);
@@ -583,7 +582,7 @@
       // TODO
       // TODO are there any possible short circuits based on [behavior]'s state?
       const mapTagB = (event, behavior, combine) =>
-        lazyEvent(
+        lazyConstructor(
           (eventSource, behaviorSource) =>
             mapSource(eventSource, (x) =>
               combine(x, behaviorSource.getCurrentValue())
@@ -599,7 +598,7 @@
       const tag = (parent, latchGet) => map(parent, () => latchGet());
 
       const observeE = (parent) =>
-        lazyEvent(
+        lazyConstructor(
           (parentSource) =>
             parentSource.isPushable()
               ? newEventPair([parentSource], function* (value) {
@@ -613,12 +612,12 @@
 
       // Loopable
       function* switchE(newParents) {
-        // We're safe evaluating the event pair eagerly instead of using [lazyEvent]
+        // We're safe evaluating the event pair eagerly instead of using [lazyConstructor]
         // because there are no parents yet.
         const [sink, source] = newEventPair([], function* (value) {
           return value;
         });
-        lazyEvent((newParentsSource) => {
+        lazyConstructor((newParentsSource) => {
           if (!newParentsSource.isPushable()) {
             return;
           }
@@ -628,7 +627,7 @@
             function* (newParent) {
               const source = weakSource.deref(); // Weakness prevents memory leaks.
               if (source !== undefined) {
-                lazyEvent((newParentSource) => {
+                lazyConstructor((newParentSource) => {
                   source.switch(newParentSource);
                   sink.switch(newParentSource.getWeakSink());
                 }, newParent);
@@ -646,10 +645,10 @@
       // TODO lift boundary cases up the call stack
       function* stepper(initialValue, newValues) {
         // TODO define poll
-        // We're safe evaluating the behavior pair eagerly instead of using [lazyEvent]
+        // We're safe evaluating the behavior pair eagerly instead of using [lazyConstructor]
         // because there are no parents yet.
         const [sink, source] = newBehaviorPair([], initialValue, undefined);
-        lazyEvent((parentSource) => {
+        lazyConstructor((parentSource) => {
           if (!parentSource.isPushable()) {
             return;
           }
