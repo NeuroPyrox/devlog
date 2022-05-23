@@ -653,7 +653,7 @@
           modSink.activate();
           modSource.addChild(source);
         }, newParents);
-        return { _construct: k(source) };
+        return lazyConstructor(k(source));
       }
 
       // TODO lift boundary cases up the call stack
@@ -677,7 +677,7 @@
           modSink.activate();
           modSource.addChild(source);
         }, newValues);
-        return { _construct: k(source) };
+        return lazyConstructor(k(source));
       }
 
       // TODO optimize with binary tree
