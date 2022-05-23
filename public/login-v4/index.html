@@ -541,6 +541,12 @@
           return source;
         });
 
+      const mapSource = (parentSource, f) =>
+        parentSource.isPushable()
+          ? newEventPair([parentSource], function* (value) {
+              return f(value);
+            })[1]
+          : neverSource;
       const map = (parent, f) =>
         singleParentEvent(parent, function* (value) {
           return f(value);
@@ -559,10 +565,10 @@
         lazyEvent(
           (parentASource, parentBSource) => {
             if (!parentASource.isPushable()) {
-              return map(parentB, BtoC)();
+              return mapSource(parentBSource, BtoC);
             }
             if (!parentBSource.isPushable()) {
-              return map(parentA, AtoC)();
+              return mapSource(parentASource, AtoC);
             }
             return newEventPair(
               [parentASource, parentBSource],
