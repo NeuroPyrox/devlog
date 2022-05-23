@@ -27,9 +27,7 @@
     // Lifecycle: out, pull, constructEvents, repeat(out, push, constructEvents)
 
     let eventConstructors = null;
-    // Kind of like [queueMicrotask], but they only get executed after [push] or [pull].
-    // Always callable for non-monadic events and behaviors because
-    // non-monadic ones won't affect state until [constructEvents]. TODO this comment might be outdated.
+    // Kind of like [queueMicrotask], but the tasks only get deferred during [delayConstructionDuring].
     const lazyConstructor = (f, ...args) => {
       args.forEach((arg) => Util.assert(arg._construct, arg));
       if (eventConstructors === null) {
@@ -44,7 +42,7 @@
           Util.unnestable(() => f(...args.map((arg) => arg._construct())))
         ),
       };
-      eventConstructors.push(() => result._construct());
+      eventConstructors.push(result);
       return result;
     };
     // Only called on startup and in the [Push] monad.
@@ -55,7 +53,7 @@
         const result = f(...args);
         const temp = eventConstructors;
         eventConstructors = [];
-        temp.forEach((f) => f());
+        temp.forEach((constructor) => constructor._construct());
         // TODO make this assertion more direct
         Util.assert(eventConstructors.length === 0);
         eventConstructors = null;
