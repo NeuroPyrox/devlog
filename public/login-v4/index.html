@@ -27,6 +27,11 @@
     // TODO factor behaviors into the lifecycle.
     // TODO make topology changes more explicit.
     // Lifecycle: out, pull, constructEvents, repeat(out, push, constructEvents)
+    // lazyConstructor
+    //
+    //                 delayConstructionDuring
+    //                 pull-------------------
+    // eventLoop------------------------------
 
     let eventConstructors = "eager";
     // Kind of like [queueMicrotask], but the tasks only get delayed during [delayConstructionDuring].
@@ -49,16 +54,20 @@
       eventConstructors.push(result);
       return result;
     };
+    // TODO make private
+    const construct = () => {
+      const temp = eventConstructors;
+      eventConstructors = "constructing";
+      temp.forEach((constructor) => constructor._construct());
+      eventConstructors = "eager";
+    }
     // Only called on startup and in the [Push] monad.
     const delayConstructionDuring =
       (f) =>
       (...args) => {
         eventConstructors = [];
         const result = f(...args);
-        const temp = eventConstructors;
-        eventConstructors = "constructing";
-        temp.forEach((constructor) => constructor._construct());
-        eventConstructors = "eager";
+        construct();
         return result;
       };
 
