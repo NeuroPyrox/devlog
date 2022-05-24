@@ -4,6 +4,17 @@ const fs = require("fs");
 const P = require("../../parsers.js");
 const htmlHandler = require("../../lib/html-handler.js");
 
+const moduleHandler = (moduleName) =>
+  P.endIn(`/${moduleName}.js`).map(() => async (req, res) => {
+    const fileName = `${__dirname}/${moduleName}.js`;
+    const stat = await fs.promises.stat(fileName);
+    res.writeHead(200, {
+      "Content-Type": "text/javascript",
+      "Content-Length": stat.size,
+    });
+    fs.createReadStream(fileName).pipe(res);
+  });
+
 module.exports = P.end
   .map(() => (req, res) => {
     console.log(req);
@@ -13,30 +24,6 @@ module.exports = P.end
     res.end();
   })
   .or(P.endIn("/").map(() => htmlHandler(`${__dirname}/index.html`)))
-  .or(P.endIn("/util.js").map(() => async (req, res) => {
-    const fileName = `${__dirname}/util.js`;
-    const stat = await fs.promises.stat(fileName);
-    res.writeHead(200, {
-      "Content-Type": "text/javascript",
-      "Content-Length": stat.size
-    });
-    fs.createReadStream(fileName).pipe(res);
-  }))
-  .or(P.endIn("/lazyConstructors.js").map(() => async (req, res) => {
-    const fileName = `${__dirname}/lazyConstructors.js`;
-    const stat = await fs.promises.stat(fileName);
-    res.writeHead(200, {
-      "Content-Type": "text/javascript",
-      "Content-Length": stat.size
-    });
-    fs.createReadStream(fileName).pipe(res);
-  }))
-  .or(P.endIn("/pull.js").map(() => async (req, res) => {
-    const fileName = `${__dirname}/pull.js`;
-    const stat = await fs.promises.stat(fileName);
-    res.writeHead(200, {
-      "Content-Type": "text/javascript",
-      "Content-Length": stat.size
-    });
-    fs.createReadStream(fileName).pipe(res);
-  }));
+  .or(moduleHandler("util"))
+  .or(moduleHandler("lazyConstructors"))
+  .or(moduleHandler("pull"));
