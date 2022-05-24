@@ -78,20 +78,22 @@ class ShrinkingListNode {
 
 const weakRefUndefined = { deref: () => undefined };
 
-const callMethod =
-  (field) =>
-  (...args) =>
-  (object) =>
-    object[field](...args);
+const monadicMutator = Symbol();
 
 // TODO use symbols
 const runMonad = (context, generator) => {
   let step = generator.next();
   while (!step.done) {
-    step = generator.next(step.value(context));
+    step = generator.next(step.value[monadicMutator](context));
   }
   return step.value;
 };
+
+const monadicMethod =
+  (field) =>
+  (...args) => ({
+    [monadicMutator]: (context) => context[field](...args),
+  });
 
 // Used when we want nullable values, but don't want the library user to create a null value.
 const nothing = Symbol();
@@ -125,8 +127,8 @@ export {
   assert,
   ShrinkingList,
   weakRefUndefined,
-  callMethod,
   runMonad,
+  monadicMethod,
   nothing,
   unnestable,
   memoize,
