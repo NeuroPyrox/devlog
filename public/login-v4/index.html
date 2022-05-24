@@ -33,6 +33,9 @@
     // TODO factor behaviors into the lifecycle.
     // TODO make topology changes more explicit.
     // Lifecycle: out, pull, constructEvents, repeat(out, push, constructEvents)
+    
+    // lazyConstructor during !constructAll
+    // lazyLoop during !constructAll & delayConstructionDuring & pullLazy
 
     // lazyConstructor         -----------------------
     //                         Push.push
@@ -133,6 +136,7 @@
       const liftPull = Util.monadicMethod("liftPull");
       const setBehavior = Util.monadicMethod("setBehavior");
 
+      // TODO refactor
       const push = Util.unnestable((sink, value) => {
         const context = new Context();
         context.writeSink(sink, value);

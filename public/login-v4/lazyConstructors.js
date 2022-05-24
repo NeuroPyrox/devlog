@@ -11,7 +11,7 @@ const constConstructor = (x) => ({
 // Kind of like [queueMicrotask], but the tasks only get delayed during [delayConstructionDuring].
 const lazyConstructor = (f, ...args) => {
   Util.assert(constructors !== "constructing");
-  args.forEach((arg) => Util.assert(arg[construct], arg));
+  args.forEach((arg) => Util.assert(arg[construct]));
   // We allow construction outside of [delayConstructionDuring] to improve garbage collection.
   if (constructors === "eager") {
     return constConstructor(f(...args));
@@ -27,6 +27,7 @@ const lazyConstructor = (f, ...args) => {
   return result;
 };
 
+// TODO rename
 const lazyLoop = () => {
   Util.assert(constructors !== "constructing");
   Util.assert(constructors !== "eager");
@@ -52,13 +53,12 @@ const constructAll = () => {
 
 // TODO assertions on lifecycle
 // Only called on startup and in the [Push] monad.
-const delayConstructionDuring =
-  (f) =>
-  (...args) => {
+const delayConstructionDuring = (f) =>
+  Util.unnestable((...args) => {
     constructors = [];
     const result = f(...args);
     constructAll();
     return result;
-  };
+  });
 
 export { constConstructor, lazyConstructor, lazyLoop, delayConstructionDuring };
