@@ -74,8 +74,8 @@
           }, parent),
         loop: lazyLoop,
       };
-      const output = Util.callMethod("output");
-      const loop = Util.callMethod("loop")(); // = (object) => object.loop()
+      const output = Util.monadicMethod("output");
+      const loop = Util.monadicMethod("loop")();
 
       // TODO add assertions on lifecycle
       // The return value is used by [observeE].
@@ -128,10 +128,10 @@
         }
       }
 
-      const readSink = Util.callMethod("readSink");
-      const enqueueAction = Util.callMethod("enqueueAction");
-      const liftPull = Util.callMethod("liftPull");
-      const setBehavior = Util.callMethod("setBehavior");
+      const readSink = Util.monadicMethod("readSink");
+      const enqueueAction = Util.monadicMethod("enqueueAction");
+      const liftPull = Util.monadicMethod("liftPull");
+      const setBehavior = Util.monadicMethod("setBehavior");
 
       const push = Util.unnestable((sink, value) => {
         const context = new Context();
