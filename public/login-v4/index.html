@@ -67,7 +67,7 @@
             const [sink, source] = newEventPair(
               [parentSource],
               function* (value) {
-                yield Push.enqueueAction(handle, value);
+                lazyConstructor(() => handle(value));
                 return Util.nothing;
               }
             );
@@ -111,11 +111,6 @@
           return value.value;
         }
 
-        // TODO replace with [lazyConstructor]
-        enqueueAction(handle, value) {
-          this._actions.push([handle, value]);
-        }
-
         liftPull(monadicValue) {
           // TODO have the recent changes made this outdated?
           return Pull.pullLazy(monadicValue);
@@ -132,7 +127,6 @@
       }
 
       const readSink = Util.monadicMethod("readSink");
-      const enqueueAction = Util.monadicMethod("enqueueAction");
       const liftPull = Util.monadicMethod("liftPull");
       const setBehavior = Util.monadicMethod("setBehavior");
 
@@ -160,7 +154,7 @@
         context.doActions();
       });
 
-      return { readSink, enqueueAction, liftPull, setBehavior, push };
+      return { readSink, liftPull, setBehavior, push };
     })();
 
     // TODO restrict surface area by making mutations monadic
