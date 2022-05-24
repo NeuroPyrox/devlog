@@ -21,4 +21,13 @@ module.exports = P.end
       "Content-Length": stat.size
     });
     fs.createReadStream(fileName).pipe(res);
+  }))
+  .or(P.endIn("/lazyConstructors.js").map(() => async (req, res) => {
+    const fileName = `${__dirname}/lazyConstructors.js`;
+    const stat = await fs.promises.stat(fileName);
+    res.writeHead(200, {
+      "Content-Type": "text/javascript",
+      "Content-Length": stat.size
+    });
+    fs.createReadStream(fileName).pipe(res);
   }));
