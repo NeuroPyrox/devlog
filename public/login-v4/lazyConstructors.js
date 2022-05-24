@@ -2,17 +2,18 @@ import * as Util from "./util.js";
 
 // TODO use symbol for [_construct]
 
-let eventConstructors = "eager";
+let constructors = "eager";
+
 const constConstructor = (x) => ({
   _construct: () => x,
 });
 
 // Kind of like [queueMicrotask], but the tasks only get delayed during [delayConstructionDuring].
 const lazyConstructor = (f, ...args) => {
-  Util.assert(eventConstructors !== "constructing");
+  Util.assert(constructors !== "constructing");
   args.forEach((arg) => Util.assert(arg._construct, arg));
   // We allow construction outside of [delayConstructionDuring] to improve garbage collection.
-  if (eventConstructors === "eager") {
+  if (constructors === "eager") {
     return constConstructor(f(...args));
   }
   // The order of composition between [Util.memoize] and [Util.unnestable] doesn't matter,
@@ -22,13 +23,13 @@ const lazyConstructor = (f, ...args) => {
       Util.unnestable(() => f(...args.map((arg) => arg._construct())))
     ),
   };
-  eventConstructors.push(result);
+  constructors.push(result);
   return result;
 };
 
 const lazyLoop = () => {
-  Util.assert(eventConstructors !== "constructing");
-  Util.assert(eventConstructors !== "eager");
+  Util.assert(constructors !== "constructing");
+  Util.assert(constructors !== "eager");
   const result = {
     _construct: () => {
       throw new Error("Must call [loop.loop] on every [loop]!");
@@ -42,17 +43,18 @@ const lazyLoop = () => {
 };
 
 const construct = () => {
-  const temp = eventConstructors;
-  eventConstructors = "constructing";
+  const temp = constructors;
+  constructors = "constructing";
   temp.forEach((constructor) => constructor._construct());
-  eventConstructors = "eager";
+  constructors = "eager";
 };
 
+// TODO assertions on lifecycle
 // Only called on startup and in the [Push] monad.
 const delayConstructionDuring =
   (f) =>
   (...args) => {
-    eventConstructors = [];
+    constructors = [];
     const result = f(...args);
     construct();
     return result;
