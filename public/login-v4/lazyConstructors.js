@@ -1,17 +1,17 @@
 import * as Util from "./util.js";
 
-// TODO use symbol for [_construct]
+const construct = Symbol();
 
 let constructors = "eager";
 
 const constConstructor = (x) => ({
-  _construct: () => x,
+  [construct]: () => x,
 });
 
 // Kind of like [queueMicrotask], but the tasks only get delayed during [delayConstructionDuring].
 const lazyConstructor = (f, ...args) => {
   Util.assert(constructors !== "constructing");
-  args.forEach((arg) => Util.assert(arg._construct, arg));
+  args.forEach((arg) => Util.assert(arg[construct], arg));
   // We allow construction outside of [delayConstructionDuring] to improve garbage collection.
   if (constructors === "eager") {
     return constConstructor(f(...args));
@@ -19,8 +19,8 @@ const lazyConstructor = (f, ...args) => {
   // The order of composition between [Util.memoize] and [Util.unnestable] doesn't matter,
   // but [Util.memoize(Util.unnestable(...))] seems like it'd be more efficient.
   const result = {
-    _construct: Util.memoize(
-      Util.unnestable(() => f(...args.map((arg) => arg._construct())))
+    [construct]: Util.memoize(
+      Util.unnestable(() => f(...args.map((arg) => arg[construct]())))
     ),
   };
   constructors.push(result);
@@ -31,21 +31,22 @@ const lazyLoop = () => {
   Util.assert(constructors !== "constructing");
   Util.assert(constructors !== "eager");
   const result = {
-    _construct: () => {
+    [construct]: () => {
       throw new Error("Must call [loop.loop] on every [loop]!");
     },
   };
   result.loop = (setTo) => {
-    Util.assert(setTo._construct);
-    result._construct = setTo._construct;
+    Util.assert(setTo[construct]);
+    result[construct] = setTo[construct];
   };
   return result;
 };
 
-const construct = () => {
+// Only has one callsite, but we make it a separate function so we can refer to it in comments.
+const constructAll = () => {
   const temp = constructors;
   constructors = "constructing";
-  temp.forEach((constructor) => constructor._construct());
+  temp.forEach((constructor) => constructor[construct]());
   constructors = "eager";
 };
 
@@ -56,7 +57,7 @@ const delayConstructionDuring =
   (...args) => {
     constructors = [];
     const result = f(...args);
-    construct();
+    constructAll();
     return result;
   };
 
