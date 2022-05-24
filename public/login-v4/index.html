@@ -33,7 +33,7 @@
     // TODO factor behaviors into the lifecycle.
     // TODO make topology changes more explicit.
     // Lifecycle: out, pull, constructEvents, repeat(out, push, constructEvents)
-    
+
     // lazyConstructor during !constructAll
     // lazyLoop during !constructAll & delayConstructionDuring & pullLazy
 
@@ -90,11 +90,9 @@
     })();
 
     const Push = (() => {
-      // TODO rename to state
       class Context {
         constructor() {
           this._values = new WeakMap();
-          this._actions = [];
         }
 
         writeSink(sink, value) {
@@ -120,18 +118,13 @@
         setBehavior(target, value) {
           throw "Not implemented";
         }
-
-        doActions() {
-          this._actions.forEach(([handle, value]) => handle(value));
-        }
       }
 
       const readSink = Util.monadicMethod("readSink");
       const liftPull = Util.monadicMethod("liftPull");
       const setBehavior = Util.monadicMethod("setBehavior");
 
-      // TODO refactor
-      const push = Util.unnestable((sink, value) => {
+      const push = delayConstructionDuring((sink, value) => {
         const context = new Context();
         context.writeSink(sink, value);
         const heap = new Heap((a, b) => a.getPriority() < b.getPriority());
@@ -139,19 +132,16 @@
           heap.push(childSink);
         }
         // Construction is unsafe while iterating over active children.
-        delayConstructionDuring(() => {
-          for (const sink of heap) {
-            const value = Util.runMonad(context, sink.poll());
-            if (value !== Util.nothing) {
-              context.writeSink(sink, value);
-              for (const child of sink.iterateActiveChildren()) {
-                // Mutating the heap while iterating over it.
-                heap.push(child);
-              }
+        for (const sink of heap) {
+          const value = Util.runMonad(context, sink.poll());
+          if (value !== Util.nothing) {
+            context.writeSink(sink, value);
+            for (const child of sink.iterateActiveChildren()) {
+              // Mutating the heap while iterating over it.
+              heap.push(child);
             }
           }
-        })();
-        context.doActions();
+        }
       });
 
       return { readSink, liftPull, setBehavior, push };
