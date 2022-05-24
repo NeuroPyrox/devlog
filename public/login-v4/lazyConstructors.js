@@ -10,6 +10,7 @@ const constConstructor = (x) => ({
 
 // Kind of like [queueMicrotask], but the tasks only get delayed during [delayConstructionDuring].
 const lazyConstructor = (f, ...args) => {
+  // TODO remove this assertion if needed for behaviors
   Util.assert(constructors !== "constructing");
   args.forEach((arg) => Util.assert(arg[construct]));
   // We allow construction outside of [delayConstructionDuring] to improve garbage collection.

@@ -80,7 +80,6 @@ const weakRefUndefined = { deref: () => undefined };
 
 const monadicMutator = Symbol();
 
-// TODO use symbols
 const runMonad = (context, generator) => {
   let step = generator.next();
   while (!step.done) {
