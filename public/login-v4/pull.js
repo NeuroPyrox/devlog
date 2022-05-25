@@ -11,6 +11,7 @@ import { neverSource, newEventPair } from "./internals.js"; // Circular dependen
 const outputs = [];
 
 const context = {
+  // TODO update comments
   // To stop the output, call [source.getWeakSink().deref()?.deactivate()].
   // When the return value loses all its references,
   // we assert that the sink is not active,
@@ -36,8 +37,7 @@ const context = {
 const output = monadicMethod("output");
 const loop = monadicMethod("loop")();
 
-// TODO add assertions on lifecycle
-// The return value is used by [observeE].
+// Only used by [pullStart] and [Combinators.observeE].
 const pull = (monadicValue) => runMonad(context, monadicValue());
 // TODO once we implement the html monad, remove the return value.
 const pullStart = delayConstructionDuring(pull);
