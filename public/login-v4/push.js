@@ -11,7 +11,6 @@ class Context {
   }
 
   writeSink(sink, value) {
-    // TODO can we use [nothing]?
     // Store an object so that we can differentiate between
     // an unwritten sink and a sink that had [undefined] written to it.
     this._values.set(sink, { value });
