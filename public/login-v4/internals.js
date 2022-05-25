@@ -182,8 +182,7 @@ class EventSink {
   }
 }
 
-// TODO rename
-class Source {
+class EventSource {
   constructor(parents, sink) {
     this._weakChildLinks = new ShrinkingList();
     this._parents = new ShrinkingList();
@@ -238,7 +237,7 @@ const newEventPair = (parentSources, poll, unsubscribe = () => {}) => {
     poll,
     unsubscribe
   );
-  const source = new Source(parentSources, sink);
+  const source = new EventSource(parentSources, sink);
   sinkFinalizers.register(sink, new WeakRef(source));
   sourceFinalizers.register(source, source.getWeakSink());
   return [sink, source];
