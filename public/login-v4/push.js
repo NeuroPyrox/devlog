@@ -1,7 +1,8 @@
 import Heap from "https://cdn.jsdelivr.net/gh/NeuroPyrox/heap/heap.js";
-import * as Util from "./util.js";
-import * as Pull from "./pull.js";
+import { nothing, monadicMethod, runMonad } from "./util.js";
 import { delayConstructionDuring } from "./lazyConstructors.js";
+
+import { pullLazy } from "./pull.js"; // Circular dependency
 
 class Context {
   constructor() {
@@ -17,14 +18,14 @@ class Context {
   readSink(sink) {
     const value = this._values.get(sink);
     if (value === undefined) {
-      return Util.nothing;
+      return nothing;
     }
     return value.value;
   }
 
   liftPull(monadicValue) {
     // TODO have the recent changes made this outdated?
-    return Pull.pullLazy(monadicValue);
+    return pullLazy(monadicValue);
   }
 
   // TODO make separate PushEvents and PushBehaviors monads
@@ -33,9 +34,9 @@ class Context {
   }
 }
 
-const readSink = Util.monadicMethod("readSink");
-const liftPull = Util.monadicMethod("liftPull");
-const setBehavior = Util.monadicMethod("setBehavior");
+const readSink = monadicMethod("readSink");
+const liftPull = monadicMethod("liftPull");
+const setBehavior = monadicMethod("setBehavior");
 
 const push = delayConstructionDuring((sink, value) => {
   const context = new Context();
@@ -46,8 +47,8 @@ const push = delayConstructionDuring((sink, value) => {
   }
   // Construction is unsafe while iterating over active children.
   for (const sink of heap) {
-    const value = Util.runMonad(context, sink.poll());
-    if (value !== Util.nothing) {
+    const value = runMonad(context, sink.poll());
+    if (value !== nothing) {
       context.writeSink(sink, value);
       for (const child of sink.iterateActiveChildren()) {
         // Mutating the heap while iterating over it.

@@ -1,4 +1,4 @@
-import * as Util from "./util.js";
+import { assert, memoize, unnestable } from "./util.js";
 
 const construct = Symbol();
 
@@ -11,8 +11,8 @@ const constConstructor = (x) => ({
 // Kind of like [queueMicrotask], but the tasks only get delayed during [delayConstructionDuring].
 const lazyConstructor = (f, ...args) => {
   // TODO remove this assertion if needed for behaviors
-  Util.assert(constructors !== "constructing");
-  args.forEach((arg) => Util.assert(arg[construct]));
+  assert(constructors !== "constructing");
+  args.forEach((arg) => assert(arg[construct]));
   // We allow construction outside of [delayConstructionDuring] to improve garbage collection.
   if (constructors === "eager") {
     return constConstructor(f(...args));
@@ -20,8 +20,8 @@ const lazyConstructor = (f, ...args) => {
   // The order of composition between [Util.memoize] and [Util.unnestable] doesn't matter,
   // but [Util.memoize(Util.unnestable(...))] seems like it'd be more efficient.
   const result = {
-    [construct]: Util.memoize(
-      Util.unnestable(() => f(...args.map((arg) => arg[construct]())))
+    [construct]: memoize(
+      unnestable(() => f(...args.map((arg) => arg[construct]())))
     ),
   };
   constructors.push(result);
@@ -30,15 +30,15 @@ const lazyConstructor = (f, ...args) => {
 
 // TODO rename
 const lazyLoop = () => {
-  Util.assert(constructors !== "constructing");
-  Util.assert(constructors !== "eager");
+  assert(constructors !== "constructing");
+  assert(constructors !== "eager");
   const result = {
     [construct]: () => {
       throw new Error("Must call [loop.loop] on every [loop]!");
     },
   };
   result.loop = (setTo) => {
-    Util.assert(setTo[construct]);
+    assert(setTo[construct]);
     result[construct] = setTo[construct];
   };
   return result;
@@ -55,7 +55,7 @@ const constructAll = () => {
 // TODO assertions on lifecycle
 // Only called on startup and in the [Push] monad.
 const delayConstructionDuring = (f) =>
-  Util.unnestable((...args) => {
+  unnestable((...args) => {
     constructors = [];
     const result = f(...args);
     constructAll();
