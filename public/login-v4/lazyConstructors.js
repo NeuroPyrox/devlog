@@ -28,9 +28,11 @@ const lazyConstructor = (f, ...args) => {
   return result;
 };
 
+// Unusable outside of [delayConstructionDuring] because you'd need to
+// call the [loop] method before passing it to [lazyConstructor].
 const lazyLoop = () => {
+  // TODO remove this assertion if needed for behaviors
   assert(constructors !== "constructing");
-  assert(constructors !== "eager");
   const result = {
     [construct]: () => {
       throw new Error("Must call [lazyLoop.loop] on every [lazyLoop]!");

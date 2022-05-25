@@ -4,12 +4,14 @@ import { delayConstructionDuring } from "./lazyConstructors.js";
 
 import { pull } from "./pull.js"; // Circular dependency
 
+// We create a new instance of [Context] during every [push] so we can garbage collect [_values].
 class Context {
   constructor() {
     this._values = new WeakMap();
   }
 
   writeSink(sink, value) {
+    // TODO can we use [nothing]?
     // Store an object so that we can differentiate between
     // an unwritten sink and a sink that had [undefined] written to it.
     this._values.set(sink, { value });
@@ -24,7 +26,6 @@ class Context {
   }
 
   liftPull(monadicValue) {
-    // TODO have the recent changes made this outdated?
     return pull(monadicValue);
   }
 
@@ -38,6 +39,7 @@ const readSink = monadicMethod("readSink");
 const liftPull = monadicMethod("liftPull");
 const setBehavior = monadicMethod("setBehavior");
 
+// Delay construction because we don't want to visit newly created events and behaviors.
 const push = delayConstructionDuring((sink, value) => {
   const context = new Context();
   context.writeSink(sink, value);
@@ -45,7 +47,6 @@ const push = delayConstructionDuring((sink, value) => {
   for (const childSink of sink.iterateActiveChildren()) {
     heap.push(childSink);
   }
-  // Construction is unsafe while iterating over active children.
   for (const sink of heap) {
     const value = runMonad(context, sink.poll());
     if (value !== nothing) {
