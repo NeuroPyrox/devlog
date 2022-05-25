@@ -1,10 +1,11 @@
-import * as Util from "./util.js";
+import { nothing, monadicMethod, runMonad } from "./util.js";
 import {
   lazyConstructor,
   lazyLoop,
   delayConstructionDuring,
 } from "./lazyConstructors.js";
-import {neverSource, newEventPair} from "./internals.js";
+
+import { neverSource, newEventPair } from "./internals.js"; // Circular dependency
 
 // TODO garbage collection.
 const outputs = [];
@@ -24,7 +25,7 @@ const context = {
       }
       const [sink, source] = newEventPair([parentSource], function* (value) {
         lazyConstructor(() => handle(value));
-        return Util.nothing;
+        return nothing;
       });
       sink.activate();
       outputs.push(source); // TODO remove
@@ -32,12 +33,12 @@ const context = {
     }, parent),
   loop: lazyLoop,
 };
-const output = Util.monadicMethod("output");
-const loop = Util.monadicMethod("loop")();
+const output = monadicMethod("output");
+const loop = monadicMethod("loop")();
 
 // TODO add assertions on lifecycle
 // The return value is used by [observeE].
-const pullLazy = (monadicValue) => Util.runMonad(context, monadicValue());
+const pullLazy = (monadicValue) => runMonad(context, monadicValue());
 // TODO once we implement the html monad, remove the return value.
 const pull = delayConstructionDuring(pullLazy);
 

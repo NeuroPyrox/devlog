@@ -1,5 +1,7 @@
-import * as Util from "./util.js";
-import * as Push from "./push.js";
+import { assert, ShrinkingList, weakRefUndefined } from "./util.js";
+
+import { readSink } from "./push.js"; // Circular dependency
+
 const k = (x) => () => x;
 
 // TODO restrict surface area by making mutations monadic
@@ -21,12 +23,12 @@ const sourceLinkFinalizers = new FinalizationRegistry((weakChildLink) =>
 class EventSink {
   constructor(weakParents, poll, unsubscribe) {
     const parents = weakParents.map((weakParent) => weakParent.deref());
-    this._children = new Util.ShrinkingList();
+    this._children = new ShrinkingList();
     this._weakParents = weakParents;
     this._weakParentLinks = parents.map(
       (parent) => new WeakRef(parent._children.add(this))
     );
-    this._activeChildren = new Util.ShrinkingList();
+    this._activeChildren = new ShrinkingList();
     this._deactivators = [];
     this._priority =
       parents.length === 0
@@ -48,7 +50,7 @@ class EventSink {
   *poll() {
     const parentValues = [];
     for (const weakParent of this._weakParents) {
-      parentValues.push(yield Push.readSink(weakParent.deref()));
+      parentValues.push(yield readSink(weakParent.deref()));
     }
     return yield* this._poll(...parentValues);
   }
@@ -57,7 +59,7 @@ class EventSink {
   // Must only call on inactive [output] sinks.
   // The assertions only weakly enforce this.
   activate() {
-    Util.assert(this._children.isEmpty());
+    assert(this._children.isEmpty());
     this._activateOnce();
   }
 
@@ -65,18 +67,16 @@ class EventSink {
   // Must only call on active [output] sinks.
   // The assertions only weakly enforce this.
   deactivate() {
-    Util.assert(this._children.isEmpty());
+    assert(this._children.isEmpty());
     this._deactivateOnce();
   }
 
   // TODO when can this be called?
   // Sets [_weakParents, _weakParentLinks] like the constructor does.
   switch(weakParent) {
-    Util.assert(this._pullable);
-    Util.assert(
-      this._weakParents.length === this._weakParentLinks.length
-    );
-    Util.assert(this._weakParents.length <= 1);
+    assert(this._pullable);
+    assert(this._weakParents.length === this._weakParentLinks.length);
+    assert(this._weakParents.length <= 1);
     // 0: no parent, 1: defined parent, 2: undefined parent, eq: early exit if old=new
     // 0->1            attach1
     // 0->2 eq
@@ -130,7 +130,7 @@ class EventSink {
 
   // Can call more than once if [this._weakParents.length === 0].
   _activateOnce() {
-    Util.assert(this._deactivators.length === 0);
+    assert(this._deactivators.length === 0);
     for (const weakParent of this._weakParents) {
       const parent = weakParent.deref();
       if (parent !== undefined) {
@@ -138,15 +138,13 @@ class EventSink {
           // From zero to one child.
           parent._activateOnce();
         }
-        this._deactivators.push(
-          new WeakRef(parent._activeChildren.add(this))
-        );
+        this._deactivators.push(new WeakRef(parent._activeChildren.add(this)));
       }
     }
   }
 
   _deactivateOnce() {
-    Util.assert(this._deactivators.length !== 0);
+    assert(this._deactivators.length !== 0);
     for (const deactivator of this._deactivators) {
       deactivator.deref()?.removeOnce();
     }
@@ -187,15 +185,15 @@ class EventSink {
 // TODO rename
 class Source {
   constructor(parents, sink) {
-    this._weakChildLinks = new Util.ShrinkingList();
-    this._parents = new Util.ShrinkingList();
+    this._weakChildLinks = new ShrinkingList();
+    this._parents = new ShrinkingList();
     this._weakSink = new WeakRef(sink);
     parents.forEach((parent) => parent.addChild(this));
   }
 
   // TODO when can this be called?
   addChild(child) {
-    Util.assert(this.isPushable() && child.isPushable());
+    assert(this.isPushable() && child.isPushable());
     const parentLink = child._parents.add(this);
     const childLink = this._weakChildLinks.add(new WeakRef(parentLink));
     sourceLinkFinalizers.register(parentLink, new WeakRef(childLink));
@@ -222,7 +220,7 @@ class Source {
   }
 
   _onUnpushable() {
-    Util.assert(!this.isPushable());
+    assert(!this.isPushable());
     for (const weakChildLink of this._weakChildLinks) {
       weakChildLink.deref()?.remove();
     }
@@ -234,9 +232,7 @@ class Source {
 // The only parents passed here are the ones that [poll] immediately depends on.
 const newEventPair = (parentSources, poll, unsubscribe = () => {}) => {
   // TODO why do we have this assertion?
-  Util.assert(
-    parentSources.every((parentSource) => parentSource.isPushable())
-  );
+  assert(parentSources.every((parentSource) => parentSource.isPushable()));
   const sink = new EventSink(
     parentSources.map((source) => source.getWeakSink()),
     poll,
@@ -251,7 +247,7 @@ const newEventPair = (parentSources, poll, unsubscribe = () => {}) => {
 class BehaviorSink {
   constructor(weakParents, initialValue, poll) {
     const parents = weakParents.map((weakParent) => weakParent.deref());
-    this._children = new Util.ShrinkingList();
+    this._children = new ShrinkingList();
     this._weakParents = weakParents;
     this._weakParentLinks = parents.map(
       (parent) => new WeakRef(parent._children.add(this))
@@ -274,15 +270,15 @@ class BehaviorSink {
 
 class BehaviorSource {
   constructor(parents, sink) {
-    this._weakChildLinks = new Util.ShrinkingList();
-    this._parents = new Util.ShrinkingList();
+    this._weakChildLinks = new ShrinkingList();
+    this._parents = new ShrinkingList();
     this._weakSink = new WeakRef(sink);
     parents.forEach((parent) => parent.addChild(this));
     this._variable = sink._weakVariable.deref();
   }
 
   addChild(child) {
-    Util.assert(this.isPushable() && child.isPushable());
+    assert(this.isPushable() && child.isPushable());
     const parentLink = child._parents.add(this);
     const childLink = this._weakChildLinks.add(new WeakRef(parentLink));
     sourceLinkFinalizers.register(parentLink, new WeakRef(childLink));
@@ -301,7 +297,7 @@ class BehaviorSource {
   }
 
   _onUnpushable() {
-    Util.assert(!this.isPushable());
+    assert(!this.isPushable());
     for (const weakChildLink of this._weakChildLinks) {
       weakChildLink.deref()?.remove();
     }
@@ -311,9 +307,7 @@ class BehaviorSource {
 
 const newBehaviorPair = (parentSources, initialValue, poll) => {
   // TODO why do we have this assertion?
-  Util.assert(
-    parentSources.every((parentSource) => parentSource.isPushable())
-  );
+  assert(parentSources.every((parentSource) => parentSource.isPushable()));
   const sink = new BehaviorSink(
     parentSources.map((source) => source.getWeakSink()),
     initialValue,
@@ -327,7 +321,7 @@ const newBehaviorPair = (parentSources, initialValue, poll) => {
 
 const neverSource = {
   isPushable: k(false),
-  getWeakSink: k(Util.weakRefUndefined),
+  getWeakSink: k(weakRefUndefined),
 };
 
 export { newEventPair, newBehaviorPair, neverSource };

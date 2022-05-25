@@ -1,3 +1,5 @@
+// TODO which exports are only used in one other module?
+
 const assert = (condition) => {
   if (!condition) {
     throw new Error("Assertion failed");
