@@ -26,4 +26,6 @@ module.exports = P.end
   .or(P.endIn("/").map(() => htmlHandler(`${__dirname}/index.html`)))
   .or(moduleHandler("util"))
   .or(moduleHandler("lazyConstructors"))
-  .or(moduleHandler("pull"));
+  .or(moduleHandler("pull"))
+  .or(moduleHandler("push"))
+  .or(moduleHandler("internals"));
