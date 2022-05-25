@@ -38,8 +38,8 @@ const loop = monadicMethod("loop")();
 
 // TODO add assertions on lifecycle
 // The return value is used by [observeE].
-const pullLazy = (monadicValue) => runMonad(context, monadicValue());
+const pull = (monadicValue) => runMonad(context, monadicValue());
 // TODO once we implement the html monad, remove the return value.
-const pull = delayConstructionDuring(pullLazy);
+const pullStart = delayConstructionDuring(pull);
 
-export { output, loop, pullLazy, pull };
+export { output, loop, pull, pullStart };
