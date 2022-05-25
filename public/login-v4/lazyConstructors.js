@@ -28,13 +28,12 @@ const lazyConstructor = (f, ...args) => {
   return result;
 };
 
-// TODO rename
 const lazyLoop = () => {
   assert(constructors !== "constructing");
   assert(constructors !== "eager");
   const result = {
     [construct]: () => {
-      throw new Error("Must call [loop.loop] on every [loop]!");
+      throw new Error("Must call [lazyLoop.loop] on every [lazyLoop]!");
     },
   };
   result.loop = (setTo) => {
@@ -44,7 +43,7 @@ const lazyLoop = () => {
   return result;
 };
 
-// Only has one callsite, but we make it a separate function so we can refer to it in comments.
+// Only has one callsite, but it's helpful to think of it as a separate function.
 const constructAll = () => {
   const temp = constructors;
   constructors = "constructing";
@@ -52,7 +51,6 @@ const constructAll = () => {
   constructors = "eager";
 };
 
-// TODO assertions on lifecycle
 // Only called on startup and in the [Push] monad.
 const delayConstructionDuring = (f) =>
   unnestable((...args) => {

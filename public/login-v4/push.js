@@ -2,7 +2,7 @@ import Heap from "https://cdn.jsdelivr.net/gh/NeuroPyrox/heap/heap.js";
 import { nothing, monadicMethod, runMonad } from "./util.js";
 import { delayConstructionDuring } from "./lazyConstructors.js";
 
-import { pullLazy } from "./pull.js"; // Circular dependency
+import { pull } from "./pull.js"; // Circular dependency
 
 class Context {
   constructor() {
@@ -25,7 +25,7 @@ class Context {
 
   liftPull(monadicValue) {
     // TODO have the recent changes made this outdated?
-    return pullLazy(monadicValue);
+    return pull(monadicValue);
   }
 
   // TODO make separate PushEvents and PushBehaviors monads
