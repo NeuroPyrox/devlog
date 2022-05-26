@@ -25,11 +25,10 @@ class EventSinkLinks {
     this.setWeakParents(weakParents);
     this._children = new ShrinkingList();
     this._unsubscribe = unsubscribe; // Only used for input events
-    this._pullable = true;
   }
 
   assertSwitchConditions() {
-    assert(this._pullable);
+    //assert(!(_onUnpullable has been called))
     assert(this._weakParents.length === this._weakParentLinks.length);
     assert(this._weakParents.length <= 1);
   }
@@ -49,7 +48,6 @@ class EventSinkLinks {
     }
     this._weakParents = []; // TODO why do we have this statement?
     this._unsubscribe();
-    this._pullable = false;
   }
 }
 
