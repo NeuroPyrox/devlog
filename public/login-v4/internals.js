@@ -26,6 +26,14 @@ class EventSinkLinks {
     this._children = new ShrinkingList();
     this._unsubscribe = unsubscribe; // Only used for input events
   }
+  
+  *readParents() {
+    const parentValues = [];
+    for (const weakParent of this._weakParents) {
+      parentValues.push(yield readSink(weakParent.deref()));
+    }
+    return parentValues;
+  }
 
   assertSwitchConditions() {
     //assert(!(_onUnpullable has been called))
@@ -80,11 +88,7 @@ class EventSink {
   }
 
   *poll() {
-    const parentValues = [];
-    for (const weakParent of this.links._weakParents) {
-      parentValues.push(yield readSink(weakParent.deref()));
-    }
-    return yield* this._poll(...parentValues);
+    return yield* this._poll(...yield* this.links.readParents());
   }
 
   // TODO when can this be called?
@@ -119,13 +123,13 @@ class EventSink {
     const parent = weakParent.deref();
     // The case where [oldParent === undefined] is very interesting.
     const oldParent = this.links._weakParents[0]?.deref();
+    // The main purpose of this early exit is to avoid activating a sink that we just deactivated.
     if (parent === oldParent) {
       return;
     }
     // Detach from [oldParent].
     this._deactivate();
     if (oldParent !== undefined) {
-      this._deactivate();
       this.links._weakParentLinks[0].deref()?.removeOnce();
       if (parent === undefined) {
         // Attach to [undefined].
