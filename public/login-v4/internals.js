@@ -5,6 +5,8 @@ import { readSink } from "./push.js"; // Circular dependency
 const k = (x) => () => x;
 
 // TODO restrict surface area by making mutations monadic
+
+// None of these finalizers will interrupt [Push.push]
 const sinkFinalizers = new FinalizationRegistry((weakSource) =>
   weakSource.deref()?._onUnpushable()
 );
@@ -15,19 +17,36 @@ const sourceLinkFinalizers = new FinalizationRegistry((weakChildLink) =>
   weakChildLink.deref()?.removeOnce()
 );
 
+class EventSinkLinks {
+  constructor(weakParents, unsubscribe) {
+    this._children = new ShrinkingList();
+    this._weakParents = weakParents;
+    this._weakParentLinks = weakParents.map(
+      (weakParent) => new WeakRef(weakParent.deref()._children.add(this))
+    );
+    this._unsubscribe = unsubscribe; // Only used for input events
+    this._pullable = true;
+  }
+
+  _onUnpullable() {
+    for (const weakParentLink of this._weakParentLinks) {
+      weakParentLink.deref()?.removeOnce();
+    }
+    this._weakParents = [];
+    this._unsubscribe();
+    this._pullable = false;
+  }
+}
+
 // The only variables that are used for something other than resource management are:
 //   [_activeChildren, _priority, _poll]
 // There are 2 clusters of subtly interconnected logic:
 //   [_children, _weakParents, _weakParentLinks]
 //   [_activeChildren, _deactivators]
-class EventSink {
+class EventSink extends EventSinkLinks {
   constructor(weakParents, poll, unsubscribe) {
     const parents = weakParents.map((weakParent) => weakParent.deref());
-    this._children = new ShrinkingList();
-    this._weakParents = weakParents;
-    this._weakParentLinks = parents.map(
-      (parent) => new WeakRef(parent._children.add(this))
-    );
+    super(weakParents, unsubscribe);
     this._activeChildren = new ShrinkingList();
     this._deactivators = [];
     this._priority =
@@ -35,8 +54,6 @@ class EventSink {
         ? 0
         : Math.max(...parents.map((parent) => parent.getPriority())) + 1;
     this._poll = poll;
-    this._unsubscribe = unsubscribe; // Only used for input events
-    this._pullable = true;
   }
 
   *iterateActiveChildren() {
@@ -74,6 +91,7 @@ class EventSink {
   // TODO when can this be called?
   // Sets [_weakParents, _weakParentLinks] like the constructor does.
   switch(weakParent) {
+    // TODO why do we have this assertion?
     assert(this._pullable);
     assert(this._weakParents.length === this._weakParentLinks.length);
     assert(this._weakParents.length <= 1);
@@ -173,12 +191,7 @@ class EventSink {
 
   _onUnpullable() {
     this._deactivate();
-    for (const weakParentLink of this._weakParentLinks) {
-      weakParentLink.deref()?.removeOnce();
-    }
-    this._weakParents = [];
-    this._unsubscribe();
-    this._pullable = false;
+    super._onUnpullable();
   }
 }
 

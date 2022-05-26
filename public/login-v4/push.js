@@ -34,6 +34,7 @@ class Context {
   }
 }
 
+// TODO directly export poll functions instead of these monadic methods.
 const readSink = monadicMethod("readSink");
 const liftPull = monadicMethod("liftPull");
 const setBehavior = monadicMethod("setBehavior");
