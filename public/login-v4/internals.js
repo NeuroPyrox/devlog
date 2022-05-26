@@ -34,11 +34,13 @@ class EventSinkLinks {
     }
     return parentValues;
   }
-
-  assertSwitchConditions() {
+  
+  switch(weakParent) {
     //assert(!(_onUnpullable has been called))
     assert(this._weakParents.length === this._weakParentLinks.length);
     assert(this._weakParents.length <= 1);
+    this.removeFromParents();
+    this.setWeakParents(weakParent.deref() === undefined ? [] : [weakParent]);
   }
 
   // All [weakParents] are assumed to be alive, but we pass it like this
@@ -114,9 +116,7 @@ class EventSink {
   // TODO when can this be called?
   // [weakParent] is assumed to be alive, but we pass it like this
   // because we use both the dereffed and non-dereffed versions.
-  // Sets [_weakParents, _weakParentLinks] like the constructor does.
   switch(weakParent) {
-    this.links.assertSwitchConditions();
     // 0: no parent, 1: defined parent, 2: undefined parent, eq: early exit if old=new
     // 0->1            attach1
     // 0->2 eq
@@ -133,9 +133,7 @@ class EventSink {
     }
     // Detach from [oldParent].
     this._deactivate();
-    this.links.removeFromParents();
-    // Attach to [parent].
-    this.links.setWeakParents(parent === undefined ? [] : [weakParent]);
+    this.links.switch(weakParent);
     // Upwards propagate activeness and priority.
     const isActive = !this._activeChildren.isEmpty();
     if (isActive) {
