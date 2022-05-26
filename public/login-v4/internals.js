@@ -27,7 +27,13 @@ class EventSinkLinks {
     this._unsubscribe = unsubscribe; // Only used for input events
     this._pullable = true;
   }
-  
+
+  assertSwitchConditions() {
+    assert(this._pullable);
+    assert(this._weakParents.length === this._weakParentLinks.length);
+    assert(this._weakParents.length <= 1);
+  }
+
   // All [weakParents] are assumed to be alive, but we pass it like this
   // because we use both the dereffed and non-dereffed versions.
   setWeakParents(weakParents) {
@@ -41,7 +47,7 @@ class EventSinkLinks {
     for (const weakParentLink of this._weakParentLinks) {
       weakParentLink.deref()?.removeOnce();
     }
-    this._weakParents = [];
+    this._weakParents = []; // TODO why do we have this statement?
     this._unsubscribe();
     this._pullable = false;
   }
@@ -104,12 +110,7 @@ class EventSink {
   // because we use both the dereffed and non-dereffed versions.
   // Sets [_weakParents, _weakParentLinks] like the constructor does.
   switch(weakParent) {
-    // TODO why do we have this assertion?
-    assert(this.links._pullable);
-    assert(
-      this.links._weakParents.length === this.links._weakParentLinks.length
-    );
-    assert(this.links._weakParents.length <= 1);
+    this.links.assertSwitchConditions();
     // 0: no parent, 1: defined parent, 2: undefined parent, eq: early exit if old=new
     // 0->1            attach1
     // 0->2 eq
