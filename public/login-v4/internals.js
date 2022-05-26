@@ -18,15 +18,23 @@ const sourceLinkFinalizers = new FinalizationRegistry((weakChildLink) =>
 );
 
 class EventSinkLinks {
+  // All [weakParents] are assumed to be alive, but we pass it like this
+  // because we use both the dereffed and non-dereffed versions.
   constructor(weakParents, unsubscribe) {
     // TODO remove underscores from names
+    this.setWeakParents(weakParents);
     this._children = new ShrinkingList();
+    this._unsubscribe = unsubscribe; // Only used for input events
+    this._pullable = true;
+  }
+  
+  // All [weakParents] are assumed to be alive, but we pass it like this
+  // because we use both the dereffed and non-dereffed versions.
+  setWeakParents(weakParents) {
     this._weakParents = weakParents;
     this._weakParentLinks = weakParents.map(
       (weakParent) => new WeakRef(weakParent.deref().links._children.add(this))
     );
-    this._unsubscribe = unsubscribe; // Only used for input events
-    this._pullable = true;
   }
 
   _onUnpullable() {
@@ -45,6 +53,8 @@ class EventSinkLinks {
 //   [_children, _weakParents, _weakParentLinks]
 //   [_activeChildren, _deactivators]
 class EventSink {
+  // All [weakParents] are assumed to be alive, but we pass it like this
+  // because we use both the dereffed and non-dereffed versions.
   constructor(weakParents, poll, unsubscribe) {
     const parents = weakParents.map((weakParent) => weakParent.deref());
     this.links = new EventSinkLinks(weakParents, unsubscribe);
@@ -90,6 +100,8 @@ class EventSink {
   }
 
   // TODO when can this be called?
+  // [weakParent] is assumed to be alive, but we pass it like this
+  // because we use both the dereffed and non-dereffed versions.
   // Sets [_weakParents, _weakParentLinks] like the constructor does.
   switch(weakParent) {
     // TODO why do we have this assertion?
@@ -116,21 +128,20 @@ class EventSink {
       // This branch is redundant if [this._weakParents.length === 0].
       // Simulates the effect of [this._deactivate()].
       this._deactivators = [];
+      //assert(parent !== undefined);
     } else {
       this._deactivate();
       this.links._weakParentLinks[0].deref()?.removeOnce();
       if (parent === undefined) {
         // Attach to [undefined].
-        this.links._weakParents = [];
-        this.links._weakParentLinks = [];
+        this.links.setWeakParents([]);
         return;
       }
+      //assert(parent !== undefined);
     }
+    //assert(parent !== undefined);
     // Attach to [parent].
-    this.links._weakParents = [weakParent];
-    this.links._weakParentLinks = [
-      new WeakRef(parent.links._children.add(this)),
-    ];
+    this.links.setWeakParents([weakParent]);
     // Upwards propagate activeness and priority.
     const isActive = !this._activeChildren.isEmpty();
     if (isActive) {
