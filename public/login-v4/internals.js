@@ -123,12 +123,8 @@ class EventSink {
       return;
     }
     // Detach from [oldParent].
-    if (oldParent === undefined) {
-      // This branch is redundant if [this._weakParents.length === 0].
-      // Simulates the effect of [this._deactivate()].
-      this._deactivators = [];
-      //assert(parent !== undefined);
-    } else {
+    this._deactivate();
+    if (oldParent !== undefined) {
       this._deactivate();
       this.links._weakParentLinks[0].deref()?.removeOnce();
       if (parent === undefined) {
