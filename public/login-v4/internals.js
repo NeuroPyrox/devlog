@@ -131,22 +131,15 @@ class EventSink {
     this._deactivate();
     if (oldParent !== undefined) {
       this.links._weakParentLinks[0].deref()?.removeOnce();
-      if (parent === undefined) {
-        // Attach to [undefined].
-        this.links.setWeakParents([]);
-        return;
-      }
-      //assert(parent !== undefined);
     }
-    //assert(parent !== undefined);
     // Attach to [parent].
-    this.links.setWeakParents([weakParent]);
+    this.links.setWeakParents(parent === undefined ? [] : [weakParent]);
     // Upwards propagate activeness and priority.
     const isActive = !this._activeChildren.isEmpty();
     if (isActive) {
       this._activateOnce();
     }
-    parent._switchPriority(this._priority);
+    parent?._switchPriority(this._priority);
   }
 
   _activate() {
