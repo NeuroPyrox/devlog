@@ -19,10 +19,11 @@ const sourceLinkFinalizers = new FinalizationRegistry((weakChildLink) =>
 
 class EventSinkLinks {
   constructor(weakParents, unsubscribe) {
+    // TODO remove underscores from names
     this._children = new ShrinkingList();
     this._weakParents = weakParents;
     this._weakParentLinks = weakParents.map(
-      (weakParent) => new WeakRef(weakParent.deref()._children.add(this))
+      (weakParent) => new WeakRef(weakParent.deref().links._children.add(this))
     );
     this._unsubscribe = unsubscribe; // Only used for input events
     this._pullable = true;
@@ -43,10 +44,10 @@ class EventSinkLinks {
 // There are 2 clusters of subtly interconnected logic:
 //   [_children, _weakParents, _weakParentLinks]
 //   [_activeChildren, _deactivators]
-class EventSink extends EventSinkLinks {
+class EventSink {
   constructor(weakParents, poll, unsubscribe) {
     const parents = weakParents.map((weakParent) => weakParent.deref());
-    super(weakParents, unsubscribe);
+    this.links = new EventSinkLinks(weakParents, unsubscribe);
     this._activeChildren = new ShrinkingList();
     this._deactivators = [];
     this._priority =
@@ -66,7 +67,7 @@ class EventSink extends EventSinkLinks {
 
   *poll() {
     const parentValues = [];
-    for (const weakParent of this._weakParents) {
+    for (const weakParent of this.links._weakParents) {
       parentValues.push(yield readSink(weakParent.deref()));
     }
     return yield* this._poll(...parentValues);
@@ -76,7 +77,7 @@ class EventSink extends EventSinkLinks {
   // Must only call on inactive [output] sinks.
   // The assertions only weakly enforce this.
   activate() {
-    assert(this._children.isEmpty());
+    assert(this.links._children.isEmpty());
     this._activateOnce();
   }
 
@@ -84,7 +85,7 @@ class EventSink extends EventSinkLinks {
   // Must only call on active [output] sinks.
   // The assertions only weakly enforce this.
   deactivate() {
-    assert(this._children.isEmpty());
+    assert(this.links._children.isEmpty());
     this._deactivateOnce();
   }
 
@@ -92,9 +93,11 @@ class EventSink extends EventSinkLinks {
   // Sets [_weakParents, _weakParentLinks] like the constructor does.
   switch(weakParent) {
     // TODO why do we have this assertion?
-    assert(this._pullable);
-    assert(this._weakParents.length === this._weakParentLinks.length);
-    assert(this._weakParents.length <= 1);
+    assert(this.links._pullable);
+    assert(
+      this.links._weakParents.length === this.links._weakParentLinks.length
+    );
+    assert(this.links._weakParents.length <= 1);
     // 0: no parent, 1: defined parent, 2: undefined parent, eq: early exit if old=new
     // 0->1            attach1
     // 0->2 eq
@@ -104,7 +107,7 @@ class EventSink extends EventSinkLinks {
     // 2->2 eq
     const parent = weakParent.deref();
     // The case where [oldParent === undefined] is very interesting.
-    const oldParent = this._weakParents[0]?.deref();
+    const oldParent = this.links._weakParents[0]?.deref();
     if (parent === oldParent) {
       return;
     }
@@ -115,17 +118,19 @@ class EventSink extends EventSinkLinks {
       this._deactivators = [];
     } else {
       this._deactivate();
-      this._weakParentLinks[0].deref()?.removeOnce();
+      this.links._weakParentLinks[0].deref()?.removeOnce();
       if (parent === undefined) {
         // Attach to [undefined].
-        this._weakParents = [];
-        this._weakParentLinks = [];
+        this.links._weakParents = [];
+        this.links._weakParentLinks = [];
         return;
       }
     }
     // Attach to [parent].
-    this._weakParents = [weakParent];
-    this._weakParentLinks = [new WeakRef(parent._children.add(this))];
+    this.links._weakParents = [weakParent];
+    this.links._weakParentLinks = [
+      new WeakRef(parent.links._children.add(this)),
+    ];
     // Upwards propagate activeness and priority.
     const isActive = !this._activeChildren.isEmpty();
     if (isActive) {
@@ -149,7 +154,7 @@ class EventSink extends EventSinkLinks {
   // Can call more than once if [this._weakParents.length === 0].
   _activateOnce() {
     assert(this._deactivators.length === 0);
-    for (const weakParent of this._weakParents) {
+    for (const weakParent of this.links._weakParents) {
       const parent = weakParent.deref();
       if (parent !== undefined) {
         if (parent._activeChildren.isEmpty()) {
@@ -167,12 +172,12 @@ class EventSink extends EventSinkLinks {
       deactivator.deref()?.removeOnce();
     }
     this._deactivators = [];
-    for (const weakParent of this._weakParents) {
+    for (const weakParent of this.links._weakParents) {
       const parent = weakParent.deref();
       if (
         parent !== undefined &&
         parent._activeChildren.isEmpty() &&
-        parent._weakParents.length !== 0
+        parent.links._weakParents.length !== 0
       ) {
         // From one to zero children.
         parent._deactivateOnce();
@@ -183,7 +188,7 @@ class EventSink extends EventSinkLinks {
   _switchPriority(childPriority) {
     if (childPriority <= this._priority) {
       this._priority = childPriority - 1;
-      for (const weakParent of this._weakParents) {
+      for (const weakParent of this.links._weakParents) {
         weakParent.deref()?._switchPriority(this._priority);
       }
     }
@@ -191,7 +196,7 @@ class EventSink extends EventSinkLinks {
 
   _onUnpullable() {
     this._deactivate();
-    super._onUnpullable();
+    this.links._onUnpullable();
   }
 }
 
