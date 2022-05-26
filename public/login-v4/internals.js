@@ -35,6 +35,12 @@ class EventSinkLinks {
     return parentValues;
   }
   
+  // Counts first parent as [undefined] if not found.
+  // Used for early exits from [EventSink.switch]
+  isFirstParent(parent) {
+    return parent === this._weakParents[0]?.deref();
+  }
+  
   switch(weakParent) {
     //assert(!(_onUnpullable has been called))
     assert(this._weakParents.length === this._weakParentLinks.length);
@@ -117,21 +123,10 @@ class EventSink {
   // [weakParent] is assumed to be alive, but we pass it like this
   // because we use both the dereffed and non-dereffed versions.
   switch(weakParent) {
-    // 0: no parent, 1: defined parent, 2: undefined parent, eq: early exit if old=new
-    // 0->1            attach1
-    // 0->2 eq
-    // 1->1 eq detach1 attach1
-    // 1->2    detach1 attach2
-    // 2->1    detach2 attach1
-    // 2->2 eq
     const parent = weakParent.deref();
-    // The case where [oldParent === undefined] is very interesting.
-    const oldParent = this.links._weakParents[0]?.deref();
-    // The main purpose of this early exit is to avoid activating a sink that we just deactivated.
-    if (parent === oldParent) {
+    if (this.links.isFirstParent(parent)) {
       return;
     }
-    // Detach from [oldParent].
     this._deactivate();
     this.links.switch(weakParent);
     // Upwards propagate activeness and priority.
