@@ -26,7 +26,7 @@ class EventSinkLinks {
     this._children = new ShrinkingList();
     this._unsubscribe = unsubscribe; // Only used for input events
   }
-  
+
   *readParents() {
     const parentValues = [];
     for (const weakParent of this._weakParents) {
@@ -50,10 +50,14 @@ class EventSinkLinks {
     );
   }
 
-  _onUnpullable() {
+  removeFromParents() {
     for (const weakParentLink of this._weakParentLinks) {
       weakParentLink.deref()?.removeOnce();
     }
+  }
+
+  _onUnpullable() {
+    this.removeFromParents();
     this._weakParents = []; // TODO why do we have this statement?
     this._unsubscribe();
   }
@@ -88,7 +92,7 @@ class EventSink {
   }
 
   *poll() {
-    return yield* this._poll(...yield* this.links.readParents());
+    return yield* this._poll(...(yield* this.links.readParents()));
   }
 
   // TODO when can this be called?
@@ -129,9 +133,7 @@ class EventSink {
     }
     // Detach from [oldParent].
     this._deactivate();
-    if (oldParent !== undefined) {
-      this.links._weakParentLinks[0].deref()?.removeOnce();
-    }
+    this.links.removeFromParents();
     // Attach to [parent].
     this.links.setWeakParents(parent === undefined ? [] : [weakParent]);
     // Upwards propagate activeness and priority.
