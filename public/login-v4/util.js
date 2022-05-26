@@ -90,6 +90,8 @@ const runMonad = (context, generator) => {
   return step.value;
 };
 
+// TODO make even more private by requiring a reference to the class
+// TODO maybe a makeMonad function that takes a class and a list of methods?
 const monadicMethod =
   (field) =>
   (...args) => ({
