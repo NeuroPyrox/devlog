@@ -4,6 +4,8 @@ import { readSink } from "./push.js"; // Circular dependency
 
 const k = (x) => () => x;
 
+// TODO Encapsulation
+
 // TODO restrict surface area by making mutations monadic
 
 // None of these finalizers will interrupt [Push.push]
@@ -42,8 +44,6 @@ class EventSinkLinks {
   }
   
   switch(weakParent) {
-    //assert(!(_onUnpullable has been called))
-    assert(this._weakParents.length === this._weakParentLinks.length);
     assert(this._weakParents.length <= 1);
     this.removeFromParents();
     this.setWeakParents(weakParent.deref() === undefined ? [] : [weakParent]);
@@ -58,6 +58,8 @@ class EventSinkLinks {
     );
   }
 
+  // In both callsites, [_weakParents] is modified immediately afterward,
+  // ensuring that each [_weakParents] contains the corresponding [_weakParentLinks].
   removeFromParents() {
     for (const weakParentLink of this._weakParentLinks) {
       weakParentLink.deref()?.removeOnce();

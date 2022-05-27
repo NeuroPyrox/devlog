@@ -80,6 +80,7 @@ class ShrinkingListNode {
 
 const weakRefUndefined = { deref: () => undefined };
 
+// TODO replace with private encapsulation
 const monadicMutator = Symbol();
 
 const runMonad = (context, generator) => {
