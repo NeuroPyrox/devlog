@@ -64,7 +64,7 @@ class EventSinkLinks {
   }
 
   // In both callsites, [_weakParents] is modified immediately afterward,
-  // ensuring that each [_weakParents] contains the corresponding [_weakParentLinks].
+  // ensuring that each of [_weakParents] corresponds to each of [_weakParentLinks].
   removeFromParents() {
     for (const weakParentLink of this._weakParentLinks) {
       weakParentLink.deref()?.removeOnce();
@@ -79,12 +79,30 @@ class EventSinkLinks {
 }
 
 class EventSinkActivation {
+  #container;
+  
   // All [weakParents] are assumed to be alive, but we pass it like this
   // because we use both the dereffed and non-dereffed versions.
   constructor(container, weakParents, unsubscribe) {
+    this.#container = container;
     this.links = new EventSinkLinks(container, weakParents, unsubscribe);
     this._activeChildren = new ShrinkingList();
     this._deactivators = [];
+  }
+
+  // Can call more than once if [this._weakParents.length === 0].
+  _activateOnce() {
+    assert(this._deactivators.length === 0);
+    for (const weakParent of this.links._weakParents) {
+      const parent = weakParent.deref();
+      if (parent !== undefined) {
+        if (parent.activation._activeChildren.isEmpty()) {
+          // From zero to one child.
+          parent.activation._activateOnce();
+        }
+        this._deactivators.push(new WeakRef(parent.activation._activeChildren.add(this.#container)));
+      }
+    }
   }
 }
 
@@ -123,7 +141,7 @@ class EventSink {
   // The assertions only weakly enforce this.
   activate() {
     assert(this.activation.links._children.isEmpty());
-    this._activateOnce();
+    this.activation._activateOnce();
   }
 
   // TODO when can this be called?
@@ -147,35 +165,20 @@ class EventSink {
     // Upwards propagate activeness and priority.
     const isActive = !this.activation._activeChildren.isEmpty();
     if (isActive) {
-      this._activateOnce();
+      this.activation._activateOnce();
     }
     parent?._switchPriority(this._priority);
   }
 
   _activate() {
     if (this.activation._deactivators.length === 0) {
-      this._activateOnce();
+      this.activation._activateOnce();
     }
   }
 
   _deactivate() {
     if (this.activation._deactivators.length !== 0) {
       this._deactivateOnce();
-    }
-  }
-
-  // Can call more than once if [this._weakParents.length === 0].
-  _activateOnce() {
-    assert(this.activation._deactivators.length === 0);
-    for (const weakParent of this.activation.links._weakParents) {
-      const parent = weakParent.deref();
-      if (parent !== undefined) {
-        if (parent.activation._activeChildren.isEmpty()) {
-          // From zero to one child.
-          parent._activateOnce();
-        }
-        this.activation._deactivators.push(new WeakRef(parent.activation._activeChildren.add(this)));
-      }
     }
   }
 
