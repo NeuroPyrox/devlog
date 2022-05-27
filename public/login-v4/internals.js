@@ -20,9 +20,12 @@ const sourceLinkFinalizers = new FinalizationRegistry((weakChildLink) =>
 );
 
 class EventSinkLinks {
+  #container;
+  
   // All [weakParents] are assumed to be alive, but we pass it like this
   // because we use both the dereffed and non-dereffed versions.
-  constructor(weakParents, unsubscribe) {
+  constructor(container, weakParents, unsubscribe) {
+    this.#container = container;
     // TODO remove underscores from names
     this.setWeakParents(weakParents);
     this._children = new ShrinkingList();
@@ -37,8 +40,8 @@ class EventSinkLinks {
     return parentValues;
   }
 
-  // Counts first parent as [undefined] if not found.
-  // Used for early exits from [EventSink.switch]
+  // First parent is [undefined] if not found.
+  // Used for early exits from [this.#container.switch]
   isFirstParent(parent) {
     return parent === this._weakParents[0]?.deref();
   }
@@ -53,8 +56,10 @@ class EventSinkLinks {
   // because we use both the dereffed and non-dereffed versions.
   setWeakParents(weakParents) {
     this._weakParents = weakParents;
+    // We use [this.#container] instead of [this] because there must
+    // be a chain of references from the inputs to each pushable poll function.
     this._weakParentLinks = weakParents.map(
-      (weakParent) => new WeakRef(weakParent.deref().activation.links._children.add(this))
+      (weakParent) => new WeakRef(weakParent.deref().activation.links._children.add(this.#container))
     );
   }
 
@@ -76,8 +81,8 @@ class EventSinkLinks {
 class EventSinkActivation {
   // All [weakParents] are assumed to be alive, but we pass it like this
   // because we use both the dereffed and non-dereffed versions.
-  constructor(weakParents, unsubscribe) {
-    this.links = new EventSinkLinks(weakParents, unsubscribe);
+  constructor(container, weakParents, unsubscribe) {
+    this.links = new EventSinkLinks(container, weakParents, unsubscribe);
     this._activeChildren = new ShrinkingList();
     this._deactivators = [];
   }
@@ -93,7 +98,7 @@ class EventSink {
   // because we use both the dereffed and non-dereffed versions.
   constructor(weakParents, poll, unsubscribe) {
     const parents = weakParents.map((weakParent) => weakParent.deref());
-    this.activation = new EventSinkActivation(weakParents, unsubscribe);
+    this.activation = new EventSinkActivation(this, weakParents, unsubscribe);
     this._priority =
       parents.length === 0
         ? 0
