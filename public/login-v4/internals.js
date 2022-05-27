@@ -25,7 +25,7 @@ class EventSinkLinks {
   // All [weakParents] are assumed to be alive, but we pass it like this
   // because we use both the dereffed and non-dereffed versions.
   constructor(container, weakParents, unsubscribe) {
-    this.#container = container;
+    this.#container = container; // Keeps the poll function alive.
     // TODO remove underscores from names
     this.setWeakParents(weakParents);
     this._children = new ShrinkingList();
@@ -56,10 +56,8 @@ class EventSinkLinks {
   // because we use both the dereffed and non-dereffed versions.
   setWeakParents(weakParents) {
     this._weakParents = weakParents;
-    // We use [this.#container] instead of [this] because there must
-    // be a chain of references from the inputs to each pushable poll function.
     this._weakParentLinks = weakParents.map(
-      (weakParent) => new WeakRef(weakParent.deref().activation.links._children.add(this.#container))
+      (weakParent) => new WeakRef(weakParent.deref().activation.links._children.add(this))
     );
   }
 
