@@ -102,6 +102,25 @@ class EventSinkActivation {
       }
     }
   }
+
+  _deactivateOnce() {
+    assert(this._deactivators.length !== 0);
+    for (const deactivator of this._deactivators) {
+      deactivator.deref()?.removeOnce();
+    }
+    this._deactivators = [];
+    for (const weakParent of this.links._weakParents) {
+      const parent = weakParent.deref();
+      if (
+        parent !== undefined &&
+        parent.activation._activeChildren.isEmpty() &&
+        parent.activation.links._weakParents.length !== 0
+      ) {
+        // From one to zero children.
+        parent.activation._deactivateOnce();
+      }
+    }
+  }
 }
 
 // The only variables that are used for something other than resource management are:
@@ -147,7 +166,7 @@ class EventSink {
   // The assertions only weakly enforce this.
   deactivate() {
     assert(this.activation.links._children.isEmpty());
-    this._deactivateOnce();
+    this.activation._deactivateOnce();
   }
 
   // TODO when can this be called?
@@ -176,26 +195,7 @@ class EventSink {
 
   _deactivate() {
     if (this.activation._deactivators.length !== 0) {
-      this._deactivateOnce();
-    }
-  }
-
-  _deactivateOnce() {
-    assert(this.activation._deactivators.length !== 0);
-    for (const deactivator of this.activation._deactivators) {
-      deactivator.deref()?.removeOnce();
-    }
-    this.activation._deactivators = [];
-    for (const weakParent of this.activation.links._weakParents) {
-      const parent = weakParent.deref();
-      if (
-        parent !== undefined &&
-        parent.activation._activeChildren.isEmpty() &&
-        parent.activation.links._weakParents.length !== 0
-      ) {
-        // From one to zero children.
-        parent._deactivateOnce();
-      }
+      this.activation._deactivateOnce();
     }
   }
 
