@@ -36,13 +36,13 @@ class EventSinkLinks {
     }
     return parentValues;
   }
-  
+
   // Counts first parent as [undefined] if not found.
   // Used for early exits from [EventSink.switch]
   isFirstParent(parent) {
     return parent === this._weakParents[0]?.deref();
   }
-  
+
   switch(weakParent) {
     assert(this._weakParents.length <= 1);
     this.removeFromParents();
@@ -54,7 +54,7 @@ class EventSinkLinks {
   setWeakParents(weakParents) {
     this._weakParents = weakParents;
     this._weakParentLinks = weakParents.map(
-      (weakParent) => new WeakRef(weakParent.deref().links._children.add(this))
+      (weakParent) => new WeakRef(weakParent.deref().activation.links._children.add(this))
     );
   }
 
@@ -73,6 +73,16 @@ class EventSinkLinks {
   }
 }
 
+class EventSinkActivation {
+  // All [weakParents] are assumed to be alive, but we pass it like this
+  // because we use both the dereffed and non-dereffed versions.
+  constructor(weakParents, unsubscribe) {
+    this.links = new EventSinkLinks(weakParents, unsubscribe);
+    this._activeChildren = new ShrinkingList();
+    this._deactivators = [];
+  }
+}
+
 // The only variables that are used for something other than resource management are:
 //   [_activeChildren, _priority, _poll]
 // There are 2 clusters of subtly interconnected logic:
@@ -83,9 +93,7 @@ class EventSink {
   // because we use both the dereffed and non-dereffed versions.
   constructor(weakParents, poll, unsubscribe) {
     const parents = weakParents.map((weakParent) => weakParent.deref());
-    this.links = new EventSinkLinks(weakParents, unsubscribe);
-    this._activeChildren = new ShrinkingList();
-    this._deactivators = [];
+    this.activation = new EventSinkActivation(weakParents, unsubscribe);
     this._priority =
       parents.length === 0
         ? 0
@@ -94,7 +102,7 @@ class EventSink {
   }
 
   *iterateActiveChildren() {
-    yield* this._activeChildren;
+    yield* this.activation._activeChildren;
   }
 
   getPriority() {
@@ -102,14 +110,14 @@ class EventSink {
   }
 
   *poll() {
-    return yield* this._poll(...(yield* this.links.readParents()));
+    return yield* this._poll(...(yield* this.activation.links.readParents()));
   }
 
   // TODO when can this be called?
   // Must only call on inactive [output] sinks.
   // The assertions only weakly enforce this.
   activate() {
-    assert(this.links._children.isEmpty());
+    assert(this.activation.links._children.isEmpty());
     this._activateOnce();
   }
 
@@ -117,7 +125,7 @@ class EventSink {
   // Must only call on active [output] sinks.
   // The assertions only weakly enforce this.
   deactivate() {
-    assert(this.links._children.isEmpty());
+    assert(this.activation.links._children.isEmpty());
     this._deactivateOnce();
   }
 
@@ -126,13 +134,13 @@ class EventSink {
   // because we use both the dereffed and non-dereffed versions.
   switch(weakParent) {
     const parent = weakParent.deref();
-    if (this.links.isFirstParent(parent)) {
+    if (this.activation.links.isFirstParent(parent)) {
       return;
     }
     this._deactivate();
-    this.links.switch(weakParent);
+    this.activation.links.switch(weakParent);
     // Upwards propagate activeness and priority.
-    const isActive = !this._activeChildren.isEmpty();
+    const isActive = !this.activation._activeChildren.isEmpty();
     if (isActive) {
       this._activateOnce();
     }
@@ -140,44 +148,44 @@ class EventSink {
   }
 
   _activate() {
-    if (this._deactivators.length === 0) {
+    if (this.activation._deactivators.length === 0) {
       this._activateOnce();
     }
   }
 
   _deactivate() {
-    if (this._deactivators.length !== 0) {
+    if (this.activation._deactivators.length !== 0) {
       this._deactivateOnce();
     }
   }
 
   // Can call more than once if [this._weakParents.length === 0].
   _activateOnce() {
-    assert(this._deactivators.length === 0);
-    for (const weakParent of this.links._weakParents) {
+    assert(this.activation._deactivators.length === 0);
+    for (const weakParent of this.activation.links._weakParents) {
       const parent = weakParent.deref();
       if (parent !== undefined) {
-        if (parent._activeChildren.isEmpty()) {
+        if (parent.activation._activeChildren.isEmpty()) {
           // From zero to one child.
           parent._activateOnce();
         }
-        this._deactivators.push(new WeakRef(parent._activeChildren.add(this)));
+        this.activation._deactivators.push(new WeakRef(parent.activation._activeChildren.add(this)));
       }
     }
   }
 
   _deactivateOnce() {
-    assert(this._deactivators.length !== 0);
-    for (const deactivator of this._deactivators) {
+    assert(this.activation._deactivators.length !== 0);
+    for (const deactivator of this.activation._deactivators) {
       deactivator.deref()?.removeOnce();
     }
-    this._deactivators = [];
-    for (const weakParent of this.links._weakParents) {
+    this.activation._deactivators = [];
+    for (const weakParent of this.activation.links._weakParents) {
       const parent = weakParent.deref();
       if (
         parent !== undefined &&
-        parent._activeChildren.isEmpty() &&
-        parent.links._weakParents.length !== 0
+        parent.activation._activeChildren.isEmpty() &&
+        parent.activation.links._weakParents.length !== 0
       ) {
         // From one to zero children.
         parent._deactivateOnce();
@@ -188,7 +196,7 @@ class EventSink {
   _switchPriority(childPriority) {
     if (childPriority <= this._priority) {
       this._priority = childPriority - 1;
-      for (const weakParent of this.links._weakParents) {
+      for (const weakParent of this.activation.links._weakParents) {
         weakParent.deref()?._switchPriority(this._priority);
       }
     }
@@ -196,7 +204,7 @@ class EventSink {
 
   _onUnpullable() {
     this._deactivate();
-    this.links._onUnpullable();
+    this.activation.links._onUnpullable();
   }
 }
 
