@@ -102,8 +102,7 @@ class EventSinkActivation {
     }
   }
 
-  _deactivateOnce() {
-    assert(this._deactivators.length !== 0);
+  deactivate() {
     for (const deactivator of this._deactivators) {
       deactivator.deref()?.removeOnce();
     }
@@ -112,11 +111,10 @@ class EventSinkActivation {
       const parent = weakParent.deref()?.activation;
       if (
         parent !== undefined &&
-        parent._activeChildren.isEmpty() &&
-        parent.links._weakParents.length !== 0 // TODO why?
+        parent._activeChildren.isEmpty()
       ) {
         // From one to zero children.
-        parent._deactivateOnce();
+        parent.deactivate();
       }
     }
   }
@@ -165,7 +163,7 @@ class EventSink {
   // The assertions only weakly enforce this.
   deactivate() {
     assert(this.activation.links._children.isEmpty()); // TODO why?
-    this.activation._deactivateOnce();
+    this.activation.deactivate();
   }
 
   // TODO when can this be called?
@@ -194,7 +192,7 @@ class EventSink {
 
   _deactivate() {
     if (this.activation._deactivators.length !== 0) {
-      this.activation._deactivateOnce();
+      this.activation.deactivate();
     }
   }
 
