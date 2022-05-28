@@ -151,18 +151,12 @@ class EventSink {
   }
 
   // TODO when can this be called?
-  // Must only call on inactive [output] sinks.
-  // The assertions only weakly enforce this.
   activate() {
-    assert(this.activation.links._children.isEmpty()); // TODO why?
     this.activation.activate();
   }
 
   // TODO when can this be called?
-  // Must only call on active [output] sinks.
-  // The assertions only weakly enforce this.
   deactivate() {
-    assert(this.activation.links._children.isEmpty()); // TODO why?
     this.activation.deactivate();
   }
 
@@ -174,26 +168,14 @@ class EventSink {
     if (this.activation.links.isFirstParent(parent)) {
       return;
     }
-    this._deactivate();
+    this.deactivate();
     this.activation.links.switch(weakParent);
     // Upwards propagate activeness and priority.
     const isActive = !this.activation._activeChildren.isEmpty();
     if (isActive) {
-      this.activation.activate();
+      this.activate();
     }
     parent?._switchPriority(this._priority);
-  }
-
-  _activate() {
-    if (this.activation._deactivators.length === 0) {
-      this.activation.activate();
-    }
-  }
-
-  _deactivate() {
-    if (this.activation._deactivators.length !== 0) {
-      this.activation.deactivate();
-    }
   }
 
   _switchPriority(childPriority) {
@@ -206,7 +188,7 @@ class EventSink {
   }
 
   _onUnpullable() {
-    this._deactivate();
+    this.deactivate();
     this.activation.links._onUnpullable();
   }
 }
