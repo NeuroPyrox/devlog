@@ -92,13 +92,13 @@ class EventSinkActivation {
   _activateOnce() {
     assert(this._deactivators.length === 0);
     for (const weakParent of this.links._weakParents) {
-      const parent = weakParent.deref();
+      const parent = weakParent.deref()?.activation;
       if (parent !== undefined) {
-        if (parent.activation._activeChildren.isEmpty()) {
+        if (parent._activeChildren.isEmpty()) {
           // From zero to one child.
-          parent.activation._activateOnce();
+          parent._activateOnce();
         }
-        this._deactivators.push(new WeakRef(parent.activation._activeChildren.add(this.#container)));
+        this._deactivators.push(new WeakRef(parent._activeChildren.add(this.#container)));
       }
     }
   }
@@ -110,14 +110,14 @@ class EventSinkActivation {
     }
     this._deactivators = [];
     for (const weakParent of this.links._weakParents) {
-      const parent = weakParent.deref();
+      const parent = weakParent.deref()?.activation;
       if (
         parent !== undefined &&
-        parent.activation._activeChildren.isEmpty() &&
-        parent.activation.links._weakParents.length !== 0
+        parent._activeChildren.isEmpty() &&
+        parent.links._weakParents.length !== 0 // TODO why?
       ) {
         // From one to zero children.
-        parent.activation._deactivateOnce();
+        parent._deactivateOnce();
       }
     }
   }
@@ -157,7 +157,7 @@ class EventSink {
   // Must only call on inactive [output] sinks.
   // The assertions only weakly enforce this.
   activate() {
-    assert(this.activation.links._children.isEmpty());
+    assert(this.activation.links._children.isEmpty()); // TODO why?
     this.activation._activateOnce();
   }
 
@@ -165,7 +165,7 @@ class EventSink {
   // Must only call on active [output] sinks.
   // The assertions only weakly enforce this.
   deactivate() {
-    assert(this.activation.links._children.isEmpty());
+    assert(this.activation.links._children.isEmpty()); // TODO why?
     this.activation._deactivateOnce();
   }
 
