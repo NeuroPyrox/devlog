@@ -13,7 +13,7 @@ const sinkFinalizers = new FinalizationRegistry((weakSource) =>
   weakSource.deref()?._onUnpushable()
 );
 const sourceFinalizers = new FinalizationRegistry((weakSink) =>
-  weakSink.deref()?._onUnpullable()
+  weakSink.deref()?.onUnpullable()
 );
 const sourceLinkFinalizers = new FinalizationRegistry((weakChildLink) =>
   weakChildLink.deref()?.removeOnce()
@@ -138,6 +138,12 @@ class EventSinkActivation {
       this.activate();
     }
   }
+
+  onUnpullable() {
+    // [switchE]'s modulator is an example of a sink that will only deactivate once it's unpullable.
+    this.deactivate();
+    this.links.onUnpullable();
+  }
 }
 
 // The only variables that are used for something other than resource management are:
@@ -202,10 +208,8 @@ class EventSink {
     }
   }
 
-  _onUnpullable() {
-    // [switchE]'s modulator is an example of a sink that will only deactivate once it's unpullable.
-    this.deactivate();
-    this.activation.links.onUnpullable();
+  onUnpullable() {
+    this.activation.onUnpullable();
   }
 }
 
@@ -286,7 +290,7 @@ class BehaviorSink {
     this._weakVariable = new WeakRef({ thunk: () => initialValue });
   }
 
-  _onUnpullable() {
+  onUnpullable() {
     for (const weakParentLink of this._weakParentLinks) {
       weakParentLink.deref()?.removeOnce();
     }
