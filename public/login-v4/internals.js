@@ -77,7 +77,7 @@ class EventSinkLinks {
     this.#weakParents = weakParents;
     this.#weakParentLinks = weakParents.map(
       (weakParent) =>
-        new WeakRef(weakParent.deref().activation.links.#children.add(this))
+        new WeakRef(weakParent.deref().links.#children.add(this))
     );
   }
 
@@ -91,15 +91,13 @@ class EventSinkLinks {
 }
 
 class EventSinkActivation {
-  #container;
   #activeChildren;
   #deactivators;
 
   // All [weakParents] are assumed to be alive, but we pass it like this
   // because we use both the dereffed and non-dereffed versions.
-  constructor(container, weakParents, unsubscribe) {
-    this.#container = container;
-    this.links = new EventSinkLinks(container, weakParents, unsubscribe);
+  constructor(weakParents, unsubscribe) {
+    this.links = new EventSinkLinks(this, weakParents, unsubscribe);
     this.#activeChildren = new ShrinkingList();
     this.#deactivators = [];
   }
@@ -116,9 +114,9 @@ class EventSinkActivation {
       return;
     }
     this.links.forEachParent((parent) => {
-      parent.activation.activate();
+      parent.activate();
       this.#deactivators.push(
-        new WeakRef(parent.activation.#activeChildren.add(this.#container))
+        new WeakRef(parent.#activeChildren.add(this))
       );
     });
   }
@@ -129,9 +127,9 @@ class EventSinkActivation {
     }
     this.#deactivators = [];
     this.links.forEachParent((parent) => {
-      if (parent.activation.#activeChildren.isEmpty()) {
+      if (parent.#activeChildren.isEmpty()) {
         // From one to zero children.
-        parent.activation.deactivate();
+        parent.deactivate();
       }
     });
   }
@@ -159,15 +157,15 @@ class EventSinkActivation {
 // There are 2 clusters of subtly interconnected logic:
 //   [#children, #weakParents, #weakParentLinks]
 //   [#activeChildren, #deactivators]
-class EventSink {
+class EventSink extends EventSinkActivation {
   #priority;
   #poll;
   
   // All [weakParents] are assumed to be alive, but we pass it like this
   // because we use both the dereffed and non-dereffed versions.
   constructor(weakParents, poll, unsubscribe) {
+    super(weakParents, unsubscribe);
     const parents = weakParents.map((weakParent) => weakParent.deref());
-    this.activation = new EventSinkActivation(this, weakParents, unsubscribe);
     this.#priority =
       parents.length === 0
         ? 0
@@ -175,26 +173,12 @@ class EventSink {
     this.#poll = poll;
   }
 
-  *iterateActiveChildren() {
-    yield* this.activation.iterateActiveChildren();
-  }
-
   getPriority() {
     return this.#priority;
   }
 
   *poll() {
-    return yield* this.#poll(...(yield* this.activation.links.readParents()));
-  }
-
-  // TODO when can this be called?
-  activate() {
-    this.activation.activate();
-  }
-
-  // TODO when can this be called?
-  deactivate() {
-    this.activation.deactivate();
+    return yield* this.#poll(...(yield* this.links.readParents()));
   }
 
   // TODO when can this be called?
@@ -202,10 +186,10 @@ class EventSink {
   // because we use both the dereffed and non-dereffed versions.
   switch(weakParent) {
     const parent = weakParent.deref();
-    if (this.activation.links.isFirstParent(parent)) {
+    if (this.links.isFirstParent(parent)) {
       return;
     }
-    this.activation.switch(weakParent);
+    super.switch(weakParent);
     parent?.#switchPriority(this.#priority);
   }
 
@@ -213,14 +197,10 @@ class EventSink {
   #switchPriority(childPriority) {
     if (childPriority <= this.#priority) {
       this.#priority = childPriority - 1;
-      this.activation.links.forEachParent((parent) =>
+      this.links.forEachParent((parent) =>
         parent.#switchPriority(this.#priority)
       );
     }
-  }
-
-  onUnpullable() {
-    this.activation.onUnpullable();
   }
 }
 
