@@ -92,42 +92,44 @@ class EventSinkLinks {
 
 class EventSinkActivation {
   #container;
+  #activeChildren;
+  #deactivators;
 
   // All [weakParents] are assumed to be alive, but we pass it like this
   // because we use both the dereffed and non-dereffed versions.
   constructor(container, weakParents, unsubscribe) {
     this.#container = container;
     this.links = new EventSinkLinks(container, weakParents, unsubscribe);
-    this._activeChildren = new ShrinkingList();
-    this._deactivators = [];
+    this.#activeChildren = new ShrinkingList();
+    this.#deactivators = [];
   }
 
   // Iterate instead of returning the list itself because we don't
   // want the function caller to add or remove any children.
   *iterateActiveChildren() {
-    yield* this._activeChildren;
+    yield* this.#activeChildren;
   }
 
   activate() {
-    if (this._deactivators.length !== 0) {
+    if (this.#deactivators.length !== 0) {
       // Filters out all sinks that are already active, except for inputs.
       return;
     }
     this.links.forEachParent((parent) => {
       parent.activation.activate();
-      this._deactivators.push(
-        new WeakRef(parent.activation._activeChildren.add(this.#container))
+      this.#deactivators.push(
+        new WeakRef(parent.activation.#activeChildren.add(this.#container))
       );
     });
   }
 
   deactivate() {
-    for (const deactivator of this._deactivators) {
+    for (const deactivator of this.#deactivators) {
       deactivator.deref()?.removeOnce();
     }
-    this._deactivators = [];
+    this.#deactivators = [];
     this.links.forEachParent((parent) => {
-      if (parent.activation._activeChildren.isEmpty()) {
+      if (parent.activation.#activeChildren.isEmpty()) {
         // From one to zero children.
         parent.activation.deactivate();
       }
@@ -139,7 +141,7 @@ class EventSinkActivation {
   switch(weakParent) {
     this.deactivate();
     this.links.switch(weakParent);
-    const hasActiveChild = !this._activeChildren.isEmpty();
+    const hasActiveChild = !this.#activeChildren.isEmpty();
     if (hasActiveChild) {
       this.activate();
     }
@@ -153,21 +155,24 @@ class EventSinkActivation {
 }
 
 // The only variables that are used for something other than resource management are:
-//   [_activeChildren, _priority, _poll]
+//   [#activeChildren, #priority, #poll]
 // There are 2 clusters of subtly interconnected logic:
 //   [#children, #weakParents, #weakParentLinks]
-//   [_activeChildren, _deactivators]
+//   [#activeChildren, #deactivators]
 class EventSink {
+  #priority;
+  #poll;
+  
   // All [weakParents] are assumed to be alive, but we pass it like this
   // because we use both the dereffed and non-dereffed versions.
   constructor(weakParents, poll, unsubscribe) {
     const parents = weakParents.map((weakParent) => weakParent.deref());
     this.activation = new EventSinkActivation(this, weakParents, unsubscribe);
-    this._priority =
+    this.#priority =
       parents.length === 0
         ? 0
         : Math.max(...parents.map((parent) => parent.getPriority())) + 1;
-    this._poll = poll;
+    this.#poll = poll;
   }
 
   *iterateActiveChildren() {
@@ -175,11 +180,11 @@ class EventSink {
   }
 
   getPriority() {
-    return this._priority;
+    return this.#priority;
   }
 
   *poll() {
-    return yield* this._poll(...(yield* this.activation.links.readParents()));
+    return yield* this.#poll(...(yield* this.activation.links.readParents()));
   }
 
   // TODO when can this be called?
@@ -201,15 +206,15 @@ class EventSink {
       return;
     }
     this.activation.switch(weakParent);
-    parent?._switchPriority(this._priority);
+    parent?.#switchPriority(this.#priority);
   }
 
   // TODO custom error message for infinite recursion
-  _switchPriority(childPriority) {
-    if (childPriority <= this._priority) {
-      this._priority = childPriority - 1;
+  #switchPriority(childPriority) {
+    if (childPriority <= this.#priority) {
+      this.#priority = childPriority - 1;
       this.activation.links.forEachParent((parent) =>
-        parent._switchPriority(this._priority)
+        parent.#switchPriority(this.#priority)
       );
     }
   }
