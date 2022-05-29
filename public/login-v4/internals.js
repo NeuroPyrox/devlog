@@ -20,7 +20,6 @@ const sourceLinkFinalizers = new FinalizationRegistry((weakChildLink) =>
 );
 
 class EventSinkLinks {
-  #container;
   #weakParents;
   #weakParentLinks;
   #children;
@@ -28,8 +27,7 @@ class EventSinkLinks {
 
   // All [weakParents] are assumed to be alive, but we pass it like this
   // because we use both the dereffed and non-dereffed versions.
-  constructor(container, weakParents, unsubscribe) {
-    this.#container = container; // Keeps the poll function alive.
+  constructor(weakParents, unsubscribe) {
     // TODO remove underscores from names
     this.#setWeakParents(weakParents);
     this.#children = new ShrinkingList();
@@ -45,7 +43,7 @@ class EventSinkLinks {
   }
 
   // First parent is [undefined] if not found.
-  // Used for early exits from [this.#container.switch]
+  // Used for early exits from [EventSink.switch]
   isFirstParent(parent) {
     return parent === this.#weakParents[0]?.deref();
   }
@@ -77,7 +75,7 @@ class EventSinkLinks {
     this.#weakParents = weakParents;
     this.#weakParentLinks = weakParents.map(
       (weakParent) =>
-        new WeakRef(weakParent.deref().links.#children.add(this))
+        new WeakRef(weakParent.deref().#children.add(this))
     );
   }
 
@@ -90,14 +88,14 @@ class EventSinkLinks {
   }
 }
 
-class EventSinkActivation {
+class EventSinkActivation extends EventSinkLinks {
   #activeChildren;
   #deactivators;
 
   // All [weakParents] are assumed to be alive, but we pass it like this
   // because we use both the dereffed and non-dereffed versions.
   constructor(weakParents, unsubscribe) {
-    this.links = new EventSinkLinks(this, weakParents, unsubscribe);
+    super(weakParents, unsubscribe);
     this.#activeChildren = new ShrinkingList();
     this.#deactivators = [];
   }
@@ -113,7 +111,7 @@ class EventSinkActivation {
       // Filters out all sinks that are already active, except for inputs.
       return;
     }
-    this.links.forEachParent((parent) => {
+    this.forEachParent((parent) => {
       parent.activate();
       this.#deactivators.push(
         new WeakRef(parent.#activeChildren.add(this))
@@ -126,7 +124,7 @@ class EventSinkActivation {
       deactivator.deref()?.removeOnce();
     }
     this.#deactivators = [];
-    this.links.forEachParent((parent) => {
+    this.forEachParent((parent) => {
       if (parent.#activeChildren.isEmpty()) {
         // From one to zero children.
         parent.deactivate();
@@ -138,7 +136,7 @@ class EventSinkActivation {
   // because we use both the dereffed and non-dereffed versions.
   switch(weakParent) {
     this.deactivate();
-    this.links.switch(weakParent);
+    super.switch(weakParent);
     const hasActiveChild = !this.#activeChildren.isEmpty();
     if (hasActiveChild) {
       this.activate();
@@ -148,7 +146,7 @@ class EventSinkActivation {
   onUnpullable() {
     // [switchE]'s modulator is an example of a sink that will only deactivate once it's unpullable.
     this.deactivate();
-    this.links.onUnpullable();
+    super.onUnpullable();
   }
 }
 
@@ -178,7 +176,7 @@ class EventSink extends EventSinkActivation {
   }
 
   *poll() {
-    return yield* this.#poll(...(yield* this.links.readParents()));
+    return yield* this.#poll(...(yield* this.readParents()));
   }
 
   // TODO when can this be called?
@@ -186,7 +184,7 @@ class EventSink extends EventSinkActivation {
   // because we use both the dereffed and non-dereffed versions.
   switch(weakParent) {
     const parent = weakParent.deref();
-    if (this.links.isFirstParent(parent)) {
+    if (this.isFirstParent(parent)) {
       return;
     }
     super.switch(weakParent);
@@ -197,7 +195,7 @@ class EventSink extends EventSinkActivation {
   #switchPriority(childPriority) {
     if (childPriority <= this.#priority) {
       this.#priority = childPriority - 1;
-      this.links.forEachParent((parent) =>
+      this.forEachParent((parent) =>
         parent.#switchPriority(this.#priority)
       );
     }
