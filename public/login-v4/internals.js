@@ -21,7 +21,7 @@ const sourceLinkFinalizers = new FinalizationRegistry((weakChildLink) =>
 
 class EventSinkLinks {
   #container;
-  
+
   // All [weakParents] are assumed to be alive, but we pass it like this
   // because we use both the dereffed and non-dereffed versions.
   constructor(container, weakParents, unsubscribe) {
@@ -57,7 +57,8 @@ class EventSinkLinks {
   setWeakParents(weakParents) {
     this._weakParents = weakParents;
     this._weakParentLinks = weakParents.map(
-      (weakParent) => new WeakRef(weakParent.deref().activation.links._children.add(this))
+      (weakParent) =>
+        new WeakRef(weakParent.deref().activation.links._children.add(this))
     );
   }
 
@@ -78,7 +79,7 @@ class EventSinkLinks {
 
 class EventSinkActivation {
   #container;
-  
+
   // All [weakParents] are assumed to be alive, but we pass it like this
   // because we use both the dereffed and non-dereffed versions.
   constructor(container, weakParents, unsubscribe) {
@@ -97,7 +98,9 @@ class EventSinkActivation {
       const parent = weakParent.deref()?.activation;
       if (parent !== undefined) {
         parent.activate();
-        this._deactivators.push(new WeakRef(parent._activeChildren.add(this.#container)));
+        this._deactivators.push(
+          new WeakRef(parent._activeChildren.add(this.#container))
+        );
       }
     }
   }
@@ -109,13 +112,21 @@ class EventSinkActivation {
     this._deactivators = [];
     for (const weakParent of this.links._weakParents) {
       const parent = weakParent.deref()?.activation;
-      if (
-        parent !== undefined &&
-        parent._activeChildren.isEmpty()
-      ) {
+      if (parent !== undefined && parent._activeChildren.isEmpty()) {
         // From one to zero children.
         parent.deactivate();
       }
+    }
+  }
+
+  // [weakParent] is assumed to be alive, but we pass it like this
+  // because we use both the dereffed and non-dereffed versions.
+  switch(weakParent) {
+    this.deactivate();
+    this.links.switch(weakParent);
+    const hasActiveChild = !this._activeChildren.isEmpty();
+    if (hasActiveChild) {
+      this.activate();
     }
   }
 }
@@ -168,13 +179,7 @@ class EventSink {
     if (this.activation.links.isFirstParent(parent)) {
       return;
     }
-    this.deactivate();
-    this.activation.links.switch(weakParent);
-    // Upwards propagate activeness and priority.
-    const isActive = !this.activation._activeChildren.isEmpty();
-    if (isActive) {
-      this.activate();
-    }
+    this.activation.switch(weakParent);
     parent?._switchPriority(this._priority);
   }
 
@@ -188,6 +193,7 @@ class EventSink {
   }
 
   _onUnpullable() {
+    // TODO should we assert that it's already deactivated?
     this.deactivate();
     this.activation.links._onUnpullable();
   }
