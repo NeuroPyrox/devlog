@@ -21,20 +21,24 @@ const sourceLinkFinalizers = new FinalizationRegistry((weakChildLink) =>
 
 class EventSinkLinks {
   #container;
+  #weakParents;
+  #weakParentLinks;
+  #children;
+  #unsubscribe;
 
   // All [weakParents] are assumed to be alive, but we pass it like this
   // because we use both the dereffed and non-dereffed versions.
   constructor(container, weakParents, unsubscribe) {
     this.#container = container; // Keeps the poll function alive.
     // TODO remove underscores from names
-    this.setWeakParents(weakParents);
-    this._children = new ShrinkingList();
-    this._unsubscribe = unsubscribe; // Only used for input events
+    this.#setWeakParents(weakParents);
+    this.#children = new ShrinkingList();
+    this.#unsubscribe = unsubscribe; // Only used for input events
   }
 
   *readParents() {
     const parentValues = [];
-    for (const weakParent of this._weakParents) {
+    for (const weakParent of this.#weakParents) {
       parentValues.push(yield readSink(weakParent.deref()));
     }
     return parentValues;
@@ -43,17 +47,17 @@ class EventSinkLinks {
   // First parent is [undefined] if not found.
   // Used for early exits from [this.#container.switch]
   isFirstParent(parent) {
-    return parent === this._weakParents[0]?.deref();
+    return parent === this.#weakParents[0]?.deref();
   }
 
   switch(weakParent) {
-    assert(this._weakParents.length <= 1);
-    this.removeFromParents();
-    this.setWeakParents(weakParent.deref() === undefined ? [] : [weakParent]);
+    assert(this.#weakParents.length <= 1);
+    this.#removeFromParents();
+    this.#setWeakParents(weakParent.deref() === undefined ? [] : [weakParent]);
   }
 
   forEachParent(f) {
-    for (const weakParent of this._weakParents) {
+    for (const weakParent of this.#weakParents) {
       const parent = weakParent.deref();
       if (parent !== undefined) {
         f(parent);
@@ -61,28 +65,28 @@ class EventSinkLinks {
     }
   }
 
+  onUnpullable() {
+    this.#removeFromParents();
+    this.#weakParents = []; // TODO why do we have this statement?
+    this.#unsubscribe();
+  }
+
   // All [weakParents] are assumed to be alive, but we pass it like this
   // because we use both the dereffed and non-dereffed versions.
-  setWeakParents(weakParents) {
-    this._weakParents = weakParents;
-    this._weakParentLinks = weakParents.map(
+  #setWeakParents(weakParents) {
+    this.#weakParents = weakParents;
+    this.#weakParentLinks = weakParents.map(
       (weakParent) =>
-        new WeakRef(weakParent.deref().activation.links._children.add(this))
+        new WeakRef(weakParent.deref().activation.links.#children.add(this))
     );
   }
 
-  // In both callsites, [_weakParents] is modified immediately afterward,
-  // ensuring that each of [_weakParents] corresponds to each of [_weakParentLinks].
-  removeFromParents() {
-    for (const weakParentLink of this._weakParentLinks) {
+  // In both callsites, [#weakParents] is modified immediately afterward,
+  // ensuring that each of [#weakParents] corresponds to each of [#weakParentLinks].
+  #removeFromParents() {
+    for (const weakParentLink of this.#weakParentLinks) {
       weakParentLink.deref()?.removeOnce();
     }
-  }
-
-  _onUnpullable() {
-    this.removeFromParents();
-    this._weakParents = []; // TODO why do we have this statement?
-    this._unsubscribe();
   }
 }
 
@@ -139,7 +143,7 @@ class EventSinkActivation {
 // The only variables that are used for something other than resource management are:
 //   [_activeChildren, _priority, _poll]
 // There are 2 clusters of subtly interconnected logic:
-//   [_children, _weakParents, _weakParentLinks]
+//   [#children, #weakParents, #weakParentLinks]
 //   [_activeChildren, _deactivators]
 class EventSink {
   // All [weakParents] are assumed to be alive, but we pass it like this
@@ -201,7 +205,7 @@ class EventSink {
   _onUnpullable() {
     // [switchE]'s modulator is an example of a sink that will only deactivate once it's unpullable.
     this.deactivate();
-    this.activation.links._onUnpullable();
+    this.activation.links.onUnpullable();
   }
 }
 
