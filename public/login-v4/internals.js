@@ -102,6 +102,12 @@ class EventSinkActivation {
     this._deactivators = [];
   }
 
+  // Iterate instead of returning the list itself because we don't
+  // want the function caller to add or remove any children.
+  *iterateActiveChildren() {
+    yield* this._activeChildren;
+  }
+
   activate() {
     if (this._deactivators.length !== 0) {
       // Filters out all sinks that are already active, except for inputs.
@@ -165,7 +171,7 @@ class EventSink {
   }
 
   *iterateActiveChildren() {
-    yield* this.activation._activeChildren;
+    yield* this.activation.iterateActiveChildren();
   }
 
   getPriority() {
