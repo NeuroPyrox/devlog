@@ -52,6 +52,15 @@ class EventSinkLinks {
     this.setWeakParents(weakParent.deref() === undefined ? [] : [weakParent]);
   }
 
+  forEachParent(f) {
+    for (const weakParent of this._weakParents) {
+      const parent = weakParent.deref();
+      if (parent !== undefined) {
+        f(parent);
+      }
+    }
+  }
+
   // All [weakParents] are assumed to be alive, but we pass it like this
   // because we use both the dereffed and non-dereffed versions.
   setWeakParents(weakParents) {
@@ -94,15 +103,12 @@ class EventSinkActivation {
       // Filters out all sinks that are already active, except for inputs.
       return;
     }
-    for (const weakParent of this.links._weakParents) {
-      const parent = weakParent.deref()?.activation;
-      if (parent !== undefined) {
-        parent.activate();
-        this._deactivators.push(
-          new WeakRef(parent._activeChildren.add(this.#container))
-        );
-      }
-    }
+    this.links.forEachParent((parent) => {
+      parent.activation.activate();
+      this._deactivators.push(
+        new WeakRef(parent.activation._activeChildren.add(this.#container))
+      );
+    });
   }
 
   deactivate() {
@@ -110,13 +116,12 @@ class EventSinkActivation {
       deactivator.deref()?.removeOnce();
     }
     this._deactivators = [];
-    for (const weakParent of this.links._weakParents) {
-      const parent = weakParent.deref()?.activation;
-      if (parent !== undefined && parent._activeChildren.isEmpty()) {
+    this.links.forEachParent((parent) => {
+      if (parent.activation._activeChildren.isEmpty()) {
         // From one to zero children.
-        parent.deactivate();
+        parent.activation.deactivate();
       }
-    }
+    });
   }
 
   // [weakParent] is assumed to be alive, but we pass it like this
@@ -183,17 +188,18 @@ class EventSink {
     parent?._switchPriority(this._priority);
   }
 
+  // TODO custom error message for infinite recursion
   _switchPriority(childPriority) {
     if (childPriority <= this._priority) {
       this._priority = childPriority - 1;
-      for (const weakParent of this.activation.links._weakParents) {
-        weakParent.deref()?._switchPriority(this._priority);
-      }
+      this.activation.links.forEachParent((parent) =>
+        parent._switchPriority(this._priority)
+      );
     }
   }
 
   _onUnpullable() {
-    // TODO should we assert that it's already deactivated?
+    // [switchE]'s modulator is an example of a sink that will only deactivate once it's unpullable.
     this.deactivate();
     this.activation.links._onUnpullable();
   }
