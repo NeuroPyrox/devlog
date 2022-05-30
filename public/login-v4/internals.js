@@ -61,10 +61,11 @@ class EventSinkLinks {
     }
   }
 
+  // Guarantees the garbage collection of this sink because the only strong references
+  // to it are from the parents' [#children], unpullable modulators, and input callbacks.
   onUnpullable() {
     this.#removeFromParents();
-    this.#weakParents = []; // TODO why do we have this statement?
-    this.#unsubscribe();
+    this.#unsubscribe(); // Contractually removes strong references from input callbacks.
   }
 
   // All [weakParents] are assumed to be alive, but we pass it like this
@@ -138,15 +139,20 @@ class EventSinkActivation extends EventSinkLinks {
     }
   }
 
+  // Guarantees the garbage collection of this sink because [#activeChildren]
+  // has the only strong references that [super] doesn't account for.
+  // It doesn't matter how long you wait to call this method
+  // because pushing an unpullable sink has no side effects.
   onUnpullable() {
-    // [switchE]'s modulator is an example of a sink that will only deactivate once it's unpullable.
-    this.deactivate();
+    this.deactivate(); // Modulators are an example of a sink that will only deactivate once it's unpullable.
     super.onUnpullable();
   }
 }
 
 // We split this class up into an inheritance tree because the variable interactions cluster together,
 // and it's easier for me to keep it all in my head this way.
+// The reason we use inheritance instead of composition is because the elements of 
+// [#weakParents], [#weakParentLinks], [#children], and [#activeChildren] are instances of [EventSink].
 class EventSink extends EventSinkActivation {
   #priority;
   #poll;
