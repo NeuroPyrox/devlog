@@ -4,8 +4,6 @@ import { readSink } from "./push.js"; // Circular dependency
 
 const k = (x) => () => x;
 
-// TODO Encapsulation
-
 // TODO restrict surface area by making mutations monadic
 
 // None of these finalizers will interrupt [Push.push]
@@ -74,8 +72,7 @@ class EventSinkLinks {
   #setWeakParents(weakParents) {
     this.#weakParents = weakParents;
     this.#weakParentLinks = weakParents.map(
-      (weakParent) =>
-        new WeakRef(weakParent.deref().#children.add(this))
+      (weakParent) => new WeakRef(weakParent.deref().#children.add(this))
     );
   }
 
@@ -113,9 +110,7 @@ class EventSinkActivation extends EventSinkLinks {
     }
     this.forEachParent((parent) => {
       parent.activate();
-      this.#deactivators.push(
-        new WeakRef(parent.#activeChildren.add(this))
-      );
+      this.#deactivators.push(new WeakRef(parent.#activeChildren.add(this)));
     });
   }
 
@@ -150,24 +145,22 @@ class EventSinkActivation extends EventSinkLinks {
   }
 }
 
-// The only variables that are used for something other than resource management are:
-//   [#activeChildren, #priority, #poll]
-// There are 2 clusters of subtly interconnected logic:
-//   [#children, #weakParents, #weakParentLinks]
-//   [#activeChildren, #deactivators]
+// We split this class up into an inheritance tree because the variable interactions cluster together,
+// and it's easier for me to keep it all in my head this way.
 class EventSink extends EventSinkActivation {
   #priority;
   #poll;
-  
+
   // All [weakParents] are assumed to be alive, but we pass it like this
   // because we use both the dereffed and non-dereffed versions.
   constructor(weakParents, poll, unsubscribe) {
     super(weakParents, unsubscribe);
-    const parents = weakParents.map((weakParent) => weakParent.deref());
     this.#priority =
-      parents.length === 0
+      weakParents.length === 0
         ? 0
-        : Math.max(...parents.map((parent) => parent.getPriority())) + 1;
+        : Math.max(
+            ...weakParents.map((weakParent) => weakParent.deref().getPriority())
+          ) + 1;
     this.#poll = poll;
   }
 
@@ -195,9 +188,7 @@ class EventSink extends EventSinkActivation {
   #switchPriority(childPriority) {
     if (childPriority <= this.#priority) {
       this.#priority = childPriority - 1;
-      this.forEachParent((parent) =>
-        parent.#switchPriority(this.#priority)
-      );
+      this.forEachParent((parent) => parent.#switchPriority(this.#priority));
     }
   }
 }
