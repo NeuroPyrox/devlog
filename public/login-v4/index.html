@@ -55,7 +55,12 @@
       const input = (subscribe) =>
         lazyConstructor(() => {
           let sink, source;
-          // TODO what can go wrong if [subscribe] disobeys the protocol?
+          // [unsubscribe] must remove all strong references of the push callback passed to [subscribe],
+          // or there will be a memory leak.
+          // The push callback can't be called until [subscribe] ends.
+          // Other than that, the requirements for [subscribe] and [unsubscribe] are surprisingly lenient.
+          // For example, you could push the input in [unsubscribe] before discarding the callback,
+          // although the event wouldn't reach any outputs.
           const unsubscribe = subscribe((x) => Push.push(sink, x));
           [sink, source] = newEventPair([], null, unsubscribe);
           return source;
@@ -157,6 +162,9 @@
               if (source !== undefined) {
                 lazyConstructor((newParentSource) => {
                   source.switch(newParentSource);
+                  // It's not possible to switch to an unpullable sink.
+                  // If we switch to an unpushable one that's not garbage collected,
+                  // then it will still get garbage collected properly.
                   sink.switch(newParentSource.getWeakSink());
                 }, newParent);
               }

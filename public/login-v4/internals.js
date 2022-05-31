@@ -23,10 +23,7 @@ class EventSinkLinks {
   #children;
   #unsubscribe;
 
-  // All [weakParents] are assumed to be alive, but we pass it like this
-  // because we use both the dereffed and non-dereffed versions.
   constructor(weakParents, unsubscribe) {
-    // TODO remove underscores from names
     this.#setWeakParents(weakParents);
     this.#children = new ShrinkingList();
     this.#unsubscribe = unsubscribe; // Only used for input events
@@ -68,12 +65,13 @@ class EventSinkLinks {
     this.#unsubscribe(); // Contractually removes strong references from input callbacks.
   }
 
-  // All [weakParents] are assumed to be alive, but we pass it like this
-  // because we use both the dereffed and non-dereffed versions.
   #setWeakParents(weakParents) {
     this.#weakParents = weakParents;
-    this.#weakParentLinks = weakParents.map(
-      (weakParent) => new WeakRef(weakParent.deref().#children.add(this))
+    const parents = weakParents
+      .map((weakParent) => weakParent.deref())
+      .filter((parent) => parent !== undefined);
+    this.#weakParentLinks = parents.map(
+      (parent) => new WeakRef(parent.#children.add(this))
     );
   }
 
@@ -90,8 +88,6 @@ class EventSinkActivation extends EventSinkLinks {
   #activeChildren;
   #deactivators;
 
-  // All [weakParents] are assumed to be alive, but we pass it like this
-  // because we use both the dereffed and non-dereffed versions.
   constructor(weakParents, unsubscribe) {
     super(weakParents, unsubscribe);
     this.#activeChildren = new ShrinkingList();
@@ -128,8 +124,6 @@ class EventSinkActivation extends EventSinkLinks {
     });
   }
 
-  // [weakParent] is assumed to be alive, but we pass it like this
-  // because we use both the dereffed and non-dereffed versions.
   switch(weakParent) {
     this.deactivate();
     super.switch(weakParent);
@@ -151,22 +145,19 @@ class EventSinkActivation extends EventSinkLinks {
 
 // We split this class up into an inheritance tree because the variable interactions cluster together,
 // and it's easier for me to keep it all in my head this way.
-// The reason we use inheritance instead of composition is because the elements of 
+// The reason we use inheritance instead of composition is because the elements of
 // [#weakParents], [#weakParentLinks], [#children], and [#activeChildren] are instances of [EventSink].
 class EventSink extends EventSinkActivation {
   #priority;
   #poll;
 
-  // All [weakParents] are assumed to be alive, but we pass it like this
-  // because we use both the dereffed and non-dereffed versions.
   constructor(weakParents, poll, unsubscribe) {
     super(weakParents, unsubscribe);
+    const parents = weakParents
+      .map((weakParent) => weakParent.deref())
+      .filter((parent) => parent !== undefined);
     this.#priority =
-      weakParents.length === 0
-        ? 0
-        : Math.max(
-            ...weakParents.map((weakParent) => weakParent.deref().getPriority())
-          ) + 1;
+      Math.max(0, ...parents.map((parent) => parent.getPriority())) + 1;
     this.#poll = poll;
   }
 
@@ -179,8 +170,6 @@ class EventSink extends EventSinkActivation {
   }
 
   // TODO when can this be called?
-  // [weakParent] is assumed to be alive, but we pass it like this
-  // because we use both the dereffed and non-dereffed versions.
   switch(weakParent) {
     const parent = weakParent.deref();
     if (this.isFirstParent(parent)) {
@@ -247,8 +236,6 @@ class EventSource {
 // Some of the event's parents may not be passed into this function but added later.
 // The only parents passed here are the ones that [poll] immediately depends on.
 const newEventPair = (parentSources, poll, unsubscribe = () => {}) => {
-  // TODO why do we have this assertion?
-  assert(parentSources.every((parentSource) => parentSource.isPushable()));
   const sink = new EventSink(
     parentSources.map((source) => source.getWeakSink()),
     poll,
