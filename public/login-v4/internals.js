@@ -1,4 +1,4 @@
-import { assert, ShrinkingList, weakRefUndefined } from "./util.js";
+import { assert, ShrinkingList, weakRefUndefined, derefMany } from "./util.js";
 
 import { readSink } from "./push.js"; // Circular dependency
 
@@ -67,16 +67,11 @@ class EventSinkLinks {
 
   #setWeakParents(weakParents) {
     this.#weakParents = weakParents;
-    const parents = weakParents
-      .map((weakParent) => weakParent.deref())
-      .filter((parent) => parent !== undefined);
-    this.#weakParentLinks = parents.map(
+    this.#weakParentLinks = derefMany(weakParents).map(
       (parent) => new WeakRef(parent.#children.add(this))
     );
   }
 
-  // In both callsites, [#weakParents] is modified immediately afterward,
-  // ensuring that each of [#weakParents] corresponds to each of [#weakParentLinks].
   #removeFromParents() {
     for (const weakParentLink of this.#weakParentLinks) {
       weakParentLink.deref()?.removeOnce();
@@ -153,11 +148,11 @@ class EventSink extends EventSinkActivation {
 
   constructor(weakParents, poll, unsubscribe) {
     super(weakParents, unsubscribe);
-    const parents = weakParents
-      .map((weakParent) => weakParent.deref())
-      .filter((parent) => parent !== undefined);
     this.#priority =
-      Math.max(0, ...parents.map((parent) => parent.getPriority())) + 1;
+      Math.max(
+        -1,
+        ...derefMany(weakParents).map((parent) => parent.getPriority())
+      ) + 1;
     this.#poll = poll;
   }
 
@@ -198,7 +193,7 @@ class EventSource {
 
   // TODO when can this be called?
   addChild(child) {
-    assert(this.isPushable() && child.isPushable());
+    assert(this.isPushable() && child.isPushable()); // Ensures [child._parents] will be removed by [_onUnpushable].
     const parentLink = child._parents.add(this);
     const childLink = this._weakChildLinks.add(new WeakRef(parentLink));
     sourceLinkFinalizers.register(parentLink, new WeakRef(childLink));
@@ -215,7 +210,9 @@ class EventSource {
 
   // TODO when can this be called?
   switch(parent) {
+    // [this.isPushable()] is guaranteed by the caller.
     // Check if there's more than one parent.
+    // TODO explain this more
     if (this._parents.getLast() !== this._parents.getFirst()) {
       this._parents.getLast().removeOnce();
     }
@@ -225,7 +222,7 @@ class EventSource {
   }
 
   _onUnpushable() {
-    assert(!this.isPushable());
+    assert(!this.isPushable()); // Ensures [addChild] can't be called again.
     for (const weakChildLink of this._weakChildLinks) {
       weakChildLink.deref()?.remove();
     }
