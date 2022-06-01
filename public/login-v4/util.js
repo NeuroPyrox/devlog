@@ -127,6 +127,9 @@ const log = (x) => {
   return x;
 };
 
+const derefMany = (weakRefs) =>
+  weakRefs.map((weakRef) => weakRef.deref()).filter((ref) => ref !== undefined);
+
 export {
   assert,
   ShrinkingList,
@@ -137,4 +140,5 @@ export {
   unnestable,
   memoize,
   log,
+  derefMany
 };
