@@ -176,7 +176,7 @@
           );
           modSink.activate();
           // [source]'s pullability implies [modSource]'s pullability.
-          modSource.addChild(source);
+          source.addParent(modSource);
         }, newParents);
         return constConstructor(source);
       }
@@ -200,7 +200,7 @@
           );
           // TODO does the order of these 2 statements matter?
           modSink.activate();
-          modSource.addChild(source);
+          source.addParent(modSource);
         }, newValues);
         return constConstructor(source);
       }
