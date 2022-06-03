@@ -189,7 +189,7 @@ class EventSource {
     this._weakChildLinks = new ShrinkingList();
     this._parents = new ShrinkingList();
     this._weakSink = new WeakRef(sink);
-    // [this.isPushable()] because we have a strong reference to [sink].
+    // [this.isPushable()] because we have a strong reference to [sink], even if temporary.
     parents.forEach((parent) => this.addParent(parent));
   }
 
@@ -206,7 +206,7 @@ class EventSource {
     }
     const parentLink = this._parents.add(parent);
     const childLink = parent._weakChildLinks.add(new WeakRef(parentLink));
-    // GC of [_parents] triggers GC of [_weakChildLinks]
+    // Removal of [_parents] triggers GC of parents' [_weakChildLinks]
     sourceLinkFinalizers.register(parentLink, new WeakRef(childLink));
   }
 
@@ -231,9 +231,7 @@ class EventSource {
     }
     assert(this._parents.getLast() === this._parents.getFirst()); // One or zero parents.
     assert(!this._parents.isEmpty()); // Possibilities eliminated to one parent.
-    if (parent.isPushable()) {
-      this.addParent(parent);
-    }
+    this.addParent(parent);
   }
 
   _onUnpushable() {
