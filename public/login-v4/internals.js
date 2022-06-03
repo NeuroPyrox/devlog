@@ -184,11 +184,14 @@ class EventSink extends EventSinkActivation {
 }
 
 class EventSource {
+  #weakChildLinks;
+  #parents;
+  #weakSink;
   
   constructor(parents, sink) {
-    this._weakChildLinks = new ShrinkingList();
-    this._parents = new ShrinkingList();
-    this._weakSink = new WeakRef(sink);
+    this.#weakChildLinks = new ShrinkingList();
+    this.#parents = new ShrinkingList();
+    this.#weakSink = new WeakRef(sink);
     // [this.isPushable()] because we have a strong reference to [sink], even if temporary.
     parents.forEach((parent) => this.addParent(parent));
   }
@@ -200,23 +203,23 @@ class EventSource {
     // either [this] will keep [parent] alive even when [parent] won't push to [this],
     // or [parent] will push to [this], contradicting [this] being unpushable.
     assert(this.isPushable());
-    // Ensures [_onUnpushable] cleans up all [_parents] and [_weakChildLinks].
+    // Ensures [_onUnpushable] cleans up all [#parents] and [#weakChildLinks].
     if (!parent.isPushable()) {
       return;
     }
-    const parentLink = this._parents.add(parent);
-    const childLink = parent._weakChildLinks.add(new WeakRef(parentLink));
-    // Removal of [_parents] triggers GC of parents' [_weakChildLinks]
+    const parentLink = this.#parents.add(parent);
+    const childLink = parent.#weakChildLinks.add(new WeakRef(parentLink));
+    // Removal of [#parents] triggers GC of parents' [#weakChildLinks]
     sourceLinkFinalizers.register(parentLink, new WeakRef(childLink));
   }
 
   isPushable() {
-    return this._weakSink.deref() !== undefined;
+    return this.#weakSink.deref() !== undefined;
   }
 
   // TODO when can this be called?
   getWeakSink() {
-    return this._weakSink;
+    return this.#weakSink;
   }
 
   // TODO when can this be called?
@@ -224,25 +227,25 @@ class EventSource {
   switch(parent) {
     // There's a lot of coupling here, but basically [switchE]s can either have 1 or 2 parents.
     // The first parent is the modulator and the second parent
-    // if it exists is the parent that pushes [this._weakSink].
+    // if it exists is the parent that pushes [this.#weakSink].
     // Check if there's more than one parent.
-    if (this._parents.getLast() !== this._parents.getFirst()) {
-      this._parents.getLast().removeOnce();
+    if (this.#parents.getLast() !== this.#parents.getFirst()) {
+      this.#parents.getLast().removeOnce();
     }
-    assert(this._parents.getLast() === this._parents.getFirst()); // One or zero parents.
-    assert(!this._parents.isEmpty()); // Possibilities eliminated to one parent.
+    assert(this.#parents.getLast() === this.#parents.getFirst()); // One or zero parents.
+    assert(!this.#parents.isEmpty()); // Possibilities eliminated to one parent.
     this.addParent(parent);
   }
 
   _onUnpushable() {
-    // Ensures no more [_weakParentLinks] or [_parents] will be added to [this].
+    // Ensures no more [_weakParentLinks] or [#parents] will be added to [this].
     assert(!this.isPushable());
-    // Remove elements from  childrens' [_parents].
-    for (const weakChildLink of this._weakChildLinks) {
+    // Remove elements from  childrens' [#parents].
+    for (const weakChildLink of this.#weakChildLinks) {
       weakChildLink.deref()?.remove();
     }
-    // [_weakChildLinks] will be cleaned up by [sourceLinkFinalizers].
-    // [_parents] will be cleaned up when [_onUnpushable] gets called on each element of [_parents].
+    // [#weakChildLinks] will be cleaned up by [sourceLinkFinalizers].
+    // [#parents] will be cleaned up when [_onUnpushable] gets called on each element of [#parents].
   }
 }
 
@@ -285,27 +288,31 @@ class BehaviorSink {
 }
 
 class BehaviorSource {
+  #weakChildLinks;
+  #parents;
+  #weakSink;
+  
   constructor(parents, sink) {
-    this._weakChildLinks = new ShrinkingList();
-    this._parents = new ShrinkingList();
-    this._weakSink = new WeakRef(sink);
+    this.#weakChildLinks = new ShrinkingList();
+    this.#parents = new ShrinkingList();
+    this.#weakSink = new WeakRef(sink);
     parents.forEach((parent) => parent.addChild(this));
     this._variable = sink._weakVariable.deref();
   }
 
   addChild(child) {
     assert(this.isPushable() && child.isPushable());
-    const parentLink = child._parents.add(this);
-    const childLink = this._weakChildLinks.add(new WeakRef(parentLink));
+    const parentLink = child.#parents.add(this);
+    const childLink = this.#weakChildLinks.add(new WeakRef(parentLink));
     sourceLinkFinalizers.register(parentLink, new WeakRef(childLink));
   }
 
   isPushable() {
-    return this._weakSink.deref() !== undefined;
+    return this.#weakSink.deref() !== undefined;
   }
 
   getWeakSink() {
-    return this._weakSink;
+    return this.#weakSink;
   }
 
   getCurrentValue() {
@@ -314,11 +321,11 @@ class BehaviorSource {
 
   _onUnpushable() {
     assert(!this.isPushable());
-    for (const weakChildLink of this._weakChildLinks) {
+    for (const weakChildLink of this.#weakChildLinks) {
       weakChildLink.deref()?.remove();
     }
-    // [_weakChildLinks] will be cleaned up by [sourceLinkFinalizers].
-    // [_parents] will be cleaned up when [_onUnpushable] gets called on each element of [_parents].
+    // [#weakChildLinks] will be cleaned up by [sourceLinkFinalizers].
+    // [#parents] will be cleaned up when [_onUnpushable] gets called on each element of [#parents].
   }
 }
 
