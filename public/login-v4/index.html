@@ -157,6 +157,8 @@
           const weakSource = new WeakRef(source);
           // Strongly references [sink] but weakly references [source] because
           // [modSinks]'s pushability implies [sink]'s pushability.
+          // We put the reference in the poll function instead of [modSink]'s children
+          // because [modSink] doesn't directly push to [sink].
           const [modSink, modSource] = newEventPair(
             [newParentsSource],
             function* (newParent) {
@@ -166,8 +168,8 @@
                   // It's not possible to switch to an unpullable [newParentSource].
                   // If [newParentSource] is unpushable, [source.switch] has a case that deals with it.
                   source.switch(newParentSource);
-                  // If we switch to an unpushable one that's not garbage collected,
-                  // then it will still get garbage collected properly.
+                  // If we switch to an unpushable sink that's not GC'd yet,
+                  // then it will still get GC'd properly.
                   sink.switch(newParentSource.getWeakSink());
                 }, newParent);
               }

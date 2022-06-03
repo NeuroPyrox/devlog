@@ -8,7 +8,8 @@ const constConstructor = (x) => ({
   [construct]: () => x,
 });
 
-// Kind of like [queueMicrotask], but the tasks only get delayed during [delayConstructionDuring].
+// Kind of like an applicative [queueMicrotask],
+// but the tasks only get delayed during [delayConstructionDuring].
 const lazyConstructor = (f, ...args) => {
   // TODO remove this assertion if needed for behaviors
   assert(constructors !== "constructing");
@@ -30,6 +31,7 @@ const lazyConstructor = (f, ...args) => {
 
 // Unusable outside of [delayConstructionDuring] because you'd need to
 // call the [loop] method before passing it to [lazyConstructor].
+// We don't need assertions for that because eager evaluation will throw an error.
 const lazyLoop = () => {
   // TODO remove this assertion if needed for behaviors
   assert(constructors !== "constructing");
