@@ -185,7 +185,6 @@ class EventSink extends EventSinkActivation {
 
 class EventSource {
   
-  // TODO what if some parents are unpushable?
   constructor(parents, sink) {
     this._weakChildLinks = new ShrinkingList();
     this._parents = new ShrinkingList();
@@ -221,13 +220,17 @@ class EventSource {
   }
 
   // TODO when can this be called?
+  // [this.isPushable()] must be guaranteed by the caller.
   switch(parent) {
-    // [this.isPushable()] is guaranteed by the caller.
+    // There's a lot of coupling here, but basically [switchE]s can either have 1 or 2 parents.
+    // The first parent is the modulator and the second parent
+    // if it exists is the parent that pushes [this._weakSink].
     // Check if there's more than one parent.
-    // TODO explain this more
     if (this._parents.getLast() !== this._parents.getFirst()) {
       this._parents.getLast().removeOnce();
     }
+    assert(this._parents.getLast() === this._parents.getFirst()); // One or zero parents.
+    assert(!this._parents.isEmpty()); // Possibilities eliminated to one parent.
     if (parent.isPushable()) {
       this.addParent(parent);
     }
