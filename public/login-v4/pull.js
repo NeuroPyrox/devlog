@@ -21,9 +21,6 @@ const context = {
   // and for the ability to control when the output starts.
   output: (parent, handle) =>
     lazyConstructor((parentSource) => {
-      if (!parentSource.isPushable()) {
-        return neverSource;
-      }
       const [sink, source] = newEventPair([parentSource], function* (value) {
         lazyConstructor(() => handle(value));
         return nothing;
