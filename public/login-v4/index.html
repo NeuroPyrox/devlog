@@ -59,21 +59,17 @@
           // or there will be a memory leak.
           // The push callback can't be called until [subscribe] ends.
           // Other than that, the requirements for [subscribe] and [unsubscribe] are surprisingly lenient.
-          // For example, you could push the input in [unsubscribe] before discarding the callback,
+          // For example, you could push the input during [unsubscribe] before discarding the callback,
           // although the event wouldn't reach any outputs.
           const unsubscribe = subscribe((x) => Push.push(sink, x));
           [sink, source] = newEventPair([], null, unsubscribe);
           return source;
         });
 
-      const pushableMapSource = (pushableParentSource, f) =>
-        newEventPair([pushableParentSource], function* (value) {
+      const mapSource = (parentSource, f) =>
+        newEventPair([parentSource], function* (value) {
           return f(value);
         })[1];
-      const mapSource = (parentSource, f) =>
-        parentSource.isPushable()
-          ? pushableMapSource(parentSource, f)
-          : neverSource;
       const map = (parent, f) =>
         lazyConstructor((parentSource) => mapSource(parentSource, f), parent);
 
@@ -93,7 +89,7 @@
               return mapSource(parentBSource, BtoC);
             }
             if (!parentBSource.isPushable()) {
-              return pushableMapSource(parentASource, AtoC);
+              return mapSource(parentASource, AtoC);
             }
             return newEventPair(
               [parentASource, parentBSource],

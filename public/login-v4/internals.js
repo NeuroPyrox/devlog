@@ -249,6 +249,8 @@ class EventSource {
   }
 }
 
+// TODO special case if all [parentSources] are unpushable.
+// TODO update comment
 // Some of the event's parents may not be passed into this function but added later.
 // The only parents passed here are the ones that [poll] immediately depends on.
 const newEventPair = (parentSources, poll, unsubscribe = () => {}) => {
