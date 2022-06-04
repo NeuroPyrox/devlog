@@ -122,11 +122,9 @@
       const observeE = (parent) =>
         lazyConstructor(
           (parentSource) =>
-            parentSource.isPushable()
-              ? newEventPair([parentSource], function* (value) {
-                  return yield Push.liftPull(value);
-                })[1]
-              : neverSource,
+            newEventPair([parentSource], function* (value) {
+              return yield Push.liftPull(value);
+            })[1],
           parent
         );
 
