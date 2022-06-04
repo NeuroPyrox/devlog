@@ -160,6 +160,8 @@
               return Util.nothing;
             }
           );
+          // The order of these 2 statements doesn't matter because
+          // the branching in both only depends on whether [parentSource] is pushable.
           modSink.activate();
           // [source]'s pullability implies [modSource]'s pullability.
           source.addParent(modSource);
@@ -174,9 +176,6 @@
         // because there are no parents yet.
         const [sink, source] = newBehaviorPair([], initialValue, undefined);
         lazyConstructor((parentSource) => {
-          if (!parentSource.isPushable()) {
-            return;
-          }
           const [modSink, modSource] = newEventPair(
             [parentSource],
             function* (value) {
@@ -184,8 +183,10 @@
               return Util.nothing;
             }
           );
-          // TODO does the order of these 2 statements matter?
+          // The order of these 2 statements doesn't matter because
+          // the branching in both only depends on whether [parentSource] is pushable.
           modSink.activate();
+          // [source]'s pullability implies [modSource]'s pullability.
           source.addParent(modSource);
         }, newValues);
         return constConstructor(source);
