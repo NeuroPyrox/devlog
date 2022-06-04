@@ -138,9 +138,6 @@
           return value;
         });
         lazyConstructor((newParentsSource) => {
-          if (!newParentsSource.isPushable()) {
-            return;
-          }
           const weakSource = new WeakRef(source);
           // Strongly references [sink] but weakly references [source] because
           // [modSinks]'s pushability implies [sink]'s pushability.
