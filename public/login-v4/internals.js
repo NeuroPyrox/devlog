@@ -223,6 +223,7 @@ class EventSource {
   }
 
   // TODO when can this be called?
+  // Sets the 2nd parent of an [EventSource] that has 1 or 2 parents,
   // [this.isPushable()] must be guaranteed by the caller.
   switch(parent) {
     // There's a lot of coupling here, but basically [switchE]s can either have 1 or 2 parents.
@@ -249,10 +250,9 @@ class EventSource {
   }
 }
 
-// TODO special case if all [parentSources] are unpushable.
-// TODO update comment
-// Some of the event's parents may not be passed into this function but added later.
-// The only parents passed here are the ones that [poll] immediately depends on.
+// Possible O(1) optimization: special case if [parentSources.every(x => !x.isPushable())].
+// Some of the event's parents may not be passed into this function but added via [EventSource.addParent].
+// The only parents passed here are the ones that [EventSink.poll] immediately depends on.
 const newEventPair = (parentSources, poll, unsubscribe = () => {}) => {
   const sink = new EventSink(
     parentSources.map((source) => source.getWeakSink()),
@@ -289,45 +289,14 @@ class BehaviorSink {
   }
 }
 
-class BehaviorSource {
-  #weakChildLinks;
-  #parents;
-  #weakSink;
-  
+class BehaviorSource extends EventSource {
   constructor(parents, sink) {
-    this.#weakChildLinks = new ShrinkingList();
-    this.#parents = new ShrinkingList();
-    this.#weakSink = new WeakRef(sink);
-    parents.forEach((parent) => parent.addChild(this));
+    super(parents, sink);
     this._variable = sink._weakVariable.deref();
-  }
-
-  addChild(child) {
-    assert(this.isPushable() && child.isPushable());
-    const parentLink = child.#parents.add(this);
-    const childLink = this.#weakChildLinks.add(new WeakRef(parentLink));
-    sourceLinkFinalizers.register(parentLink, new WeakRef(childLink));
-  }
-
-  isPushable() {
-    return this.#weakSink.deref() !== undefined;
-  }
-
-  getWeakSink() {
-    return this.#weakSink;
   }
 
   getCurrentValue() {
     return this._variable.thunk();
-  }
-
-  _onUnpushable() {
-    assert(!this.isPushable());
-    for (const weakChildLink of this.#weakChildLinks) {
-      weakChildLink.deref()?.remove();
-    }
-    // [#weakChildLinks] will be cleaned up by [sourceLinkFinalizers].
-    // [#parents] will be cleaned up when [_onUnpushable] gets called on each element of [#parents].
   }
 }
 
