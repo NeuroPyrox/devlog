@@ -192,7 +192,7 @@ class EventSource {
     this.#weakSink = new WeakRef(sink);
     this.#weakChildLinks = new ShrinkingList();
     this.#parents = new ShrinkingList();
-    // [this.isPushable()] because we have a strong reference to [sink], even if temporary.
+    // [this.#isPushable()] because we have a strong reference to [sink], even if temporary.
     parents.forEach((parent) => this.addParent(parent));
   }
 
@@ -207,9 +207,9 @@ class EventSource {
     // If we do assign an unpushable source new parents,
     // either [this] will keep [parent] alive even when [parent] won't push to [this],
     // or [parent] will push to [this], contradicting [this] being unpushable.
-    assert(this.isPushable());
+    assert(this.#isPushable());
     // Ensures [onUnpushable] cleans up all [#parents] and [#weakChildLinks].
-    if (!parent.isPushable()) {
+    if (!parent.#isPushable()) {
       return;
     }
     const parentLink = this.#parents.add(parent);
@@ -220,7 +220,7 @@ class EventSource {
 
   // TODO when can this be called?
   // Sets or removes the 2nd parent of an [EventSource] that has 1 or 2 parents,
-  // [this.isPushable()] must be guaranteed by the caller.
+  // [this.#isPushable()] must be guaranteed by the caller.
   switch(parent) {
     // There's a lot of coupling here, but basically [switchE]s can either have 1 or 2 parents.
     // The first parent is the modulator and the second parent
@@ -238,7 +238,7 @@ class EventSource {
 
   onUnpushable() {
     // Ensures no more [_weakParentLinks] or [#parents] will be added to [this].
-    assert(!this.isPushable());
+    assert(!this.#isPushable());
     // Remove elements from  childrens' [#parents].
     for (const weakChildLink of this.#weakChildLinks) {
       weakChildLink.deref()?.remove();
@@ -247,7 +247,8 @@ class EventSource {
     // [#parents] will be cleaned up when [onUnpushable] gets called on each element of [#parents].
   }
 
-  isPushable() {
+  // In theory this isn't private because of [this.getWeakSink], but I don't want to pollute the interface.
+  #isPushable() {
     return this.#weakSink.deref() !== undefined;
   }
 }
@@ -302,9 +303,8 @@ class BehaviorSource extends EventSource {
   }
 }
 
+// TODO factor out similarities with [newEventPair].
 const newBehaviorPair = (parentSources, initialValue, poll) => {
-  // TODO why do we have this assertion?
-  assert(parentSources.every((parentSource) => parentSource.isPushable()));
   const sink = new BehaviorSink(
     parentSources.map((source) => source.getWeakSink()),
     initialValue,
