@@ -252,7 +252,7 @@ class EventSource {
   }
 }
 
-// Possible O(1) optimization: special case if [parentSources.every(x => !x.isPushable())].
+// Possible O(1) optimization: similar function that has a special case for all [parentSources] being unpushable.
 // Some of the event's parents may not be passed into this function but added via [EventSource.addParent].
 // The only parents passed here are the ones that [EventSink.poll] immediately depends on.
 const newEventPair = (parentSources, poll, unsubscribe = () => {}) => {
@@ -316,10 +316,4 @@ const newBehaviorPair = (parentSources, initialValue, poll) => {
   return [sink, source];
 };
 
-// TODO update
-const neverSource = {
-  isPushable: k(false),
-  getWeakSink: k(weakRefUndefined),
-};
-
-export { newEventPair, newBehaviorPair, neverSource };
+export { newEventPair, newBehaviorPair };

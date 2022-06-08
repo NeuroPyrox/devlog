@@ -24,7 +24,7 @@
     } from "./lazyConstructors.js";
     import * as Pull from "./pull.js";
     import * as Push from "./push.js";
-    import { newEventPair, newBehaviorPair, neverSource } from "./internals.js";
+    import { newEventPair, newBehaviorPair } from "./internals.js";
     const k = (x) => () => x;
 
     // TODO make a graph over time of the call stack and which functions are callable.
@@ -50,8 +50,6 @@
     // scriptInitialization----         Push.push--------------
 
     const Combinators = (() => {
-      const never = constConstructor(neverSource);
-
       const input = (subscribe) =>
         lazyConstructor(() => {
           let sink, source;
@@ -65,6 +63,8 @@
           [sink, source] = newEventPair([], null, unsubscribe);
           return source;
         });
+      
+      const never = input(k());
 
       const mapSource = (parentSource, f) =>
         newEventPair([parentSource], function* (value) {

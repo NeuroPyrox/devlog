@@ -5,7 +5,7 @@ import {
   delayConstructionDuring,
 } from "./lazyConstructors.js";
 
-import { neverSource, newEventPair } from "./internals.js"; // Circular dependency
+import { newEventPair } from "./internals.js"; // Circular dependency
 
 // TODO garbage collection.
 const outputs = [];
