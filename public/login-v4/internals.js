@@ -8,7 +8,7 @@ const k = (x) => () => x;
 
 // None of these finalizers will interrupt [Push.push]
 const sinkFinalizers = new FinalizationRegistry((weakSource) =>
-  weakSource.deref()?._onUnpushable()
+  weakSource.deref()?.onUnpushable()
 );
 const sourceFinalizers = new FinalizationRegistry((weakSink) =>
   weakSink.deref()?.onUnpullable()
@@ -187,13 +187,18 @@ class EventSource {
   #weakChildLinks;
   #parents;
   #weakSink;
-  
+
   constructor(parents, sink) {
+    this.#weakSink = new WeakRef(sink);
     this.#weakChildLinks = new ShrinkingList();
     this.#parents = new ShrinkingList();
-    this.#weakSink = new WeakRef(sink);
     // [this.isPushable()] because we have a strong reference to [sink], even if temporary.
     parents.forEach((parent) => this.addParent(parent));
+  }
+
+  // TODO when can this be called?
+  getWeakSink() {
+    return this.#weakSink;
   }
 
   // TODO when can this be called?
@@ -203,7 +208,7 @@ class EventSource {
     // either [this] will keep [parent] alive even when [parent] won't push to [this],
     // or [parent] will push to [this], contradicting [this] being unpushable.
     assert(this.isPushable());
-    // Ensures [_onUnpushable] cleans up all [#parents] and [#weakChildLinks].
+    // Ensures [onUnpushable] cleans up all [#parents] and [#weakChildLinks].
     if (!parent.isPushable()) {
       return;
     }
@@ -213,17 +218,8 @@ class EventSource {
     sourceLinkFinalizers.register(parentLink, new WeakRef(childLink));
   }
 
-  isPushable() {
-    return this.#weakSink.deref() !== undefined;
-  }
-
   // TODO when can this be called?
-  getWeakSink() {
-    return this.#weakSink;
-  }
-
-  // TODO when can this be called?
-  // Sets the 2nd parent of an [EventSource] that has 1 or 2 parents,
+  // Sets or removes the 2nd parent of an [EventSource] that has 1 or 2 parents,
   // [this.isPushable()] must be guaranteed by the caller.
   switch(parent) {
     // There's a lot of coupling here, but basically [switchE]s can either have 1 or 2 parents.
@@ -233,12 +229,14 @@ class EventSource {
     if (this.#parents.getLast() !== this.#parents.getFirst()) {
       this.#parents.getLast().removeOnce();
     }
-    assert(this.#parents.getLast() === this.#parents.getFirst()); // One or zero parents.
-    assert(!this.#parents.isEmpty()); // Possibilities eliminated to one parent.
+    assert(
+      !this.#parents.isEmpty() &&
+        this.#parents.getLast() === this.#parents.getFirst()
+    ); // One parent
     this.addParent(parent);
   }
 
-  _onUnpushable() {
+  onUnpushable() {
     // Ensures no more [_weakParentLinks] or [#parents] will be added to [this].
     assert(!this.isPushable());
     // Remove elements from  childrens' [#parents].
@@ -246,7 +244,11 @@ class EventSource {
       weakChildLink.deref()?.remove();
     }
     // [#weakChildLinks] will be cleaned up by [sourceLinkFinalizers].
-    // [#parents] will be cleaned up when [_onUnpushable] gets called on each element of [#parents].
+    // [#parents] will be cleaned up when [onUnpushable] gets called on each element of [#parents].
+  }
+
+  isPushable() {
+    return this.#weakSink.deref() !== undefined;
   }
 }
 
@@ -314,6 +316,7 @@ const newBehaviorPair = (parentSources, initialValue, poll) => {
   return [sink, source];
 };
 
+// TODO update
 const neverSource = {
   isPushable: k(false),
   getWeakSink: k(weakRefUndefined),
