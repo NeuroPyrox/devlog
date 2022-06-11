@@ -55,7 +55,8 @@ const constructAll = () => {
   constructors = "eager";
 };
 
-// Only called on startup and in the [Push] monad.
+// TODO remove return value when we have an html monad.
+// Only called on startup and wrapping the [Push] monad.
 const delayConstructionDuring = (f) =>
   unnestable((...args) => {
     constructors = [];

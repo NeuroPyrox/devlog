@@ -20,7 +20,6 @@
       constConstructor,
       lazyConstructor,
       lazyLoop,
-      delayConstructionDuring,
     } from "./lazyConstructors.js";
     import * as Pull from "./pull.js";
     import * as Push from "./push.js";
@@ -63,7 +62,7 @@
           [sink, source] = newEventPair([], null, unsubscribe);
           return source;
         });
-      
+
       const never = input(k());
 
       const mapSource = (parentSource, f) =>
