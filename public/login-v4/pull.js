@@ -36,7 +36,6 @@ const loop = monadicMethod("loop")();
 
 // Only used by [pullStart] and [Combinators.observeE].
 const pull = (monadicValue) => runMonad(context, monadicValue());
-// TODO once we implement the html monad, remove the return value.
 const pullStart = delayConstructionDuring(pull);
 
 export { output, loop, pull, pullStart };

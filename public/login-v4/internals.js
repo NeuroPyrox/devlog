@@ -79,6 +79,13 @@ class EventSinkLinks {
   }
 }
 
+// TODO rigourously define the tradeoff
+// There's an efficiency tradeoff for long chains of events that only rarely get pushed.
+//   A chain of events is a set of events E and a bijection f:E=>Nat such that f(a)+1=f(b) implies a is one of b's parents.
+//   The initial event i has the lowest f value and the terminal event t has the highest f value.
+//   t's activation implies i's activation by the definition of activation.
+//   Each time the whole chain activates or deactivates, it's O(n) where n is the length of the chain.
+//   The benefit of this is we avoid pushing events that don't push an output.
 class EventSinkActivation extends EventSinkLinks {
   #activeChildren;
   #deactivators;
@@ -138,10 +145,20 @@ class EventSinkActivation extends EventSinkLinks {
   }
 }
 
-// We split this class up into an inheritance tree because the variable interactions cluster together,
+// We split this class up into an inheritance chain because the variable interactions cluster together,
 // and it's easier for me to keep it all in my head this way.
 // The reason we use inheritance instead of composition is because the elements of
 // [#weakParents], [#weakParentLinks], [#children], and [#activeChildren] are instances of [EventSink].
+// [EventSink]s can either be pushable, lazily unpushable, or eagerly unpushable.
+//   Unpushable ones are either lazily unpushable or eagerly unpushable.
+//   Pushable ones are strongly referenced by at least one pushable [EventSink] parent or a push callback.
+//     Pushable ones become lazily unpushable when all the sinks that reference them become unpushable,
+//     or when [onUnpullable] is called.
+//   Lazily unpushable ones are not pushable, but haven't been garbage collected yet.
+//     They may be strongly referenced only by lazily unpushable sinks.
+//     Lazily unpushable sinks become eagerly unpushable when they're garbage collected.
+//   Eagerly unpushable
+// [EventSink] A pushes [EventSink] B only if A is a parent of B or A pushes a parent of B.
 class EventSink extends EventSinkActivation {
   #priority;
   #poll;
@@ -253,9 +270,9 @@ class EventSource {
   }
 }
 
-// Possible O(1) optimization: similar function that has a special case for all [parentSources] being unpushable.
 // Some of the event's parents may not be passed into this function but added via [EventSource.addParent].
 // The only parents passed here are the ones that [EventSink.poll] immediately depends on.
+// Possible O(1) optimization: similar function that has a special case for all [parentSources] being unpushable.
 const newEventPair = (parentSources, poll, unsubscribe = () => {}) => {
   const sink = new EventSink(
     parentSources.map((source) => source.getWeakSink()),
@@ -268,6 +285,19 @@ const newEventPair = (parentSources, poll, unsubscribe = () => {}) => {
   return [sink, source];
 };
 
+// TODO semantics of pushability and pullability
+// [BehaviorSink]s can either be pushable, lazily unpushable, or eagerly unpushable.
+//   Unpushable ones are either lazily unpushable or eagerly unpushable.
+//   Pushable ones are strongly referenced by at least one pushable [BehaviorSink] parent or pushable [EventSink] modulator.
+//     Pushable ones become lazily unpushable when all the sinks that reference them become unpushable,
+//     or when [onUnpullable] is called.
+//   Lazily unpushable ones are not pushable, but haven't been garbage collected yet.
+//     They may be strongly referenced only by lazily unpushable sinks.
+//     Lazily unpushable sinks become eagerly unpushable when they're garbage collected.
+//   Eagerly unpushable
+// Behaviors can be split up unto 4 types: input, hidden, output, input-output.
+// TODO eager vs lazy pushability
+// There can be an unpullable sink whose variable is still referenced
 class BehaviorSink {
   constructor(weakParents, initialValue, poll) {
     const parents = weakParents.map((weakParent) => weakParent.deref());
