@@ -6,6 +6,17 @@ const k = (x) => () => x;
 
 // TODO restrict surface area by making mutations monadic
 
+// Definitions:
+// TODO define "sink"
+// TODO define "parent"
+// TODO define "child"
+// TODO define "event"
+// (sink x is a nested parent of sink y) iff (x is a parent of (y or one of y's nested parents))
+// (sink x is a nested child of sink y) iff (y is a nested parent of x)
+// (A chain of events (E,f) is a finite set of events E and an injection f:E=>Nat) such that (f(a)+1=f(b) implies a is a parent of b)
+// (The initial event of a chain of events (E,f)) is (the preimage of (the lowest number in the image of f))
+// (The terminal event of a chain of events (E,f)) is (the preimage of (the highest number in the image of f))
+
 // None of these finalizers will interrupt [Push.push]
 const sinkFinalizers = new FinalizationRegistry((weakSource) =>
   weakSource.deref()?.onUnpushable()
@@ -79,13 +90,26 @@ class EventSinkLinks {
   }
 }
 
+// TODO define "active"
+// TODO define "inactive"
+// TODO define "push"
+// TODO define "activate"
+// TODO define "deactivate"
+// TODO define "active nested children"
 // TODO rigourously define the tradeoff
-// There's an efficiency tradeoff for long chains of events that only rarely get pushed.
-//   A chain of events is a set of events E and a bijection f:E=>Nat such that f(a)+1=f(b) implies a is one of b's parents.
-//   The initial event i has the lowest f value and the terminal event t has the highest f value.
-//   t's activation implies i's activation by the definition of activation.
-//   Each time the whole chain activates or deactivates, it's O(n) where n is the length of the chain.
-//   The benefit of this is we avoid pushing events that don't push an output.
+// There's an efficiency tradeoff for long chains of events (E,f) that only rarely get pushed.
+//   In the current implementation (pushing an event implies pushing its active children).
+//   There's an alternate implementation where (pushing an event implies pushing its (active and inactive) children).
+//   When (we push a parent of the initial event) while (the initial event is inactive):
+//     In the current implementation it costs O(1).
+//     In an alternate implementation it costs O(size of E).
+//   When (we activate the terminal event) while (the initial event is inactive):
+//     In the current implementation it costs O(size of E).
+//     In an alternate implementation it costs O(1).
+//   When (we deactivate the terminal event) while (the initial event's only active nested children are in E):
+//     In the current implementation it costs O(size of E).
+//     In an alternate implementation it costs O(1).
+//   TODO draw conclusions
 class EventSinkActivation extends EventSinkLinks {
   #activeChildren;
   #deactivators;
