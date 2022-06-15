@@ -7,13 +7,26 @@ const k = (x) => () => x;
 // TODO restrict surface area by making mutations monadic
 
 // Definitions:
-// TODO define "sink"
 // TODO define "parent"
 // TODO define "child"
-// TODO define "event"
-// (sink x is a nested parent of sink y) iff (x is a parent of (y or one of y's nested parents))
-// (sink x is a nested child of sink y) iff (y is a nested parent of x)
-// (A chain of events (E,f) is a finite set of events E and an injection f:E=>Nat) such that (f(a)+1=f(b) implies a is a parent of b)
+// A live sink is an [EventSink] or [BehaviorSink].
+// A live source an [EventSource] or [BehaviorSource].
+// A weak x is an x or [undefined].
+// A sink is a weak live sink.
+// A source is a weak live sink.
+// The sink of a live source o is [o.#weakSink.deref()].
+// (sink i pairs with source o) means (o is [undefined] or the sink of o is i).
+//   An [EventSink] can only pair with a weak [EventSource].
+//   A [BehaviorSink] can only pair with a weak [BehaviorSource].
+//   An [EventSource] can only pair with a weak [EventSink].
+//   A [BehaviorSource] can only pair with a weak [BehaviorSink].
+// An event (i,o) is a weak [EventSink] i and a weak [EventSource] o such that i pairs with o.
+// A behavior (i,o) is a weak [BehaviorSink] i and a weak [BehaviorSource] o such that i pairs with o.
+// A reactive (i,o) is an event (i,o) or a behavior (i,o).
+// Equivalently, a reactive (i,o) is a sink i and a source o such that i pairs with o.
+// (event x is a nested parent of event y) means (x is a parent of (y or one of y's nested parents))
+// (event x is a nested child of event y) means (y is a nested parent of x)
+// (A chain of events (E,f)) is ((a finite set of events E and an injection f:E=>Nat) such that (f(a)+1=f(b) implies a is a parent of b))
 // (The initial event of a chain of events (E,f)) is (the preimage of (the lowest number in the image of f))
 // (The terminal event of a chain of events (E,f)) is (the preimage of (the highest number in the image of f))
 
@@ -101,13 +114,13 @@ class EventSinkLinks {
 //   There's an alternate implementation where (pushing an event implies pushing its (active and inactive) children).
 //   Case a: when (we push a parent of the initial event) while (the initial event is inactive):
 //     In the current implementation it costs O(1).
-//     In an alternate implementation it costs at least O(size of E).
+//     In the alternate implementation it costs at least O(size of E).
 //   Case b: when (we activate the terminal event) while (the initial event is inactive):
 //     In the current implementation it costs O(size of E).
-//     In an alternate implementation it costs O(1).
+//     In the alternate implementation it costs O(1).
 //   Case c: when (we deactivate the terminal event) while (the initial event's only active nested children are in E):
 //     In the current implementation it costs O(size of E).
-//     In an alternate implementation it costs O(1).
+//     In the alternate implementation it costs O(1).
 //   We prefer the current implementation because:
 //     Case a may be cost much more than O(size of E) if some events are expensive to compute.
 //     Long chains of events can typically be refactored into state machines.
