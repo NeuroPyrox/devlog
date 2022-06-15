@@ -96,20 +96,22 @@ class EventSinkLinks {
 // TODO define "activate"
 // TODO define "deactivate"
 // TODO define "active nested children"
-// TODO rigourously define the tradeoff
 // There's an efficiency tradeoff for long chains of events (E,f) that only rarely get pushed.
 //   In the current implementation (pushing an event implies pushing its active children).
 //   There's an alternate implementation where (pushing an event implies pushing its (active and inactive) children).
-//   When (we push a parent of the initial event) while (the initial event is inactive):
+//   Case a: when (we push a parent of the initial event) while (the initial event is inactive):
 //     In the current implementation it costs O(1).
-//     In an alternate implementation it costs O(size of E).
-//   When (we activate the terminal event) while (the initial event is inactive):
+//     In an alternate implementation it costs at least O(size of E).
+//   Case b: when (we activate the terminal event) while (the initial event is inactive):
 //     In the current implementation it costs O(size of E).
 //     In an alternate implementation it costs O(1).
-//   When (we deactivate the terminal event) while (the initial event's only active nested children are in E):
+//   Case c: when (we deactivate the terminal event) while (the initial event's only active nested children are in E):
 //     In the current implementation it costs O(size of E).
 //     In an alternate implementation it costs O(1).
-//   TODO draw conclusions
+//   We prefer the current implementation because:
+//     Case a may be cost much more than O(size of E) if some events are expensive to compute.
+//     Long chains of events can typically be refactored into state machines.
+//     Cases b and c would need to be awfully common for this tradeoff to start mattering.
 class EventSinkActivation extends EventSinkLinks {
   #activeChildren;
   #deactivators;
