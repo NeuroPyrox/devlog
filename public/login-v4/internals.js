@@ -9,31 +9,40 @@ const k = (x) => () => x;
 // Definitions:
 // TODO define "parent"
 // TODO define "child"
-// A live sink is an [EventSink] or [BehaviorSink].
-// A live source an [EventSource] or [BehaviorSource].
+// A live sink   is an [EventSink]   or [BehaviorSink].
+// A live source is an [EventSource] or [BehaviorSource].
 // A weak x is an x or [undefined].
-// A sink is a weak live sink.
+// A sink   is a weak live sink.
 // A source is a weak live source.
 // The sink of a live source o is [o.#weakSink.deref()].
 // (sink i pairs with source o) or (source o pairs with sink i) means (o is [undefined] or the sink of o is i).
-//   An [EventSink] can only pair with a weak [EventSource].
-//   An [EventSource] can only pair with a weak [EventSink].
-//   A [BehaviorSink] can only pair with a weak [BehaviorSource].
-//   A [BehaviorSource] can only pair with a weak [BehaviorSink].
+//   An [EventSink]      can only pair with a weak [EventSource].
+//   An [EventSource]    can only pair with a weak [EventSink].
+//   A  [BehaviorSink]   can only pair with a weak [BehaviorSource].
+//   A  [BehaviorSource] can only pair with a weak [BehaviorSink].
 //   [undefined] can pair with [undefined] or an [EventSink] or an [EventSource] or a [BehaviorSink] or a [BehaviorSource].
-// An event (i,o) is a weak [EventSink] i and a weak [EventSource] o such that i pairs with o.
-// A behavior (i,o) is a weak [BehaviorSink] i and a weak [BehaviorSource] o such that i pairs with o.
+// An event    (i,o) is a weak [EventSink]    i and a weak [EventSource]    o such that i pairs with o.
+// A  behavior (i,o) is a weak [BehaviorSink] i and a weak [BehaviorSource] o such that i pairs with o.
 // A reactive (i,o) is an event (i,o) or a behavior (i,o).
 //   ((i,o) is a reactive) iff (i is a sink, o is a source, and i pairs with o).
-// (reactive (i,o) is a parent of reactive (j,p)) means (i strongly references j and j is not [undefined]).
-// TODO make this true
+// (reactive (i,o) is a        parent of reactive (j,p)) means (i           strongly references j and j is not [undefined]).
 // (reactive (i,o) is an eager parent of reactive (j,p)) means (i.#children strongly references j and j is not [undefined]).
-// (reactive (i,o) is a lazy parent of reactive (j,p)) means (i.#poll strongly references j and j is not [undefined]).
-//   (reactive x is a lazy parent of reactive y) implies (x is an event).
-//   TODO contradiction
-// (reactive x is a child of reactive y) means (y is a parent of x).
+// (reactive (i,o) is a  lazy  parent of reactive (j,p)) means (i.#poll     strongly references j and j is not [undefined]).
+// (reactive x is a        child of reactive y) means (y is a        parent of x).
 // (reactive x is an eager child of reactive y) means (y is an eager parent of x).
-// (reactive x is a lazy child of reactive y) means (y is a lazy parent of x).
+// (reactive x is a  lazy  child of reactive y) means (y is a  lazy  parent of x)
+// (reactive x is a        parent of reactive y) implies:
+//   (x is an eager parent of y) xor (x is a lazy parent of y).
+// (reactive x is an eager parent of reactive y) implies:
+//   // TODO
+// (reactive x is a  lazy  parent of reactive y) implies:
+//   (x is an event).
+//   (x is the only lazy parent of y).
+//   (y is the only lazy child  of x).
+//   (x has no eager children).
+//   (x has no lazy parents).
+//   (x has one eager parent).
+// (reactive x is an eager parent of )
 // TODO nested
 // (event x is a nested parent of event y) means (x is a parent of (y or one of y's nested parents))
 // (event x is a nested child of event y) means (y is a nested parent of x)
