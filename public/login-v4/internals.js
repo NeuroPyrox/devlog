@@ -23,6 +23,7 @@ const k = (x) => () => x;
 // A  behavior (i,o) is a weak [BehaviorSink] i and a weak [BehaviorSource] o such that i pairs with o.
 // A reactive (i,o) is an event (i,o) or a behavior (i,o).
 //   ((i,o) is a reactive) iff (i is a sink, o is a source, and i pairs with o).
+// TODO rename to "strong referencer", "parent", and "modulator".
 // (reactive (i,o) is a        parent of reactive (j,p)) means (i           strongly references j and j is not [undefined]).
 // (reactive (i,o) is an eager parent of reactive (j,p)) means (i.#children strongly references j and j is not [undefined]).
 // (reactive (i,o) is a  lazy  parent of reactive (j,p)) means (i.#poll     strongly references j and j is not [undefined]).
@@ -30,6 +31,7 @@ const k = (x) => () => x;
 // (reactive x is an eager child of reactive y) means (y is an eager parent of x).
 // (reactive x is a  lazy  child of reactive y) means (y is a  lazy  parent of x)
 // (reactive x is a        parent of reactive y) implies (x is an eager parent of y) xor (x is a lazy parent of y).
+// TODO loops
 // (reactive x is an eager parent of reactive y) implies (x and y are both events) xor (x and y are both behaviors).
 // (reactive x is a  lazy  parent of reactive y) implies:
 //   x is an event.
@@ -41,10 +43,11 @@ const k = (x) => () => x;
 // (reactive x is a nested parent of reactive y) means (x is an eager parent of (y or one of y's nested parents)).
 // (reactive x is a nested child  of reactive y) means (y is a nested parent of x).
 // (reactive x is a nested parent of reactive y) implies (x and y are both events) xor (x and y are both behaviors).
-// (A chain of reactives (E,f)) means ((a finite set of reactives E and an injection f:E=>Nat) such that (f(a)+1=f(b) implies a is a parent of b)).
-//   (The initial  reactive) means (the preimage of (the lowest  number in the image of f)).
-//   (The terminal reactive) means (the preimage of (the highest number in the image of f)).
-//   The finiteness of E implies the existence of the terminal event.
+// (A chain of reactives) means (a finite strict total order of reactives) where:
+//   x<y means x is an eager parent of y.
+//   The first reactive means the least    element in the order.
+//   The last  reactive means the greatest element in the order.
+//   (Every reactive is an event) xor (every reactive is a behavior).
 
 // None of these finalizers will interrupt [Push.push]
 const sinkFinalizers = new FinalizationRegistry((weakSource) =>
@@ -125,22 +128,21 @@ class EventSinkLinks {
 // TODO define "activate"
 // TODO define "deactivate"
 // TODO define "active nested children"
-// There's an efficiency tradeoff for long chains of events (E,f) that only rarely get pushed.
-//   In the current implementation (pushing an event implies pushing its active children).
-//   There's an alternate implementation where (pushing an event implies pushing its (active and inactive) children).
-//   Case a: when (we push a parent of the initial event) while (the initial event is inactive):
-//     In the current implementation it costs O(1).
-//     In the alternate implementation it costs at least O(size of E).
-//   Case b: when (we activate the terminal event) while (the initial event is inactive):
-//     In the current implementation it costs O(size of E).
-//     In the alternate implementation it costs O(1).
-//   Case c: when (we deactivate the terminal event) while (the initial event's only active nested children are in E):
-//     In the current implementation it costs O(size of E).
-//     In the alternate implementation it costs O(1).
+// There's an efficiency tradeoff for long chains of events of size s that only rarely get pushed.
+//   In     the current   implementation,      pushing an event implies pushing its active children.
+//   There's an alternate implementation where pushing an event implies pushing its        children.
+//   Case a means (we push a parent of the first event) while (the first event is inactive).
+//   Case b means (we activate         the last  event) while (the first event is inactive).
+//   Case c means (we deactivate       the last  event) while (the first event's only active nested children are in E).
+//   Computation costs of each case in each implementation:
+//            Current Alternate
+//     Case a    O(1)      O(s)
+//     Case b    O(s)      O(1)
+//     Case c    O(s)      O(1)
 //   We prefer the current implementation because:
-//     Case a may be cost much more than O(size of E) if some events are expensive to compute.
-//     Long chains of events can typically be refactored into state machines.
+//     Case a may be cost much more than O(s) in the alternate implementation if some events are expensive to compute.
 //     Cases b and c would need to be awfully common for this tradeoff to start mattering.
+//     Long chains of events can typically be refactored into state machines.
 class EventSinkActivation extends EventSinkLinks {
   #activeChildren;
   #deactivators;
