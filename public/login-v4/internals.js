@@ -6,9 +6,7 @@ const k = (x) => () => x;
 
 // TODO restrict surface area by making mutations monadic
 
-// Definitions:
-// TODO define "parent"
-// TODO define "child"
+// Definitions used in comments:
 // A live sink   is an [EventSink]   or [BehaviorSink].
 // A live source is an [EventSource] or [BehaviorSource].
 // A weak x is an x or [undefined].
@@ -31,24 +29,22 @@ const k = (x) => () => x;
 // (reactive x is a        child of reactive y) means (y is a        parent of x).
 // (reactive x is an eager child of reactive y) means (y is an eager parent of x).
 // (reactive x is a  lazy  child of reactive y) means (y is a  lazy  parent of x)
-// (reactive x is a        parent of reactive y) implies:
-//   (x is an eager parent of y) xor (x is a lazy parent of y).
-// (reactive x is an eager parent of reactive y) implies:
-//   // TODO
+// (reactive x is a        parent of reactive y) implies (x is an eager parent of y) xor (x is a lazy parent of y).
+// (reactive x is an eager parent of reactive y) implies (x and y are both events) xor (x and y are both behaviors).
 // (reactive x is a  lazy  parent of reactive y) implies:
-//   (x is an event).
-//   (x is the only lazy parent of y).
-//   (y is the only lazy child  of x).
-//   (x has no eager children).
-//   (x has no lazy parents).
-//   (x has one eager parent).
-// (reactive x is an eager parent of )
-// TODO nested
-// (event x is a nested parent of event y) means (x is a parent of (y or one of y's nested parents))
-// (event x is a nested child of event y) means (y is a nested parent of x)
-// (A chain of events (E,f)) is ((a finite set of events E and an injection f:E=>Nat) such that (f(a)+1=f(b) implies a is a parent of b))
-// (The initial event of a chain of events (E,f)) is (the preimage of (the lowest number in the image of f))
-// (The terminal event of a chain of events (E,f)) is (the preimage of (the highest number in the image of f))
+//   x is an event.
+//   x is the only lazy parent of y.
+//   y is the only lazy child  of x.
+//   x has no eager children.
+//   x has no lazy parents.
+//   x has one eager parent.
+// (reactive x is a nested parent of reactive y) means (x is an eager parent of (y or one of y's nested parents)).
+// (reactive x is a nested child  of reactive y) means (y is a nested parent of x).
+// (reactive x is a nested parent of reactive y) implies (x and y are both events) xor (x and y are both behaviors).
+// (A chain of reactives (E,f)) means ((a finite set of reactives E and an injection f:E=>Nat) such that (f(a)+1=f(b) implies a is a parent of b)).
+//   (The initial  reactive) means (the preimage of (the lowest  number in the image of f)).
+//   (The terminal reactive) means (the preimage of (the highest number in the image of f)).
+//   The finiteness of E implies the existence of the terminal event.
 
 // None of these finalizers will interrupt [Push.push]
 const sinkFinalizers = new FinalizationRegistry((weakSource) =>
