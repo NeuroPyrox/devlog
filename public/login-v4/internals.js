@@ -23,24 +23,22 @@ const k = (x) => () => x;
 // A  behavior (i,o) is a weak [BehaviorSink] i and a weak [BehaviorSource] o such that i pairs with o.
 // A reactive (i,o) is an event (i,o) or a behavior (i,o).
 //   ((i,o) is a reactive) iff (i is a sink, o is a source, and i pairs with o).
-// TODO rename to "strong referencer", "parent", and "modulator".
-// (reactive (i,o) is a        parent of reactive (j,p)) means (i           strongly references j and j is not [undefined]).
-// (reactive (i,o) is an eager parent of reactive (j,p)) means (i.#children strongly references j and j is not [undefined]).
-// (reactive (i,o) is a  lazy  parent of reactive (j,p)) means (i.#poll     strongly references j and j is not [undefined]).
-// (reactive x is a        child of reactive y) means (y is a        parent of x).
-// (reactive x is an eager child of reactive y) means (y is an eager parent of x).
-// (reactive x is a  lazy  child of reactive y) means (y is a  lazy  parent of x)
-// (reactive x is a        parent of reactive y) implies (x is an eager parent of y) xor (x is a lazy parent of y).
+// TODO what about source references?
+// (reactive (i,o) is a parent    of reactive (j,p)) means (i.#children strongly references j and j is not [undefined]).
+// (reactive (i,o) is a modulator of reactive (j,p)) means (i.#poll     strongly references j and j is not [undefined]).
+// (reactive x is a child     of reactive y) means (y is a parent    of x).
+// (reactive x is a modulatee of reactive y) means (y is a modulator of x)
+// (reactive x strongly references reactive y) implies (x is an eager parent of y) xor (x is a lazy parent of y).
 // TODO loops
-// (reactive x is an eager parent of reactive y) implies (x and y are both events) xor (x and y are both behaviors).
-// (reactive x is a  lazy  parent of reactive y) implies:
+// (reactive x is a parent    of reactive y) implies (x and y are both events) xor (x and y are both behaviors).
+// (reactive x is a modulator of reactive y) implies:
 //   x is an event.
-//   x is the only lazy parent of y.
-//   y is the only lazy child  of x.
-//   x has no eager children.
-//   x has no lazy parents.
-//   x has one eager parent.
-// (reactive x is a nested parent of reactive y) means (x is an eager parent of (y or one of y's nested parents)).
+//   x is the only modulator of y.
+//   y is the only modulatee of x.
+//   x has no children.
+//   x has no modulators.
+//   x has one parent.
+// (reactive x is a nested parent of reactive y) means (x is a parent of (y or one of y's nested parents)).
 // (reactive x is a nested child  of reactive y) means (y is a nested parent of x).
 // (reactive x is a nested parent of reactive y) implies (x and y are both events) xor (x and y are both behaviors).
 // (A chain of reactives) means (a finite strict total order of reactives) where:
@@ -140,9 +138,9 @@ class EventSinkLinks {
 //     Case b    O(s)      O(1)
 //     Case c    O(s)      O(1)
 //   We prefer the current implementation because:
-//     Case a may be cost much more than O(s) in the alternate implementation if some events are expensive to compute.
+//     Case a in the alternate implementation may be cost much more than O(s) if some events are expensive to compute.
 //     Cases b and c would need to be awfully common for this tradeoff to start mattering.
-//     Long chains of events can typically be refactored into state machines.
+//     Long chains of events can typically be refactored into state machines anyways.
 class EventSinkActivation extends EventSinkLinks {
   #activeChildren;
   #deactivators;
