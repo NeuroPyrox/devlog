@@ -18,7 +18,7 @@ const k = (x) => () => x;
 //   An [EventSource]    can only pair with a weak [EventSink].
 //   A  [BehaviorSink]   can only pair with a weak [BehaviorSource].
 //   A  [BehaviorSource] can only pair with a weak [BehaviorSink].
-//   [undefined] can pair with [undefined] or an [EventSink] or an [EventSource] or a [BehaviorSink] or a [BehaviorSource].
+//   [undefined] can pair with [undefined] or an ([EventSink] or [EventSource] or [BehaviorSink] or [BehaviorSource]).
 // An event    (i,o) is a weak [EventSink]    i and a weak [EventSource]    o such that i pairs with o.
 // A  behavior (i,o) is a weak [BehaviorSink] i and a weak [BehaviorSource] o such that i pairs with o.
 // A reactive (i,o) is an event (i,o) or a behavior (i,o).
@@ -28,7 +28,7 @@ const k = (x) => () => x;
 // (reactive (i,o) is a modulator of reactive (j,p)) means (i.#poll     strongly references j and j is not [undefined]).
 // (reactive x is a child     of reactive y) means (y is a parent    of x).
 // (reactive x is a modulatee of reactive y) means (y is a modulator of x)
-// (reactive x strongly references reactive y) implies (x is an eager parent of y) xor (x is a lazy parent of y).
+// (reactive x strongly references reactive y) implies (x is a parent of y) xor (x is a modulator of y).
 // TODO loops
 // (reactive x is a parent    of reactive y) implies (x and y are both events) xor (x and y are both behaviors).
 // (reactive x is a modulator of reactive y) implies:
@@ -42,7 +42,7 @@ const k = (x) => () => x;
 // (reactive x is a nested child  of reactive y) means (y is a nested parent of x).
 // (reactive x is a nested parent of reactive y) implies (x and y are both events) xor (x and y are both behaviors).
 // (A chain of reactives) means (a finite strict total order of reactives) where:
-//   x<y means x is an eager parent of y.
+//   x<y means x is a parent of y.
 //   The first reactive means the least    element in the order.
 //   The last  reactive means the greatest element in the order.
 //   (Every reactive is an event) xor (every reactive is a behavior).
@@ -125,13 +125,13 @@ class EventSinkLinks {
 // TODO define "push"
 // TODO define "activate"
 // TODO define "deactivate"
-// TODO define "active nested children"
 // There's an efficiency tradeoff for long chains of events of size s that only rarely get pushed.
 //   In     the current   implementation,      pushing an event implies pushing its active children.
 //   There's an alternate implementation where pushing an event implies pushing its        children.
 //   Case a means (we push a parent of the first event) while (the first event is inactive).
 //   Case b means (we activate         the last  event) while (the first event is inactive).
-//   Case c means (we deactivate       the last  event) while (the first event's only active nested children are in E).
+//   Case c means (we deactivate       the last  event) while
+//     (the first event's active nested children are all ((a parent of the last event) or (equal to the last event))).
 //   Computation costs of each case in each implementation:
 //            Current Alternate
 //     Case a    O(1)      O(s)
