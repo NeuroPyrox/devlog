@@ -6,12 +6,14 @@ const k = (x) => () => x;
 
 // TODO restrict surface area by making mutations monadic
 
-// Definitions used in comments:
 // A live sink   is an [EventSink]   or [BehaviorSink].
 // A live source is an [EventSource] or [BehaviorSource].
 // A weak x is an x or [undefined].
 // A sink   is a weak live sink.
 // A source is a weak live source.
+// (sink   x is a parent of sink   y) means (x is live and y is live and [x.#children] strongly references y).
+// (source x is a parent of source y) means (x is live and y is live and [y.#parents]  strongly references x).
+// (x is a child  of y) means (y is a parent of x).
 // The sink of a live source o is [o.#weakSink.deref()].
 // (sink i pairs with source o) or (source o pairs with sink i) means (o is [undefined] or the sink of o is i).
 //   An [EventSink]      can only pair with a weak [EventSource].
@@ -24,10 +26,13 @@ const k = (x) => () => x;
 // A reactive (i,o) is an event (i,o) or a behavior (i,o).
 //   Equivalently, ((i,o) is a reactive) iff (i is a sink, o is a source, and i pairs with o).
 // TODO what about source references?
+// TODO Possible parent relationships:
+//   ([undefined], unpullable) parent of ([undefined], unpullable)
+//   ([undefined],   pullable) parent of ([undefined],   pullable)
 // (reactive (i,o) is a parent    of reactive (j,p)) means (i.#children strongly references j and j is not [undefined]).
 // (reactive (i,o) is a modulator of reactive (j,p)) means (i.#poll     strongly references j and j is not [undefined]).
-// (reactive x is a child     of reactive y) means (y is a parent    of x).
 // (reactive x is a modulatee of reactive y) means (y is a modulator of x)
+// TODO update comment
 // (reactive x strongly references reactive y) implies (x is a parent of y) xor (x is a modulator of y).
 // (reactive x is a parent    of reactive y) implies (x and y are both events) xor (x and y are both behaviors).
 // (reactive x is a modulator of reactive y) implies:
