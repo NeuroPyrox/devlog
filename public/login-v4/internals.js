@@ -6,16 +6,23 @@ const k = (x) => () => x;
 
 // TODO restrict surface area by making mutations monadic
 
-// A live sink   is an [EventSink]   or [BehaviorSink].
-// A live source is an [EventSource] or [BehaviorSource].
-// A weak x is an x or [undefined].
-// A sink   is a weak live sink.
-// A source is a weak live source.
+// A weak x means an x or [undefined].
+// A live weak x means an x.
+// A dead weak x means [undefined].
+// A sink   means a weak ([EventSink]   or [BehaviorSink]).
+// A source means a weak ([EventSource] or [BehaviorSource]).
 // (sink   x is a parent of sink   y) means (x is live and y is live and [x.#children] strongly references y).
 // (source x is a parent of source y) means (x is live and y is live and [y.#parents]  strongly references x).
 // (x is a child  of y) means (y is a parent of x).
-// The sink of a live source o is [o.#weakSink.deref()].
-// (sink i pairs with source o) or (source o pairs with sink i) means (o is [undefined] or the sink of o is i).
+// (sink   x is a parent of sink   y) implies (x and y are both an [EventSink])   xor (x and y are both a [BehaviorSink]).
+// (source x is a parent of source y) implies (x and y are both an [EventSource]) xor (x and y are both a [BehaviorSource]).
+// TODO sink and source properties
+// (x is a nested parent of y) means (x is a parent of (y or one of y's nested parents)).
+// (x is a nested child  of y) means (y is a nested parent of x).
+// (The sink of a live source o) means [o.#weakSink.deref()].
+// (The source of a live sink i) means ((the unique live source o such that the sink of o is i) or ([undefined] if no such live source exists)).
+// (Live sink i is the sink of live source o) iff (o is the source of i).
+// (sink i pairs with source o) means (source o pairs with sink i) means ((i is the sink of o) or (o is the source of i)).
 //   An [EventSink]      can only pair with a weak [EventSource].
 //   An [EventSource]    can only pair with a weak [EventSink].
 //   A  [BehaviorSink]   can only pair with a weak [BehaviorSource].
@@ -42,8 +49,6 @@ const k = (x) => () => x;
 //   x has no children.
 //   x has no modulators.
 //   x has one parent.
-// (reactive x is a nested parent of reactive y) means (x is a parent of (y or one of y's nested parents)).
-// (reactive x is a nested child  of reactive y) means (y is a nested parent of x).
 // (reactive x is a nested parent of reactive y) implies:
 //   (x and y are both events) xor (x and y are both behaviors).
 //   y isn't a nested parent of x.
