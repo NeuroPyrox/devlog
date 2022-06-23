@@ -6,19 +6,26 @@ const k = (x) => () => x;
 
 // TODO restrict surface area by making mutations monadic
 
+// (x is garbage) means (x is unreachable from the root object by strong references).
+// (x is garbage) implies:
+//   Anything that strongly references x is garbage.
+//   Anything that weakly   references x can either be (garbage or not garbage).
+// (x is not garbage) implies:
+//   Anything that x strongly references is not garbage.
+//   (x is the root object) or (x is strongly referenced by some y where (y is not garbage)).
 // A weak x means an x or [undefined].
-// A live weak x means an x.
-// A dead weak x means [undefined].
+//   A live weak x means an x.
+//   A dead weak x means [undefined].
 // A sink   means a weak ([EventSink]   or [BehaviorSink]).
 // A source means a weak ([EventSource] or [BehaviorSource]).
+// TODO sink and source properties
+// A source can be pullable, dead, or garbage
 // (sink   x is a parent of sink   y) means (x is live and y is live and [x.#children] strongly references y).
 // (source x is a parent of source y) means (x is live and y is live and [y.#parents]  strongly references x).
 // (x is a child  of y) means (y is a parent of x).
-// (sink   x is a parent of sink   y) implies (x and y are both an [EventSink])   xor (x and y are both a [BehaviorSink]).
-// (source x is a parent of source y) implies (x and y are both an [EventSource]) xor (x and y are both a [BehaviorSource]).
-// TODO sink and source properties
-// (x is a nested parent of y) means (x is a parent of (y or one of y's nested parents)).
-// (x is a nested child  of y) means (y is a nested parent of x).
+// (x is a nested parent of y) means (y is a nested child of x) means (x is a parent of (y or one of y's nested parents)).
+//   (sink   x is a nested parent of sink   y) implies (x and y are both an [EventSink])   xor (x and y are both a [BehaviorSink]).
+//   (source x is a nested parent of source y) implies (x and y are both an [EventSource]) xor (x and y are both a [BehaviorSource]).
 // (The sink of a live source o) means [o.#weakSink.deref()].
 // (The source of a live sink i) means ((the unique live source o such that the sink of o is i) or ([undefined] if no such live source exists)).
 // (Live sink i is the sink of live source o) iff (o is the source of i).
@@ -27,7 +34,7 @@ const k = (x) => () => x;
 //   An [EventSource]    can only pair with a weak [EventSink].
 //   A  [BehaviorSink]   can only pair with a weak [BehaviorSource].
 //   A  [BehaviorSource] can only pair with a weak [BehaviorSink].
-//   [undefined] can pair with [undefined] or an ([EventSink] or [EventSource] or [BehaviorSink] or [BehaviorSource]).
+//   [undefined] can pair with an ([EventSink] or [EventSource] or [BehaviorSink] or [BehaviorSource]).
 // An event    (i,o) is a weak [EventSink]    i and a weak [EventSource]    o such that i pairs with o.
 // A  behavior (i,o) is a weak [BehaviorSink] i and a weak [BehaviorSource] o such that i pairs with o.
 // A reactive (i,o) is an event (i,o) or a behavior (i,o).
