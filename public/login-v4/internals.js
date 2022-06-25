@@ -6,20 +6,26 @@ const k = (x) => () => x;
 
 // TODO restrict surface area by making mutations monadic
 
-// (x is garbage) means (x is unreachable from the root object by strong references).
+// Given: strong reference, root object
+// (x is garbage) means (the root object doesn't strongly reference x).
 // (x is garbage) implies:
 //   Anything that strongly references x is garbage.
-//   Anything that weakly   references x can either be (garbage or not garbage).
 // (x is not garbage) implies:
 //   Anything that x strongly references is not garbage.
 //   (x is the root object) or (x is strongly referenced by some y where (y is not garbage)).
 // A weak x means an x or [undefined].
 //   A live weak x means an x.
 //   A dead weak x means [undefined].
+// (x weakly references y) means ((x strongly references weak y) or (x weakly references weak y)).
+// (x references y) means ((x strongly references y) or (x weakly references y)).
+// (weak x is dead) implies (weak x will never be live).
+// (garbage collection) means (some garbage weak x become dead).
+// (live weak x is garbage) implies (weak x will always be (garbage or dead)).
 // A sink   means a weak ([EventSink]   or [BehaviorSink]).
 // A source means a weak ([EventSource] or [BehaviorSource]).
 // TODO sink and source properties
-// A source can be pullable, dead, or garbage
+// A sink can be either pull
+// A source can be pullable, dead, empty, or garbage
 // (sink   x is a parent of sink   y) means (x is live and y is live and [x.#children] strongly references y).
 // (source x is a parent of source y) means (x is live and y is live and [y.#parents]  strongly references x).
 // (x is a child  of y) means (y is a parent of x).
