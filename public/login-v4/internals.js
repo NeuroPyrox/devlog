@@ -19,18 +19,19 @@ const k = (x) => () => x;
 //   ((weak) x is live) means [x.deref() !== undefined].
 //   ((weak) x is dead) means [x.deref() === undefined].
 //   ((weak) x is dead) implies ((weak) x will never be live).
-//   ((weak) x has garbage) means ([x.deref()] is garbage or x is dead).
-//   ((weak) x has garbage) means (x will always have garbage).
-//   ((weak) x is strictly live)     means ((x is live)    and (x doesn't have garbage)).
-//   ((weak) x strictly has garbage) means ((x isn't dead) and (x has garbage)).
-//   for all (weak) x, ((x is strictly live) xor (x strictly has garbage) xor (x is dead)).
+//   ((weak) x has garbage) means (x is live and [x.deref()] is garbage).
+//   ((weak) x has garbage) implies (x will always (have garbage or be dead)).
+//   ((weak) x is strictly live) means ((x is live) and (x doesn't have garbage)).
+//   for all (weak) x, ((x is strictly live) xor (x has garbage) xor (x is dead)).
 //   ((weak) x has garbage) doesn't equate to (x is garbage).
 // (garbage collection) means (some (weak x) that have garbage become dead).
 // TODO update mentions of "weak"
 // A sink   means a weak ([EventSink]   or [BehaviorSink]).
 // A source means a weak ([EventSource] or [BehaviorSource]).
 // TODO sink and source properties
-// The state of a sink x can either be pushable, garbage, or dead.
+// The state x of a sink y can either be pushable, garbage, or dead.
+//   (x is garbage) doesn't have a prior meaning because x is a mathematical object, not a JavaScript object.
+//   (x is )
 // The state of a source x can either be pullable, empty, garbage, or dead.
 // (sink   x is a parent of sink   y) means (x is live and y is live and [x.#children] strongly references y).
 // (source x is a parent of source y) means (x is live and y is live and [y.#parents]  strongly references x).
