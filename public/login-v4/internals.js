@@ -17,14 +17,14 @@ const k = (x) => () => x;
 // A (weak x) y means a [WeakRef] y where [y.deref() === undefined] or [y.deref()] is an x.
 //   ((weak) y) means a (weak x) y.
 //   A (weak x) means a (weak x) y.
-//   ((weak) x is live) means [x.deref() !== undefined].
-//   ((weak) x is dead) means [x.deref() === undefined].
-//   ((weak) x is dead) implies ((weak) x will never be live).
-//   ((weak) x has garbage) means (x is live and [x.deref()] is garbage).
-//   ((weak) x has garbage) implies (x will always (have garbage or be dead)).
-//   ((weak) x is strictly live) means ((x is live) and (x doesn't have garbage)).
-//   for all (weak) x, ((x is strictly live) xor (x has garbage) xor (x is dead)).
-//   ((weak) x has garbage) doesn't equate to (x is garbage).
+//   (y is live) means [y.deref() !== undefined].
+//   (y is dead) means [y.deref() === undefined].
+//   (y is dead) implies (y will never be live).
+//   (y has garbage) means (y is live and [y.deref()] is garbage).
+//   (y has garbage) implies (y will always (have garbage or be dead)).
+//   (y is strictly live) means ((y is live) and (y doesn't have garbage)).
+//   (y is strictly live) xor (y has garbage) xor (y is dead).
+//   (y has garbage) doesn't equate to (y is garbage).
 // (garbage collection) means (some (weak x) that have garbage become dead).
 // A sink   means a weak ([EventSink]   or [BehaviorSink]).
 // A source means a weak ([EventSource] or [BehaviorSource]).
@@ -33,8 +33,6 @@ const k = (x) => () => x;
 // (x is a child  of y) means (y is a parent of x).
 // TODO update mentions of "weak"
 // TODO sink and source properties
-// (sink   x is pushable) means (x is strictly live).
-// (source x is pullable) means TODO.
 // (x is a nested parent of y) means (y is a nested child of x) means (x is a parent of (y or one of y's nested parents)).
 //   (sink   x is a nested parent of sink   y) implies (x and y are both an [EventSink])   xor (x and y are both a [BehaviorSink]).
 //   (source x is a nested parent of source y) implies (x and y are both an [EventSource]) xor (x and y are both a [BehaviorSource]).
