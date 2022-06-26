@@ -13,16 +13,20 @@ const k = (x) => () => x;
 // (x is not garbage) implies:
 //   Anything that x strongly references is not garbage.
 //   (x is the root object) or (x is strongly referenced by some y where (y is not garbage)).
-// A weak x means an x or [undefined].
-//   A live weak x means an x.
-//   A dead weak x means [undefined].
-// (x weakly references y) means ((x strongly references weak y) or (x weakly references weak y)).
-// (x references y) means ((x strongly references y) or (x weakly references y)).
-// (weak x is dead) implies (weak x will never be live).
-// (garbage collection) means (some garbage weak x become dead).
-// (live weak x is garbage) implies (weak x will always be (garbage or dead)).
+// A (weak x) y means a [WeakRef] y where [y.deref() === undefined] or [y.deref()] is an x.
+//   ((weak) y) means a (weak x) y.
+//   A (weak x) means a (weak x) y.
+//   (weak) x is live means [x.deref() !== undefined].
+//   (weak) x is dead meand [x.deref() === undefined].
+//   ((weak) x is dead) implies ((weak) x will never be live).
+//   ((weak) x has garbage) means ([x.deref()] is garbage or x is dead).
+//   ((weak) x has garbage) means ((weak) x will always have garbage).
+// (garbage collection) means (some (weak x) that have garbage become dead).
+// TODO update mentions of "weak"
 // A sink   means a weak ([EventSink]   or [BehaviorSink]).
 // A source means a weak ([EventSource] or [BehaviorSource]).
+// TODO when do we use this definition?
+// (x weakly references y) means ((x strongly references (weak) y) or (x weakly references (weak) y)).
 // TODO sink and source properties
 // A sink can be either pull
 // A source can be pullable, dead, empty, or garbage
