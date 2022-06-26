@@ -16,20 +16,22 @@ const k = (x) => () => x;
 // A (weak x) y means a [WeakRef] y where [y.deref() === undefined] or [y.deref()] is an x.
 //   ((weak) y) means a (weak x) y.
 //   A (weak x) means a (weak x) y.
-//   (weak) x is live means [x.deref() !== undefined].
-//   (weak) x is dead meand [x.deref() === undefined].
+//   ((weak) x is live) means [x.deref() !== undefined].
+//   ((weak) x is dead) means [x.deref() === undefined].
 //   ((weak) x is dead) implies ((weak) x will never be live).
 //   ((weak) x has garbage) means ([x.deref()] is garbage or x is dead).
-//   ((weak) x has garbage) means ((weak) x will always have garbage).
+//   ((weak) x has garbage) means (x will always have garbage).
+//   ((weak) x is strictly live)     means ((x is live)    and (x doesn't have garbage)).
+//   ((weak) x strictly has garbage) means ((x isn't dead) and (x has garbage)).
+//   for all (weak) x, ((x is strictly live) xor (x strictly has garbage) xor (x is dead)).
+//   ((weak) x has garbage) doesn't equate to (x is garbage).
 // (garbage collection) means (some (weak x) that have garbage become dead).
 // TODO update mentions of "weak"
 // A sink   means a weak ([EventSink]   or [BehaviorSink]).
 // A source means a weak ([EventSource] or [BehaviorSource]).
-// TODO when do we use this definition?
-// (x weakly references y) means ((x strongly references (weak) y) or (x weakly references (weak) y)).
 // TODO sink and source properties
-// A sink can be either pull
-// A source can be pullable, dead, empty, or garbage
+// The state of a sink x can either be pushable, garbage, or dead.
+// The state of a source x can either be pullable, empty, garbage, or dead.
 // (sink   x is a parent of sink   y) means (x is live and y is live and [x.#children] strongly references y).
 // (source x is a parent of source y) means (x is live and y is live and [y.#parents]  strongly references x).
 // (x is a child  of y) means (y is a parent of x).
@@ -74,6 +76,8 @@ const k = (x) => () => x;
 //   The first reactive means the least    element in the order.
 //   The last  reactive means the greatest element in the order.
 // In a chain of reactives, (every reactive is an event) xor (every reactive is a behavior).
+// TODO when do we use this definition?
+// (x weakly references y) means ((x strongly references (weak) y) or (x weakly references (weak) y)).
 
 // None of these finalizers will interrupt [Push.push]
 const sinkFinalizers = new FinalizationRegistry((weakSource) =>
