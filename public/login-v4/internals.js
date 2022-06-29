@@ -15,7 +15,7 @@ const k = (x) => () => x;
 //   Anything that x strongly references is not garbage.
 //   (x is the root object) or (x is strongly referenced by some y where (y is not garbage)).
 // A (weak x) y means a [WeakRef] y where [y.deref() === undefined] or [y.deref()] is an x.
-//   ((weak) y) means a (weak x) y.
+//   ((Weak) y) means a (weak x) y.
 //   A (weak x) means a (weak x) y.
 //   A (weak)   means a (weak x) y.
 //   (y is live) means [y.deref() !== undefined].
@@ -24,14 +24,14 @@ const k = (x) => () => x;
 //   (y has z) means [y.deref() === z].
 //   (y has garbage) means (y is live and [y.deref()] is garbage).
 //   (y has garbage) implies (y will always (have garbage or be dead)).
+//   (y has garbage) doesn't equate to (y is garbage).
 //   (y is strictly live) means ((y is live) and (y doesn't have garbage)).
 //   (y is strictly live) xor (y has garbage) xor (y is dead).
-//   (y has garbage) doesn't equate to (y is garbage).
-// (garbage collection) means (some (weak x) that have garbage become dead).
+// (Garbage collection) means (some (weak x) that have garbage become dead).
 // A sink   means a (weak ([EventSink]   or [BehaviorSink])).
 // A source means a (weak ([EventSource] or [BehaviorSource])).
-// (sink   x is a parent of sink   y) means (x is live and y is live and [x.deref().#children] strongly references [y.deref()]).
-// (source x is a parent of source y) means (x is live and y is live and [y.deref().#parents]  strongly references [x.deref()]).
+// (Sink   x is a parent of sink   y) means (x is live and y is live and [x.deref().#children] strongly references [y.deref()]).
+// (Source x is a parent of source y) means (x is live and y is live and [y.deref().#parents]  strongly references [x.deref()]).
 // (x is a child  of y) means (y is a parent of x).
 // (x is a nested parent of y) means (y is a nested child of x) means (x is a parent of (y or one of y's nested parents)).
 //   (sink   x is a nested parent of sink   y) implies (x and y both have an [EventSink])   xor (x and y both have a [BehaviorSink]).
@@ -39,11 +39,12 @@ const k = (x) => () => x;
 // (The sink of a live source o) means [o.deref().#weakSink].
 // (The source of a live sink i) means ((the unique live source whose sink is i) or (a dead (weak) if no such live source exists)).
 // (Live sink i is the sink of live source o) iff (o is the source of i).
-// (sink i pairs with source o) means (source o pairs with sink i) means ((i is the sink of o) or (o is the source of i)).
+// (Sink i pairs with source o) means (source o pairs with sink i) means ((i is the sink of o) or (o is the source of i) or (i and o are both dead)).
 //   A (weak [EventSink])      can only pair with a (weak [EventSource]).
 //   A (weak [EventSource])    can only pair with a (weak [EventSink]).
 //   A (weak [BehaviorSink])   can only pair with a (weak [BehaviorSource]).
 //   A (weak [BehaviorSource]) can only pair with a (weak [BehaviorSink]).
+//   ((Sink x pairs with source y) and (y pairs with z)) implies [x.deref() === z.deref()].TODO
 // An event    (i,o) is a (weak [EventSink])    i and a (weak [EventSource])    o where i pairs with o.
 // A  behavior (i,o) is a (weak [BehaviorSink]) i and a (weak [BehaviorSource]) o where i pairs with o.
 // A reactive (i,o) is an event (i,o) or a behavior (i,o).
@@ -53,20 +54,20 @@ const k = (x) => () => x;
 // TODO Possible parent relationships:
 //   ([undefined], unpullable) parent of ([undefined], unpullable)
 //   ([undefined],   pullable) parent of ([undefined],   pullable)
-// (reactive (i,o) is a parent    of reactive (j,p)) means (i.#children strongly references j and j is not [undefined]).
-// (reactive (i,o) is a modulator of reactive (j,p)) means (i.#poll     strongly references j and j is not [undefined]).
-// (reactive x is a modulatee of reactive y) means (y is a modulator of x)
+// (Reactive (i,o) is a parent    of reactive (j,p)) means (i.#children strongly references j and j is not [undefined]).
+// (Reactive (i,o) is a modulator of reactive (j,p)) means (i.#poll     strongly references j and j is not [undefined]).
+// (Reactive x is a modulatee of reactive y) means (y is a modulator of x)
 // TODO update comment
-// (reactive x strongly references reactive y) implies (x is a parent of y) xor (x is a modulator of y).
-// (reactive x is a parent    of reactive y) implies (x and y are both events) xor (x and y are both behaviors).
-// (reactive x is a modulator of reactive y) implies:
+// (Reactive x strongly references reactive y) implies (x is a parent of y) xor (x is a modulator of y).
+// (Reactive x is a parent    of reactive y) implies (x and y are both events) xor (x and y are both behaviors).
+// (Reactive x is a modulator of reactive y) implies:
 //   x is an event.
 //   x is the only modulator of y.
 //   y is the only modulatee of x.
 //   x has no children.
 //   x has no modulators.
 //   x has one parent.
-// (reactive x is a nested parent of reactive y) implies:
+// (Reactive x is a nested parent of reactive y) implies:
 //   (x and y are both events) xor (x and y are both behaviors).
 //   y isn't a nested parent of x.
 // (A chain of reactives) means (a finite strict total order of reactives) where:
