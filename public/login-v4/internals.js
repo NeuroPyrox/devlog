@@ -7,7 +7,6 @@ const k = (x) => () => x;
 // TODO restrict surface area by making mutations monadic
 
 // The purpose of all these complicated comments is to clarify what could otherwise be vague language.
-// Given: strong reference, root object
 // (x is garbage) means (the root object doesn't strongly reference x).
 // (x is garbage) implies:
 //   Anything that strongly references x is garbage.
@@ -21,11 +20,13 @@ const k = (x) => () => x;
 //   (y is live) means [y.deref() !== undefined].
 //   (y is dead) means [y.deref() === undefined].
 //   (y is dead) implies (y will never be live).
+//   TODO when do we use this?
 //   (y has z) means [y.deref() === z].
 //   (y has garbage) means (y is live and [y.deref()] is garbage).
 //   (y has garbage) implies (y will always (have garbage or be dead)).
 //   (y has garbage) doesn't equate to (y is garbage).
 //   (y is strictly live) means ((y is live) and (y doesn't have garbage)).
+//   TODO many way xor
 //   (y is strictly live) xor (y has garbage) xor (y is dead).
 // (Garbage collection) means (some (weak x) that have garbage become dead).
 // A sink   means a (weak ([EventSink]   or [BehaviorSink])).
@@ -38,13 +39,43 @@ const k = (x) => () => x;
 //   (source x is a nested parent of source y) implies (x and y both have an [EventSource]) xor (x and y both have a [BehaviorSource]).
 // (The sink of a live source o) means [o.deref().#weakSink].
 // (The source of a live sink i) means ((the unique live source whose sink is i) or (a dead (weak) if no such live source exists)).
+// TODO proof
 // (Live sink i is the sink of live source o) iff (o is the source of i).
 // (Sink i pairs with source o) means (source o pairs with sink i) means ((i is the sink of o) or (o is the source of i) or (i and o are both dead)).
 //   A (weak [EventSink])      can only pair with a (weak [EventSource]).
 //   A (weak [EventSource])    can only pair with a (weak [EventSink]).
 //   A (weak [BehaviorSink])   can only pair with a (weak [BehaviorSource]).
 //   A (weak [BehaviorSource]) can only pair with a (weak [BehaviorSink]).
-//   ((Sink x pairs with source y) and (y pairs with z)) implies [x.deref() === z.deref()].TODO
+//   TODO simplify
+//   ((Sink x pairs with source y) and (y pairs with z)) implies [x.deref() === z.deref()]. Proof:
+//     Given (x is the sink of y) or (y is the source of x) or (x and y are both dead).
+//     Given (z is the sink of y) or (y is the source of z) or (z and y are both dead).
+//     Case (x is the sink of y)    and (z is the sink of y):
+//       [x === z].
+//       [x.deref() === z.deref()].
+//     Case (x is the sink of y)    and (y is the source of z):
+//       y and z are live.
+//       z is the sink of y.
+//       [x === z].
+//       [x.deref() === z.deref()].
+//     Case (x is the sink of y)    and (z and y are both dead):
+//       Contradition: y is dead and y is live.
+//     Case (y is the source of x)  and (z is the sink of y):
+//       x and y are live.
+//       x is the sink of y.
+//       [x === z].
+//       [x.deref() === z.deref()].
+//     Case (y is the source of x)  and (y is the source of z):
+//       TODO
+//     Case (y is the source of x)  and (z and y are both dead):
+//       TODO
+//     Case (x and y are both dead) and (z is the sink of y):
+//       Contradition: y is dead and y is live.
+//     Case (x and y are both dead) and (y is the source of z):
+//       TODO
+//     Case (x and y are both dead) and (z and y are both dead):
+//       [x.deref() === z.deref()].
+//   TODO other proof
 // An event    (i,o) is a (weak [EventSink])    i and a (weak [EventSource])    o where i pairs with o.
 // A  behavior (i,o) is a (weak [BehaviorSink]) i and a (weak [BehaviorSource]) o where i pairs with o.
 // A reactive (i,o) is an event (i,o) or a behavior (i,o).
