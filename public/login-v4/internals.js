@@ -66,7 +66,12 @@ const k = (x) => () => x;
 //       [x === z].
 //       [x.deref() === z.deref()].
 //     Case (y is the source of x)  and (y is the source of z):
-//       TODO
+//       Case y is live:
+//         (x is the sink of y) and (z is the sink of y).
+//         [x === z].
+//         [x.deref() === z.deref()].
+//       Case y is dead:
+//         TODO
 //     Case (y is the source of x)  and (z and y are both dead):
 //       TODO
 //     Case (x and y are both dead) and (z is the sink of y):
