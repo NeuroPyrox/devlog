@@ -40,8 +40,9 @@ const k = (x) => () => x;
 //   (sink   x is a nested parent of sink   y) implies (x and y both have an [EventSink])   xor (x and y both have a [BehaviorSink]).
 //   (source x is a nested parent of source y) implies (x and y both have an [EventSource]) xor (x and y both have a [BehaviorSource]).
 // (The sink of a live source o) means [o.deref().#weakSink].
-// TODO make dead (weak)s unique.
-// (The source of a live sink i) means ((the unique live source whose sink is i) or (a dead (weak) if no such live source exists)).
+//   ((i is the sink of o) and (j was the sink of o)) implies [i === j].
+// TODO corollaries
+// (The source of a live sink i) means (the unique source whose sink (is i) or (was i)).
 // TODO proof
 // (Live sink i is the sink of live source o) iff (o is the source of i).
 // (Sink i pairs with source o) means (source o pairs with sink i) means ((i is the sink of o) or (o is the source of i) or (i and o are both dead)).
