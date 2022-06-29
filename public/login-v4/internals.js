@@ -20,8 +20,10 @@ const k = (x) => () => x;
 //   (y is live) means [y.deref() !== undefined].
 //   (y is dead) means [y.deref() === undefined].
 //   (y is dead) implies (y will never be live).
+//   (y was just initialized) implies (y is live).
 //   TODO when do we use this?
 //   (y has z) means [y.deref() === z].
+//   (y has z) implies always ((y has z) or (y is dead)).
 //   (y has garbage) means (y is live and [y.deref()] is garbage).
 //   (y has garbage) implies (y will always (have garbage or be dead)).
 //   (y has garbage) doesn't equate to (y is garbage).
@@ -38,6 +40,7 @@ const k = (x) => () => x;
 //   (sink   x is a nested parent of sink   y) implies (x and y both have an [EventSink])   xor (x and y both have a [BehaviorSink]).
 //   (source x is a nested parent of source y) implies (x and y both have an [EventSource]) xor (x and y both have a [BehaviorSource]).
 // (The sink of a live source o) means [o.deref().#weakSink].
+// TODO make dead (weak)s unique.
 // (The source of a live sink i) means ((the unique live source whose sink is i) or (a dead (weak) if no such live source exists)).
 // TODO proof
 // (Live sink i is the sink of live source o) iff (o is the source of i).
