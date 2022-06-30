@@ -7,6 +7,7 @@ const k = (x) => () => x;
 // TODO restrict surface area by making mutations monadic
 
 // The purpose of all these complicated comments is to clarify what could otherwise be vague language.
+// There's still a lot of vagueness remaining, but I think the exact meanings can be inferred.
 // (x is garbage) means (the root object doesn't strongly reference x).
 // (x is garbage) implies:
 //   Anything that strongly references x is garbage.
@@ -30,6 +31,7 @@ const k = (x) => () => x;
 //   (y is strictly live) means ((y is live) and (y doesn't have garbage)).
 //   TODO many way xor
 //   (y is strictly live) xor (y has garbage) xor (y is dead).
+//   (y equals (weak) z) means (always [y.deref() === z.deref()] after the initialization of y and z). (an equivalence relation)
 // (Garbage collection) means (some (weak x) that have garbage become dead).
 // A sink   means a (weak ([EventSink]   or [BehaviorSink])).
 // A source means a (weak ([EventSource] or [BehaviorSource])).
@@ -39,12 +41,14 @@ const k = (x) => () => x;
 // (x is a nested parent of y) means (y is a nested child of x) means (x is a parent of (y or one of y's nested parents)).
 //   (sink   x is a nested parent of sink   y) implies (x and y both have an [EventSink])   xor (x and y both have a [BehaviorSink]).
 //   (source x is a nested parent of source y) implies (x and y both have an [EventSource]) xor (x and y both have a [BehaviorSource]).
-// (The sink of a live source o) means [o.deref().#weakSink].
-//   ((i is the sink of o) and (j was the sink of o)) implies [i === j].
-// TODO corollaries
-// (The source of a live sink i) means (the unique source whose sink (is i) or (was i)).
-// TODO proof
-// (Live sink i is the sink of live source o) iff (o is the source of i).
+// (i is the sink of source o) means ((o is live and [o.deref().#weakSink === i]) or (o is dead and i was the sink of o)).
+//   ((i is the sink of o) and (j is the sink of o)) iff [i === j].
+//   ((i is the sink of o) and (i is the sink of p)) iff (o equals p).
+// Subtlety: we're defining (the source of sink i) extensionally as a member of an equivalence class instead of intensionally.
+// (o equals the source of sink i) means (i equals the sink of o).
+//   ((o equals the source of i) and (p equals the source of i)) implies (o equals p).
+//   ((o equals the source of i) and (o equals the source of j)) implies (i equals j).
+// TODO revise
 // (Sink i pairs with source o) means (source o pairs with sink i) means ((i is the sink of o) or (o is the source of i) or (i and o are both dead)).
 //   A (weak [EventSink])      can only pair with a (weak [EventSource]).
 //   A (weak [EventSource])    can only pair with a (weak [EventSink]).
