@@ -46,8 +46,8 @@ const k = (x) => () => x;
 //   ((i is the sink of o) and (i is the sink of p)) iff (o equals p).
 // Subtlety: we're defining (the source of sink i) extensionally as a member of an equivalence class instead of intensionally.
 // (o equals the source of sink i) means (i equals the sink of o).
-//   ((o equals the source of i) and (p equals the source of i)) implies (o equals p).
-//   ((o equals the source of i) and (o equals the source of j)) implies (i equals j).
+//   ((o equals the source of i) and (p equals the source of i)) iff (o equals p).
+//   ((o equals the source of i) and (o equals the source of j)) iff (i equals j).
 // TODO revise
 // (Sink i pairs with source o) means (source o pairs with sink i) means ((i is the sink of o) or (o is the source of i) or (i and o are both dead)).
 //   A (weak [EventSink])      can only pair with a (weak [EventSource]).
