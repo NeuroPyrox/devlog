@@ -44,11 +44,9 @@ const k = (x) => () => x;
 // (i is the sink of source o) means ((o is live and [o.deref().#weakSink === i]) or (o is dead and i was the sink of o)).
 //   (j is the sink of o) iff [i === j].
 //   (i is the sink of p) iff (o equals p).
-// TODO do we really need a new definition?
-// Subtlety: we're defining (the source of sink i) extensionally as a member of an equivalence class instead of intensionally.
-// (o equals the source of sink i) means (i equals the sink of o).
-//   (p equals the source of i) iff (o equals p).
-//   (o equals the source of j) iff (i equals j).
+// (i equals the sink of o) implies:
+//   (j equals the sink of o) iff (i equals j).
+//   (i equals the sink of p) iff (o equals p).
 //   (o is a (weak [EventSource]) and i is a (weak [EventSink])) or (o is a (weak [BehaviorSource]) and i is a (weak [BehaviorSink])).
 // An event    (i,o) is a (weak [EventSink])    i and a (weak [EventSource])    o where (i equals the sink of o).
 // A  behavior (i,o) is a (weak [BehaviorSink]) i and a (weak [BehaviorSource]) o where (i equals the sink of o).
