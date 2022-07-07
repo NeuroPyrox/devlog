@@ -51,7 +51,7 @@ const k = (x) => () => x;
 // An event    (i,o) is a (weak [EventSink])    i and a (weak [EventSource])    o where (i equals the sink of o).
 // A  behavior (i,o) is a (weak [BehaviorSink]) i and a (weak [BehaviorSource]) o where (i equals the sink of o).
 // A reactive (i,o) is an event (i,o) or a behavior (i,o).
-//   Equivalently, ((i,o) is a reactive) iff (i is a sink, o is a source, and i equals the sink of o).
+//   Equivalently, ((i,o) is a reactive) iff ((i is a sink) and (o is a source) and (i equals the sink of o)).
 // TODO sink and source properties
 // TODO what about source references?
 // TODO Possible parent relationships:
