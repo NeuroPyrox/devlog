@@ -44,55 +44,17 @@ const k = (x) => () => x;
 // (i is the sink of source o) means ((o is live and [o.deref().#weakSink === i]) or (o is dead and i was the sink of o)).
 //   ((i is the sink of o) and (j is the sink of o)) iff [i === j].
 //   ((i is the sink of o) and (i is the sink of p)) iff (o equals p).
+// TODO do we really need a new definition?
 // Subtlety: we're defining (the source of sink i) extensionally as a member of an equivalence class instead of intensionally.
 // (o equals the source of sink i) means (i equals the sink of o).
+//   TODO is this really "iff" instead of "implies"?
 //   ((o equals the source of i) and (p equals the source of i)) iff (o equals p).
 //   ((o equals the source of i) and (o equals the source of j)) iff (i equals j).
-// TODO revise
-// (Sink i pairs with source o) means (source o pairs with sink i) means ((i is the sink of o) or (o is the source of i) or (i and o are both dead)).
-//   A (weak [EventSink])      can only pair with a (weak [EventSource]).
-//   A (weak [EventSource])    can only pair with a (weak [EventSink]).
-//   A (weak [BehaviorSink])   can only pair with a (weak [BehaviorSource]).
-//   A (weak [BehaviorSource]) can only pair with a (weak [BehaviorSink]).
-//   TODO simplify
-//   ((Sink x pairs with source y) and (y pairs with z)) implies [x.deref() === z.deref()]. Proof:
-//     Given (x is the sink of y) or (y is the source of x) or (x and y are both dead).
-//     Given (z is the sink of y) or (y is the source of z) or (z and y are both dead).
-//     Case (x is the sink of y)    and (z is the sink of y):
-//       [x === z].
-//       [x.deref() === z.deref()].
-//     Case (x is the sink of y)    and (y is the source of z):
-//       y and z are live.
-//       z is the sink of y.
-//       [x === z].
-//       [x.deref() === z.deref()].
-//     Case (x is the sink of y)    and (z and y are both dead):
-//       Contradition: y is dead and y is live.
-//     Case (y is the source of x)  and (z is the sink of y):
-//       x and y are live.
-//       x is the sink of y.
-//       [x === z].
-//       [x.deref() === z.deref()].
-//     Case (y is the source of x)  and (y is the source of z):
-//       Case y is live:
-//         (x is the sink of y) and (z is the sink of y).
-//         [x === z].
-//         [x.deref() === z.deref()].
-//       Case y is dead:
-//         TODO
-//     Case (y is the source of x)  and (z and y are both dead):
-//       TODO
-//     Case (x and y are both dead) and (z is the sink of y):
-//       Contradition: y is dead and y is live.
-//     Case (x and y are both dead) and (y is the source of z):
-//       TODO
-//     Case (x and y are both dead) and (z and y are both dead):
-//       [x.deref() === z.deref()].
-//   TODO other proof
-// An event    (i,o) is a (weak [EventSink])    i and a (weak [EventSource])    o where i pairs with o.
-// A  behavior (i,o) is a (weak [BehaviorSink]) i and a (weak [BehaviorSource]) o where i pairs with o.
+//   (o is a (weak [EventSource]) and i is a (weak [EventSink])) or (o is a (weak [BehaviorSource]) and i is a (weak [BehaviorSink])).
+// An event    (i,o) is a (weak [EventSink])    i and a (weak [EventSource])    o where (i equals the sink of o).
+// A  behavior (i,o) is a (weak [BehaviorSink]) i and a (weak [BehaviorSource]) o where (i equals the sink of o).
 // A reactive (i,o) is an event (i,o) or a behavior (i,o).
-//   Equivalently, ((i,o) is a reactive) iff (i is a sink, o is a source, and i pairs with o).
+//   Equivalently, ((i,o) is a reactive) iff (i is a sink, o is a source, and i equals the sink of o).
 // TODO sink and source properties
 // TODO what about source references?
 // TODO Possible parent relationships:
