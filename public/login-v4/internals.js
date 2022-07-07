@@ -32,6 +32,7 @@ const k = (x) => () => x;
 //   TODO many way xor
 //   (y is strictly live) xor (y has garbage) xor (y is dead).
 //   (y equals (weak) z) means (always [y.deref() === z.deref()] after the initialization of y and z). (an equivalence relation)
+//   (y equals (weak) z) iff (this proposition was ever true: ((y is live) and (z is live) and [y.deref() === z.deref()]))
 // (Garbage collection) means (some (weak x) that have garbage become dead).
 // A sink   means a (weak ([EventSink]   or [BehaviorSink])).
 // A source means a (weak ([EventSource] or [BehaviorSource])).
