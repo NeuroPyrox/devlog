@@ -42,9 +42,8 @@ const k = (x) => () => x;
 //   (sink   x is a nested parent of sink   y) implies (x and y both have an [EventSink])   xor (x and y both have a [BehaviorSink]).
 //   (source x is a nested parent of source y) implies (x and y both have an [EventSource]) xor (x and y both have a [BehaviorSource]).
 // (i is the sink of source o) means ((o is live and [o.deref().#weakSink === i]) or (o is dead and i was the sink of o)).
-//   TODO check logic
-//   ((i is the sink of o) and (j is the sink of o)) iff [i === j].
-//   ((i is the sink of o) and (i is the sink of p)) iff (o equals p).
+//   (j is the sink of o) iff [i === j].
+//   (i is the sink of p) iff (o equals p).
 // TODO do we really need a new definition?
 // Subtlety: we're defining (the source of sink i) extensionally as a member of an equivalence class instead of intensionally.
 // (o equals the source of sink i) means (i equals the sink of o).
