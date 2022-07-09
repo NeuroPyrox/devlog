@@ -115,6 +115,7 @@ class ReactiveSink {
     this.#unsubscribe = unsubscribe; // Only used for input events
   }
 
+  // TODO can we use this both for behaviors and events?
   *readParents() {
     const parentValues = [];
     for (const weakParent of this.#weakParents) {
@@ -136,12 +137,7 @@ class ReactiveSink {
   }
 
   forEachParent(f) {
-    for (const weakParent of this.#weakParents) {
-      const parent = weakParent.deref();
-      if (parent !== undefined) {
-        f(parent);
-      }
-    }
+    derefMany(this.#weakParents).forEach(f);
   }
 
   // Guarantees the garbage collection of this sink because the only strong references
