@@ -41,7 +41,7 @@ const k = (x) => () => x;
 // (x is a nested parent of y) means (y is a nested child of x) means (x is a parent of (y or one of y's nested parents)).
 //   (sink   x is a nested parent of sink   y) implies (x and y both have an [EventSink])   xor (x and y both have a [BehaviorSink]).
 //   (source x is a nested parent of source y) implies (x and y both have an [EventSource]) xor (x and y both have a [BehaviorSource]).
-// (i is the sink of source o) means ((o is live and [o.deref().#weakSink === i]) or (o is dead and i was the sink of o)).
+// (the sink of source o) means (i where (o is live and [o.deref().#weakSink === i]) or (o is dead and i was the sink of o)).
 //   (j is the sink of o) iff [i === j].
 //   (i is the sink of p) iff (o equals p).
 //   (i equals the sink of source o) implies:
@@ -54,6 +54,8 @@ const k = (x) => () => x;
 //   Equivalently, ((i,o) is a reactive) iff ((i is a sink) and (o is a source) and (i equals the sink of o)).
 //   For all reactives (j,p), (j equals i) iff (p equals o).
 //   ((i,o) equals reactive (j,p)) means (i equals j).
+//   (the sink   of (i,o)) means i.
+//   (the source of (i,o)) means o.
 // TODO sink and source properties
 // TODO what about source references?
 // TODO Possible parent relationships:
