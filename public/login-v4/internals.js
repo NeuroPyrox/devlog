@@ -33,6 +33,7 @@ const k = (x) => () => x;
 //   (y equals (weak) z) means (always [y.deref() === z.deref()] after the initialization of y and z).
 //   (y equals (weak) z) iff (this proposition was ever true: ((y is live) and (z is live) and [y.deref() === z.deref()]))
 // (Garbage collection) means (some (weak x) that have garbage become dead).
+// TODO update
 // A sink   means a (weak ([EventSink]   or [BehaviorSink])).
 // A source means a (weak ([EventSource] or [BehaviorSource])).
 // (Sink   x is a parent of sink   y) means (x is live and y is live and [x.deref().#children] strongly references [y.deref()]).
@@ -102,7 +103,7 @@ const sourceLinkFinalizers = new FinalizationRegistry((weakChildLink) =>
   weakChildLink.deref()?.removeOnce()
 );
 
-class EventSinkLinks {
+class ReactiveSink {
   #weakParents;
   #weakParentLinks;
   #children;
@@ -184,7 +185,7 @@ class EventSinkLinks {
 //     Case a in the alternate implementation may be cost much more than O(s) if some events are expensive to compute.
 //     I can't think of any non-contrived examples where this tradeoff would matter.
 //     Long chains of events can typically be refactored into state machines anyways.
-class EventSinkActivation extends EventSinkLinks {
+class EventSinkActivation extends ReactiveSink {
   #activeChildren;
   #deactivators;
 
@@ -392,7 +393,7 @@ const newEventPair = (parentSources, poll, unsubscribe = () => {}) => {
 // Behaviors can be split up unto 4 types: input, hidden, output, input-output.
 // TODO eager vs lazy pushability
 // There can be an unpullable sink whose variable is still referenced
-class BehaviorSink extends EventSinkLinks {
+class BehaviorSink extends ReactiveSink {
   constructor(weakParents, initialValue, poll) {
     super(weakParents, () => {});
     const parents = weakParents.map((weakParent) => weakParent.deref());
