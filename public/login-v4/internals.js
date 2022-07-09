@@ -83,6 +83,12 @@ const k = (x) => () => x;
 // TODO when do we use this definition?
 // (x weakly references y) means ((x strongly references (weak) y) or (x weakly references (weak) y)).
 
+const incrementPriority = (weakParents) =>
+  Math.max(
+    -1,
+    ...derefMany(weakParents).map((parent) => parent.getPriority())
+  ) + 1;
+
 // None of these finalizers will interrupt [Push.push]
 const sinkFinalizers = new FinalizationRegistry((weakSource) =>
   weakSource.deref()?.onUnpushable()
@@ -255,11 +261,7 @@ class EventSink extends EventSinkActivation {
 
   constructor(weakParents, poll, unsubscribe) {
     super(weakParents, unsubscribe);
-    this.#priority =
-      Math.max(
-        -1,
-        ...derefMany(weakParents).map((parent) => parent.getPriority())
-      ) + 1;
+    this.#priority = incrementPriority(weakParents);
     this.#poll = poll;
   }
 
@@ -392,12 +394,13 @@ class BehaviorSink extends EventSinkLinks {
   constructor(weakParents, initialValue, poll) {
     super(weakParents, () => {});
     const parents = weakParents.map((weakParent) => weakParent.deref());
-    this._priority =
-      parents.length === 0
-        ? 0
-        : Math.max(...parents.map((parent) => parent.getPriority())) + 1;
+    this._priority = incrementPriority(weakParents);
     this._poll = poll;
     this._weakVariable = new WeakRef({ thunk: () => initialValue });
+  }
+
+  getPriority() {
+    return this.#priority;
   }
 }
 
