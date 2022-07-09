@@ -29,8 +29,7 @@ const k = (x) => () => x;
 //   (y has garbage) implies (y will always (have garbage or be dead)).
 //   (y has garbage) doesn't equate to (y is garbage).
 //   (y is strictly live) means ((y is live) and (y doesn't have garbage)).
-//   TODO many way xor
-//   (y is strictly live) xor (y has garbage) xor (y is dead).
+//   exactly one is true: (y is strictly live), (y has garbage), (y is dead).
 //   (y equals (weak) z) means (always [y.deref() === z.deref()] after the initialization of y and z).
 //   (y equals (weak) z) iff (this proposition was ever true: ((y is live) and (z is live) and [y.deref() === z.deref()]))
 // (Garbage collection) means (some (weak x) that have garbage become dead).
