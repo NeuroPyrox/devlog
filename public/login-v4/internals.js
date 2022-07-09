@@ -388,27 +388,16 @@ const newEventPair = (parentSources, poll, unsubscribe = () => {}) => {
 // Behaviors can be split up unto 4 types: input, hidden, output, input-output.
 // TODO eager vs lazy pushability
 // There can be an unpullable sink whose variable is still referenced
-class BehaviorSink {
+class BehaviorSink extends EventSinkLinks {
   constructor(weakParents, initialValue, poll) {
+    super(weakParents, () => {});
     const parents = weakParents.map((weakParent) => weakParent.deref());
-    this._children = new ShrinkingList();
-    this._weakParents = weakParents;
-    this._weakParentLinks = parents.map(
-      (parent) => new WeakRef(parent._children.add(this))
-    );
     this._priority =
       parents.length === 0
         ? 0
         : Math.max(...parents.map((parent) => parent.getPriority())) + 1;
     this._poll = poll;
     this._weakVariable = new WeakRef({ thunk: () => initialValue });
-  }
-
-  onUnpullable() {
-    for (const weakParentLink of this._weakParentLinks) {
-      weakParentLink.deref()?.removeOnce();
-    }
-    this._weakParents = [];
   }
 }
 
