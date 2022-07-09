@@ -390,10 +390,12 @@ const newEventPair = (parentSources, poll, unsubscribe = () => {}) => {
 // TODO eager vs lazy pushability
 // There can be an unpullable sink whose variable is still referenced
 class BehaviorSink extends ReactiveSink {
+  #priority;
+  
   constructor(weakParents, initialValue, poll) {
     super(weakParents, () => {});
     const parents = weakParents.map((weakParent) => weakParent.deref());
-    this._priority = incrementPriority(weakParents);
+    this.#priority = incrementPriority(weakParents);
     this._poll = poll;
     this._weakVariable = new WeakRef({ thunk: () => initialValue });
   }
