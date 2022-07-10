@@ -60,8 +60,10 @@ const k = (x) => () => x;
 //   (the source of (i,o)) means o.
 // TODO sink and source properties
 // (Reactive r is pushable) means (the sink of r is strongly live).
-// (Reactive (i,o) gets polled) means ([i.deref().poll] gets called).
-// (Reactive r get polled) implies (r is pushable).
+//   (Reactive (i,o) gets polled) means ([i.deref().poll] gets called).
+//   (Reactive r get polled) implies (r is pushable).
+// (Reactive r is weakly unpushable) means (the sink of r has garbage).
+// (Reactive r is strongly unpushable) means (the sink of r is dead).
 // TODO what about source references?
 // TODO Possible parent relationships:
 //   ([undefined], unpullable) parent of ([undefined], unpullable)
