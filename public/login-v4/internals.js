@@ -37,8 +37,8 @@ const k = (x) => () => x;
 // TODO update
 // A sink   means a (weak ([EventSink]   or [BehaviorSink])).
 // A source means a (weak ([EventSource] or [BehaviorSource])).
-// (Sink   x is a parent of sink   y) means (x is live and y is live and [x.deref().#children] strongly references [y.deref()]).
-// (Source x is a parent of source y) means (x is live and y is live and [y.deref().#parents]  strongly references [x.deref()]).
+// (Sink   x is a parent of sink   y) means (x is live and y is live and [x.deref().#children] contains [y.deref()]).
+// (Source x is a parent of source y) means (x is live and y is live and [y.deref().#parents]  contains [x.deref()]).
 // (x is a child  of y) means (y is a parent of x).
 // (x is a nested parent of y) means (y is a nested child of x) means (x is a parent of (y or one of y's nested parents)).
 //   (sink   x is a nested parent of sink   y) implies (x and y both have an [EventSink])   xor (x and y both have a [BehaviorSink]).
@@ -60,12 +60,15 @@ const k = (x) => () => x;
 //   (the source of (i,o)) means o.
 // TODO sink and source properties
 // TODO do we need to specify strong and weak?
-// (Reactive r is pushable) means (the sink   of r is strongly live).
+// (Reactive r is            pushable) means (the sink   of r is strongly live).
 // (Reactive r is weakly   unpushable) means (the sink   of r has garbage).
 // (Reactive r is strongly unpushable) means (the sink   of r is dead).
-// (Reactive r is pullable) means (the source of r is strongly live).
+// (Reactive r is            pullable) means (the source of r is strongly live).
 // (Reactive r is weakly   unpullable) means (the source of r has garbage).
 // (Reactive r is strongly unpullable) means (the source of r is dead).
+// TODO input/output reactives
+// TODO empty
+// TODO parents
 // (Reactive (i,o) gets polled) means ([i.deref().poll] gets called).
 // (Reactive r get polled) implies (r is pushable).
 // TODO what about source references?
