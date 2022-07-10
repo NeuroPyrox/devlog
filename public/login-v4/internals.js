@@ -5,6 +5,7 @@ import { readSink } from "./push.js"; // Circular dependency
 const k = (x) => () => x;
 
 // TODO restrict surface area by making mutations monadic
+// TODO rename "poll"
 
 // The purpose of all these complicated comments is to clarify what could otherwise be vague language.
 // There's still a lot of vagueness remaining, but I think the exact meanings can be inferred.
@@ -28,10 +29,10 @@ const k = (x) => () => x;
 //   (y has garbage) means (y is live and [y.deref()] is garbage).
 //   (y has garbage) implies (y will always (have garbage or be dead)).
 //   (y has garbage) doesn't equate to (y is garbage).
-//   (y is strictly live) means ((y is live) and (y doesn't have garbage)).
-//   exactly one is true: (y is strictly live), (y has garbage), (y is dead).
+//   (y is strongly live) means ((y is live) and (y doesn't have garbage)).
+//   exactly one is true: (y is strongly live), (y has garbage), (y is dead).
 //   (y equals (weak) z) means (always [y.deref() === z.deref()] after the initialization of y and z).
-//   (y equals (weak) z) iff (this proposition was ever true: ((y is live) and (z is live) and [y.deref() === z.deref()]))
+//   (y equals (weak) z) iff (this proposition is or was ever true: ((y is live) and (z is live) and [y.deref() === z.deref()]))
 // (Garbage collection) means (some (weak x) that have garbage become dead).
 // TODO update
 // A sink   means a (weak ([EventSink]   or [BehaviorSink])).
@@ -58,6 +59,9 @@ const k = (x) => () => x;
 //   (the sink   of (i,o)) means i.
 //   (the source of (i,o)) means o.
 // TODO sink and source properties
+// (Reactive r is pushable) means (the sink of r is strongly live).
+// (Reactive (i,o) gets polled) means ([i.deref().poll] gets called).
+// (Reactive r get polled) implies (r is pushable).
 // TODO what about source references?
 // TODO Possible parent relationships:
 //   ([undefined], unpullable) parent of ([undefined], unpullable)
