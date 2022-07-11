@@ -71,7 +71,10 @@ const k = (x) => () => x;
 // TODO empty
 // TODO parents
 // (Reactive (i,o) gets polled) means ([i.deref().poll] gets called).
+// (x gets destroyed) means ([x.destroy] gets called).
 // (Reactive r get polled) implies (r is pushable).
+// (The sink   of reactive r gets destroyed) implies (r is unpullable).
+// (The source of reactive r gets destroyed) implies (r is unpushable).
 // TODO what about source references?
 // TODO Possible parent relationships:
 //   ([undefined], unpullable) parent of ([undefined], unpullable)
