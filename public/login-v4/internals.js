@@ -67,6 +67,10 @@ const k = (x) => () => x;
 // (Reactive r is            pullable) means (the source of r is strongly live).
 // (Reactive r is weakly   unpullable) means (the source of r has garbage).
 // (Reactive r is strongly unpullable) means (the source of r is dead).
+// TODO How to tell between a modulator and a parent? TODO make rigorous.
+//   The way one sink references the other
+//   What if the sink is dead?
+//     Then the parents of the source couldn't have changed and we rewind to when the sink was still alive.
 // TODO input/output reactives
 // TODO empty
 // TODO parents
