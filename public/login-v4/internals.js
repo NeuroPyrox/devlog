@@ -10,7 +10,7 @@ const k = (x) => () => x;
 // The purpose of all these complicated comments is to clarify what could otherwise be vague language.
 // There's still a lot of vagueness remaining, but I think the exact meanings can be inferred.
 // (A [WeakRef] of x) means (y where (now or past [y.deref() === x])).
-//   TODO exclusivity
+//   (y is a [WeakRef] of x) iff (y was ever or will ever be a [WeakRef] of x).
 // for all x, exactly one is true: (x is live), (x is garbage), (x is dead).
 //   (x is live) implies:
 //     (y is a [WeakRef] of x) implies [y.deref() === x].
