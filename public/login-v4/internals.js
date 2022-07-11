@@ -15,6 +15,7 @@ const k = (x) => () => x;
 // (x is not garbage) implies:
 //   Anything that x strongly references is not garbage.
 //   (x is the root object) or (x is strongly referenced by some y where (y is not garbage)).
+// TODO can we get the same semantics without clunkily using [WeakRef]?
 // A (weak x) y means a [WeakRef] y where [y.deref() === undefined] or [y.deref()] is an x.
 //   ((Weak) y) means a (weak x) y.
 //   A (weak x) means a (weak x) y.
@@ -105,12 +106,9 @@ const incrementPriority = (weakParents) =>
     ...derefMany(weakParents).map((parent) => parent.getPriority())
   ) + 1;
 
-// None of these finalizers will interrupt [Push.push]
-const sinkFinalizers = new FinalizationRegistry((weakSource) =>
-  weakSource.deref()?.onUnpushable()
-);
-const sourceFinalizers = new FinalizationRegistry((weakSink) =>
-  weakSink.deref()?.onUnpullable()
+// Neither of these will interrupt [Push.push]
+const finalizers = new FinalizationRegistry((weakRef) =>
+  weakRef.deref()?.destroy()
 );
 const sourceLinkFinalizers = new FinalizationRegistry((weakChildLink) =>
   weakChildLink.deref()?.removeOnce()
@@ -155,7 +153,7 @@ class ReactiveSink {
 
   // Guarantees the garbage collection of this sink because the only strong references
   // to it are from the parents' [#children], unpullable modulators, and input callbacks.
-  onUnpullable() {
+  destroy() {
     this.#removeFromParents();
     this.#unsubscribe(); // Contractually removes strong references from input callbacks.
   }
@@ -247,9 +245,9 @@ class EventSinkActivation extends ReactiveSink {
   // has the only strong references that [super] doesn't account for.
   // It doesn't matter how long you wait to call this method
   // because pushing an unpullable sink has no side effects.
-  onUnpullable() {
+  destroy() {
     this.deactivate(); // Modulators are an example of a sink that will only deactivate once it's unpullable.
-    super.onUnpullable();
+    super.destroy();
   }
 }
 
@@ -261,7 +259,7 @@ class EventSinkActivation extends ReactiveSink {
 //   Unpushable ones are either lazily unpushable or eagerly unpushable.
 //   Pushable ones are strongly referenced by at least one pushable [EventSink] parent or a push callback.
 //     Pushable ones become lazily unpushable when all the sinks that reference them become unpushable,
-//     or when [onUnpullable] is called.
+//     or when [destroy] is called.
 //   Lazily unpushable ones are not pushable, but haven't been garbage collected yet.
 //     They may be strongly referenced only by lazily unpushable sinks.
 //     Lazily unpushable sinks become eagerly unpushable when they're garbage collected.
@@ -329,7 +327,7 @@ class EventSource {
     // either [this] will keep [parent] alive even when [parent] won't push to [this],
     // or [parent] will push to [this], contradicting [this] being unpushable.
     assert(this.#isPushable());
-    // Ensures [onUnpushable] cleans up all [#parents] and [#weakChildLinks].
+    // Ensures [destroy] cleans up all [#parents] and [#weakChildLinks].
     if (!parent.#isPushable()) {
       return;
     }
@@ -357,7 +355,7 @@ class EventSource {
     this.addParent(parent);
   }
 
-  onUnpushable() {
+  destroy() {
     // Ensures no more [_weakParentLinks] or [#parents] will be added to [this].
     assert(!this.#isPushable());
     // Remove elements from  childrens' [#parents].
@@ -365,7 +363,7 @@ class EventSource {
       weakChildLink.deref()?.remove();
     }
     // [#weakChildLinks] will be cleaned up by [sourceLinkFinalizers].
-    // [#parents] will be cleaned up when [onUnpushable] gets called on each element of [#parents].
+    // [#parents] will be cleaned up when [destroy] gets called on each element of [#parents].
   }
 
   // In theory this isn't private because of [this.getWeakSink], but I don't want to pollute the interface.
@@ -384,8 +382,8 @@ const newEventPair = (parentSources, poll, unsubscribe = () => {}) => {
     unsubscribe
   );
   const source = new EventSource(parentSources, sink);
-  sinkFinalizers.register(sink, new WeakRef(source));
-  sourceFinalizers.register(source, source.getWeakSink());
+  finalizers.register(sink, new WeakRef(source));
+  finalizers.register(source, source.getWeakSink());
   return [sink, source];
 };
 
@@ -394,7 +392,7 @@ const newEventPair = (parentSources, poll, unsubscribe = () => {}) => {
 //   Unpushable ones are either lazily unpushable or eagerly unpushable.
 //   Pushable ones are strongly referenced by at least one pushable [BehaviorSink] parent or pushable [EventSink] modulator.
 //     Pushable ones become lazily unpushable when all the sinks that reference them become unpushable,
-//     or when [onUnpullable] is called.
+//     or when [destroy] is called.
 //   Lazily unpushable ones are not pushable, but haven't been garbage collected yet.
 //     They may be strongly referenced only by lazily unpushable sinks.
 //     Lazily unpushable sinks become eagerly unpushable when they're garbage collected.
@@ -404,7 +402,7 @@ const newEventPair = (parentSources, poll, unsubscribe = () => {}) => {
 // There can be an unpullable sink whose variable is still referenced
 class BehaviorSink extends ReactiveSink {
   #priority;
-  
+
   constructor(weakParents, initialValue, poll) {
     super(weakParents, () => {});
     const parents = weakParents.map((weakParent) => weakParent.deref());
@@ -437,8 +435,8 @@ const newBehaviorPair = (parentSources, initialValue, poll) => {
     poll
   );
   const source = new BehaviorSource(parentSources, sink);
-  sinkFinalizers.register(sink, new WeakRef(source));
-  sourceFinalizers.register(source, source.getWeakSink());
+  finalizers.register(sink, new WeakRef(source));
+  finalizers.register(source, source.getWeakSink());
   return [sink, source];
 };
 
