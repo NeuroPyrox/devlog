@@ -13,14 +13,14 @@ const k = (x) => () => x;
 //   TODO exclusivity
 // for all x, exactly one is true: (x is live), (x is garbage), (x is dead).
 //   (x is live) implies:
-//     for all [WeakRef] y of x, [y.deref() === x].
+//     (y is a [WeakRef] of x) implies [y.deref() === x].
 //     x was always live.
 //   (x is garbage) implies:
-//     for all [WeakRef] y of x, [y.deref() === x].
+//     (y is a [WeakRef] of x) implies [y.deref() === x].
 //     x was always (live or garbage).
 //     x will always be (garbage or dead).
 //   (x is dead) implies:
-//     for all [WeakRef] y of x, [y.deref() === undefined].
+//     (y is a [WeakRef] of x) implies [y.deref() === undefined].
 //     x will always be dead.
 // (x is garbage) means (the root object doesn't strongly reference x).
 // (x is garbage) implies:
