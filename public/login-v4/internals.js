@@ -10,10 +10,18 @@ const k = (x) => () => x;
 // The purpose of all these complicated comments is to clarify what could otherwise be vague language.
 // There's still a lot of vagueness remaining, but I think the exact meanings can be inferred.
 // (A [WeakRef] of x) means (y where (now or past [y.deref() === x])).
+//   TODO exclusivity
 // for all x, exactly one is true: (x is live), (x is garbage), (x is dead).
-//   (x is live) implies: TODO
-//   (x is garbage) implies: TODO
-//   (x is dead) implies: TODO
+//   (x is live) implies:
+//     for all [WeakRef] y of x, [y.deref() === x].
+//     x was always live.
+//   (x is garbage) implies:
+//     for all [WeakRef] y of x, [y.deref() === x].
+//     x was always (live or garbage).
+//     x will always be (garbage or dead).
+//   (x is dead) implies:
+//     for all [WeakRef] y of x, [y.deref() === undefined].
+//     x will always be dead.
 // (x is garbage) means (the root object doesn't strongly reference x).
 // (x is garbage) implies:
 //   Anything that strongly references x is garbage.
