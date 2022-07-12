@@ -15,21 +15,22 @@ const k = (x) => () => x;
 //   (x is live) implies:
 //     (y is a [WeakRef] of x) implies [y.deref() === x].
 //     The root object strongly references x.
+//     (y strongly references x) implies (y is live).
+//     (x strongly references y) implies (y is live).
 //     x was always live.
 //   (x is garbage) implies:
 //     (y is a [WeakRef] of x) implies [y.deref() === x].
 //     The root object doesn't strongly reference x.
+//     (y strongly references x) implies (y is garbage).
+//     (x strongly references y) implies (y is garbage).
 //     x was always (live or garbage).
 //     x will always be (garbage or dead).
 //   (x is dead) implies:
 //     (y is a [WeakRef] of x) implies [y.deref() === undefined].
 //     The root object doesn't strongly reference x.
+//     nothing strongly references x.
+//     x strongly references nothing.
 //     x will always be dead.
-// (x is garbage) implies:
-//   Anything that strongly references x is garbage.
-// (x is not garbage) implies:
-//   Anything that x strongly references is not garbage.
-//   (x is the root object) or (x is strongly referenced by some y where (y is not garbage)).
 // TODO can we get the same semantics without clunkily using [WeakRef]?
 // A (weak x) y means a [WeakRef] y where [y.deref() === undefined] or [y.deref()] is an x.
 //   ((Weak) y) means a (weak x) y.
