@@ -44,23 +44,20 @@ const k = (x) => () => x;
 // (the sink of source o) means (i where (o is live and [o.#weakSink] is a [WeakRef] of i) or (o is dead and i was the sink of o)).
 //   (j is the sink of o) iff [i === j].
 //   (i is the sink of p) iff [o === p].
-//   (o is a [EventSource] and i is a [EventSink]) or (o is a [BehaviorSource] and i is a [BehaviorSink]).
-// TODO update "weak", "deref", "have", and related terms.
-// An event    (i,o) is a (weak [EventSink])    i and a (weak [EventSource])    o where (i equals the sink of o).
-// A  behavior (i,o) is a (weak [BehaviorSink]) i and a (weak [BehaviorSource]) o where (i equals the sink of o).
+//   (o is a [EventSource] and i is a [EventSink]) xor (o is a [BehaviorSource] and i is a [BehaviorSink]).
+// An event    (i,o) is a [EventSink]    i and a [EventSource]    o where (i is the sink of o).
+// A  behavior (i,o) is a [BehaviorSink] i and a [BehaviorSource] o where (i is the sink of o).
 // A reactive (i,o) is an event (i,o) or a behavior (i,o).
-//   Equivalently, ((i,o) is a reactive) iff ((i is a sink) and (o is a source) and (i equals the sink of o)).
-//   For all reactives (j,p), (j equals i) iff (p equals o).
-//   ((i,o) equals reactive (j,p)) means (i equals j).
+//   Equivalently, ((i,o) is a reactive) iff ((i is a sink) and (o is a source) and (i is the sink of o)).
 //   (the sink   of (i,o)) means i.
 //   (the source of (i,o)) means o.
 // TODO sink and source properties
 // TODO do we need to specify strong and weak?
-// (Reactive r is            pushable) means (the sink   of r is strongly live).
-// (Reactive r is weakly   unpushable) means (the sink   of r has garbage).
+// (Reactive r is            pushable) means (the sink   of r is live).
+// (Reactive r is weakly   unpushable) means (the sink   of r is garbage).
 // (Reactive r is strongly unpushable) means (the sink   of r is dead).
-// (Reactive r is            pullable) means (the source of r is strongly live).
-// (Reactive r is weakly   unpullable) means (the source of r has garbage).
+// (Reactive r is            pullable) means (the source of r is live).
+// (Reactive r is weakly   unpullable) means (the source of r is garbage).
 // (Reactive r is strongly unpullable) means (the source of r is dead).
 // TODO How to tell between a modulator and a parent? TODO make rigorous.
 //   The way one sink references the other
