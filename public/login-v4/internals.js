@@ -6,6 +6,7 @@ const k = (x) => () => x;
 
 // TODO restrict surface area by making mutations monadic
 // TODO rename "poll"
+// TODO update "EventSink", "EventSource", "BehaviorSink", "BehaviorSource" comments
 
 // The purpose of all these complicated comments is to clarify what could otherwise be vague language.
 // There's still a lot of vagueness remaining, but I think the exact meanings can be inferred.
@@ -37,17 +38,14 @@ const k = (x) => () => x;
 // (Sink   x is a parent of sink   y) means (x is live and y is live and [x.#children] contains y).
 // (Source x is a parent of source y) means (x is live and y is live and [y.#parents]  contains x).
 // (x is a child  of y) means (y is a parent of x).
-// TODO update "weak", "deref", "have", and related terms
 // (x is a nested parent of y) means (y is a nested child of x) means (x is a parent of (y or one of y's nested parents)).
-//   (sink   x is a nested parent of sink   y) implies (x and y both have an [EventSink])   xor (x and y both have a [BehaviorSink]).
-//   (source x is a nested parent of source y) implies (x and y both have an [EventSource]) xor (x and y both have a [BehaviorSource]).
-// (the sink of source o) means (i where (o is live and [o.deref().#weakSink === i]) or (o is dead and i was the sink of o)).
+//   (sink   x is a nested parent of sink   y) implies (x and y are both an [EventSink])   xor (x and y are both a [BehaviorSink]).
+//   (source x is a nested parent of source y) implies (x and y are both an [EventSource]) xor (x and y are both a [BehaviorSource]).
+// (the sink of source o) means (i where (o is live and [o.#weakSink] is a [WeakRef] of i) or (o is dead and i was the sink of o)).
 //   (j is the sink of o) iff [i === j].
-//   (i is the sink of p) iff (o equals p).
-// (i equals the sink of source o) implies:
-//   (j equals the sink of o) iff (i equals j).
-//   (i equals the sink of p) iff (o equals p).
-//   (o is a (weak [EventSource]) and i is a (weak [EventSink])) or (o is a (weak [BehaviorSource]) and i is a (weak [BehaviorSink])).
+//   (i is the sink of p) iff [o === p].
+//   (o is a [EventSource] and i is a [EventSink]) or (o is a [BehaviorSource] and i is a [BehaviorSink]).
+// TODO update "weak", "deref", "have", and related terms.
 // An event    (i,o) is a (weak [EventSink])    i and a (weak [EventSource])    o where (i equals the sink of o).
 // A  behavior (i,o) is a (weak [BehaviorSink]) i and a (weak [BehaviorSource]) o where (i equals the sink of o).
 // A reactive (i,o) is an event (i,o) or a behavior (i,o).
