@@ -31,32 +31,13 @@ const k = (x) => () => x;
 //     nothing strongly references x.
 //     x strongly references nothing.
 //     x will always be dead.
-// TODO can we get the same semantics without clunkily using [WeakRef]?
-// A (weak x) y means a [WeakRef] y where [y.deref() === undefined] or [y.deref()] is an x.
-//   ((Weak) y) means a (weak x) y.
-//   A (weak x) means a (weak x) y.
-//   A (weak)   means a (weak x) y.
-//   (y is live) means [y.deref() !== undefined].
-//   (y is dead) means [y.deref() === undefined].
-//   (y is dead) implies (y will never be live).
-//   (y was just initialized) implies (y is live).
-//   TODO when do we use this?
-//   (y has z) means [y.deref() === z].
-//   (y has z) implies always ((y has z) or (y is dead)).
-//   (y has garbage) means (y is live and [y.deref()] is garbage).
-//   (y has garbage) implies (y will always (have garbage or be dead)).
-//   (y has garbage) doesn't equate to (y is garbage).
-//   (y is strongly live) means ((y is live) and (y doesn't have garbage)).
-//   exactly one is true: (y is strongly live), (y has garbage), (y is dead).
-//   (y equals (weak) z) means (always [y.deref() === z.deref()] after the initialization of y and z).
-//   (y equals (weak) z) iff (this proposition is or was ever true: ((y is live) and (z is live) and [y.deref() === z.deref()]))
-// (Garbage collection) means (some (weak x) that have garbage become dead).
-// TODO update
-// A sink   means a (weak ([EventSink]   or [BehaviorSink])).
-// A source means a (weak ([EventSource] or [BehaviorSource])).
-// (Sink   x is a parent of sink   y) means (x is live and y is live and [x.deref().#children] contains [y.deref()]).
-// (Source x is a parent of source y) means (x is live and y is live and [y.deref().#parents]  contains [x.deref()]).
+// (Garbage collection) means (some garbage x become dead).
+// A sink   means a ([EventSink]   or [BehaviorSink]).
+// A source means a ([EventSource] or [BehaviorSource]).
+// (Sink   x is a parent of sink   y) means (x is live and y is live and [x.#children] contains y).
+// (Source x is a parent of source y) means (x is live and y is live and [y.#parents]  contains x).
 // (x is a child  of y) means (y is a parent of x).
+// TODO update "weak", "deref", "have", and related terms
 // (x is a nested parent of y) means (y is a nested child of x) means (x is a parent of (y or one of y's nested parents)).
 //   (sink   x is a nested parent of sink   y) implies (x and y both have an [EventSink])   xor (x and y both have a [BehaviorSink]).
 //   (source x is a nested parent of source y) implies (x and y both have an [EventSource]) xor (x and y both have a [BehaviorSource]).
