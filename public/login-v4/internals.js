@@ -11,7 +11,7 @@ const k = (x) => () => x;
 // The purpose of all these complicated comments is to clarify what could otherwise be vague language.
 // There's still a lot of vagueness remaining, but I think the exact meanings can be inferred.
 // (A [WeakRef] of x) means (y where (now or past [y.deref() === x])).
-//   (y is a [WeakRef] of x) iff (y was ever or will ever be a [WeakRef] of x).
+//   ((y is a [WeakRef] of x) and (y was a [WeakRef] of z)) implies [x === z].
 // for all x, exactly one is true: (x is live), (x is garbage), (x is dead).
 //   (x is live) implies:
 //     (y is a [WeakRef] of x) implies [y.deref() === x].
@@ -35,6 +35,7 @@ const k = (x) => () => x;
 // (Garbage collection) means (some garbage x become dead).
 // A sink   means a ([EventSink]   or [BehaviorSink]).
 // A source means a ([EventSource] or [BehaviorSource]).
+// TODO delay parent definitions
 // (Sink   x is a parent of sink   y) means (x is live and y is live and [x.#children] contains y).
 // (Source x is a parent of source y) means (x is live and y is live and [y.#parents]  contains x).
 // (x is a child  of y) means (y is a parent of x).
