@@ -32,12 +32,13 @@ const k = (x) => () => x;
 //     nothing strongly references x.
 //     x strongly references nothing.
 //     x will always be dead.
+//   We don't consider the case of x being uninitialized because all the logic works without it.
 // (Garbage collection) means (some garbage x become dead).
 // A sink   means a ([EventSink]   or [BehaviorSink]).
 // A source means a ([EventSource] or [BehaviorSource]).
 // TODO delay parent definitions
-// (Sink   x is a parent of sink   y) means (x is live and y is live and [x.#children] contains y).
-// (Source x is a parent of source y) means (x is live and y is live and [y.#parents]  contains x).
+// (Sink   x is a parent of sink   y) means (x is live and [x.#children] contains y).
+// (Source x is a parent of source y) means (y is live and [y.#parents]  contains x).
 // (x is a child  of y) means (y is a parent of x).
 // (x is a nested parent of y) means (y is a nested child of x) means (x is a parent of (y or one of y's nested parents)).
 //   (sink   x is a nested parent of sink   y) implies (x and y are both an [EventSink])   xor (x and y are both a [BehaviorSink]).
