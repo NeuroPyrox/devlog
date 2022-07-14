@@ -421,7 +421,6 @@ class BehaviorSink extends ReactiveSink {
 
   constructor(weakParents, initialValue, poll) {
     super(weakParents, () => {});
-    const parents = weakParents.map((weakParent) => weakParent.deref());
     this.#priority = incrementPriority(weakParents);
     this._poll = poll;
     this._weakVariable = new WeakRef({ thunk: () => initialValue });
