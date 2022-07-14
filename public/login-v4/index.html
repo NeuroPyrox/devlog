@@ -249,6 +249,9 @@
       clears,
       signupAttempts,
     }) {
+      const noCoincidence = () => {
+        throw "Shouldn't be simultaneous";
+      };
       // TODO define updates
       const internalTableB = yield* stepper([], never);
 
@@ -311,7 +314,7 @@
             (table) =>
               table.splice(index, 0, user)
         ),
-        () => {throw "Shouldn't be simultaneous"}
+        noCoincidence
       );
       const createdUsers = merge(createUserInsertions, signups);
       const changePasswordInsertions = filter(
@@ -336,7 +339,7 @@
             (table) =>
               (table[index].password = password)
         ),
-        () => {throw "Shouldn't be simultaneous"}
+        noCoincidence
       );
       const removedUsers = mapTagB(
         usernamesToRemove,
@@ -354,7 +357,7 @@
             (table) =>
               table.splice(index, 1)
         ),
-        () => {throw "Shouldn't be simultaneous"}
+        noCoincidence
       );
       clears = filter(
         tagB(clears, internalTableB),
@@ -363,7 +366,7 @@
       tableTransform = merge(
         tableTransform,
         map(clears, () => (table) => (table.length = 0)),
-        () => {throw "Shouldn't be simultaneous"}
+        noCoincidence
       );
 
       const tryLogins = (event) =>
