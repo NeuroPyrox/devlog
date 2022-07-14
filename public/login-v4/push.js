@@ -8,6 +8,7 @@ import { pull } from "./pull.js"; // Circular dependency
 class Context {
   constructor() {
     this._values = new WeakMap();
+    this._behaviorValues = [];
   }
 
   writeSink(sink, value) {
@@ -29,8 +30,14 @@ class Context {
   }
 
   // TODO make separate PushEvents and PushBehaviors monads
-  setBehavior(target, value) {
-    throw "Not implemented";
+  setBehavior(sink, value) {
+    this._behaviorValues.push([sink, value]);
+  }
+  
+  flushBehaviorValues() {
+    for (const [sink, value] of this._behaviorValues) {
+      sink.setValue(value);
+    }
   }
 }
 
@@ -57,6 +64,7 @@ const push = delayConstructionDuring((sink, value) => {
       }
     }
   }
+  context.flushBehaviorValues();
 });
 
 export { readSink, liftPull, setBehavior, push };
