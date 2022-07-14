@@ -10,6 +10,21 @@ const k = (x) => () => x;
 
 // The purpose of all these complicated comments is to clarify what could otherwise be vague language.
 // There's still a lot of vagueness remaining, but I think the exact meanings can be inferred.
+// TODO rigorously define these properties:
+//   No infinite loops.
+//   Only modulators, parents, and pushers can strongly reference a sink.
+//   Only children and and lazy constructors can strongly reference a source.
+//   The graph of sources lines up with the graph of sinks.
+//   Sink destructors remove all strong references to the object.
+//   Source destructors remove all strong references to the objecct except from lazy constructors.
+//   Destructors can be called in any order with arbitrary delay.
+//   Unpullable sinks won't do anything when you push them.
+//   Behavior variables are only strongly referenced from places that might want their value.
+//   When a behavior is computed, all its parents are computed.
+//   When a behavior becomes uncomputed, all its children become uncomputed.
+//   Only computed behaviors get pushed.
+//   Only computed behaviors can have computed children.
+//   Only uncomputed behaviors can have uncomputed parents.
 // (A [WeakRef] of x) means (y where (now or past [y.deref() === x])).
 //   ((y is a [WeakRef] of x) and (y was a [WeakRef] of z)) implies [x === z].
 // for all x, exactly one is true: (x is live), (x is garbage), (x is dead).
