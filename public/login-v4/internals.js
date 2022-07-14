@@ -429,6 +429,11 @@ class BehaviorSink extends ReactiveSink {
   getPriority() {
     return this.#priority;
   }
+  
+  setValue(value) {
+    // The change gets propagated to the source because the source has a reference to [this._weakVariable.deref()].
+    this._weakVariable.deref().thunk = () => value;
+  }
 }
 
 class BehaviorSource extends EventSource {
