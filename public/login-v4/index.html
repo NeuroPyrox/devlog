@@ -252,8 +252,7 @@
       const noCoincidence = () => {
         throw "Shouldn't be simultaneous";
       };
-      // TODO define updates
-      const internalTableB = yield* stepper([], never);
+      const internalTableB = yield Pull.loop;
 
       const protoFindUsername = (table, start, end, username) => {
         if (start === end) {
@@ -367,6 +366,19 @@
         tableTransform,
         map(clears, () => (table) => (table.length = 0)),
         noCoincidence
+      );
+
+      // TODO make a combinator for this use case.
+      // The copy prevents side-effects if we want to access internalTableB arbitrarily.
+      internalTableB.loop(
+        yield* stepper(
+          [],
+          mapTagB(tableTransform, internalTableB, (transform, table) => {
+            const copy = [...table];
+            transform(copy);
+            return copy;
+          })
+        )
       );
 
       const tryLogins = (event) =>
