@@ -25,9 +25,9 @@ const k = (x) => () => x;
 //   Only computed behaviors get pushed.
 //   Only computed behaviors can have computed children.
 //   Only uncomputed behaviors can have uncomputed parents.
-// TODO factor in undefined
-// (A [WeakRef] of x) means (y where (now or past [y.deref() === x])).
-//   ((y is a [WeakRef] of x) and (y was a [WeakRef] of z)) implies [x === z].
+// (A [WeakRef] of x) means (y where (at all points in time [(y.deref() === x) || (y.deref() === undefined)])).
+//   At some point in time [y.deref() === x].
+//   [y.deref() === undefined] implies (always in the future [y.deref() === undefined]).
 // for all x, exactly one is true: (x is live), (x is garbage), (x is dead).
 //   (x is live) means ((the root object) strongly references x).
 //   (x is dead) means ((y is a [WeakRef] of x) implies [y.deref() === undefined]).
