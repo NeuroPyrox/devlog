@@ -28,6 +28,7 @@ const k = (x) => () => x;
 // (A [WeakRef] of x) means (y where (at all points in time [(y.deref() === x) || (y.deref() === undefined)])).
 //   At some point in time [y.deref() === x].
 //   [y.deref() === undefined] implies (always in the future [y.deref() === undefined]).
+// ((x strongly references y) and (y strongly references z)) implies (x strongly references z).
 // for all x, exactly one is true: (x is live), (x is garbage), (x is dead).
 //   (x is live) means ((the root object) strongly references x).
 //   (x is dead) means ((y is a [WeakRef] of x) implies [y.deref() === undefined]).
