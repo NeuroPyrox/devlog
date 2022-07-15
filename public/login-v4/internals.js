@@ -32,7 +32,9 @@ const k = (x) => () => x;
 //   D. (z is a [WeakRef] of x) implies (at all points in time [y.deref() === x.deref()]).
 // 2. ((x strongly references y) and (y strongly references z)) implies (x strongly references z).
 // 3. for all x, exactly one is true: (x is live), (x is garbage), (x is dead).
-//   We don't consider the case of x being uninitialized because all the logic works without it.
+//   We treat the times when x was uninitialized as non-existant, and any expressions on x inherit that non-existance.
+//   For example, where any member of an expression is uninitialized, conjunctions default to true and disjunctions default to false.
+//   This is a very subtle point, but you don't need it to understand the rest of these comments.
 //   A. (x is live) means ((the root object) strongly references x).
 //   B. (x is dead) means ((y is a [WeakRef] of x) implies [y.deref() === undefined]).
 //   C. (x is garbage) means (x is neither dead nor live).
