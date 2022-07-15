@@ -25,28 +25,30 @@ const k = (x) => () => x;
 //   Only computed behaviors get pushed.
 //   Only computed behaviors can have computed children.
 //   Only uncomputed behaviors can have uncomputed parents.
-// (A [WeakRef] of x) means (y where (at all points in time [(y.deref() === x) !== (y.deref() === undefined)])).
-//   At some point in time [y.deref() === x].
-//   [y.deref() === x]         implies (always in the past   [y.deref() === x]).
-//   [y.deref() === undefined] implies (always in the future [y.deref() === undefined]).
-//   (z is a [WeakRef] of x) implies (at all points in time [y.deref() === x.deref()]).
-// ((x strongly references y) and (y strongly references z)) implies (x strongly references z).
-// for all x, exactly one is true: (x is live), (x is garbage), (x is dead).
-//   (x is live) means ((the root object) strongly references x).
-//   (x is dead) means ((y is a [WeakRef] of x) implies [y.deref() === undefined]).
-//   (x is garbage) means (x is neither dead nor live).
-//   (x is live) implies:
-//     (x strongly references y) implies (y is live).
-//     x was always live.
-//   (x is garbage) implies:
-//     (y strongly references x) implies (y is garbage).
-//     x was always (live or garbage).
-//     x will always be (garbage or dead).
-//   (x is dead) implies:
-//     nothing strongly references x.
-//     x strongly references nothing.
-//     x will always be dead.
+// 1. (A [WeakRef] of x) means (y where (at all points in time [(y.deref() === x) !== (y.deref() === undefined)])).
+//   A. At some point in time [y.deref() === x].
+//   B. [y.deref() === x]         implies (always in the past   [y.deref() === x]).
+//   C. [y.deref() === undefined] implies (always in the future [y.deref() === undefined]). (Deducible from 1, B)
+//   D. (z is a [WeakRef] of x) implies (at all points in time [y.deref() === x.deref()]).
+// 2. ((x strongly references y) and (y strongly references z)) implies (x strongly references z).
+// 3. for all x, exactly one is true: (x is live), (x is garbage), (x is dead).
 //   We don't consider the case of x being uninitialized because all the logic works without it.
+//   A. (x is live) means ((the root object) strongly references x).
+//   B. (x is dead) means ((y is a [WeakRef] of x) implies [y.deref() === undefined]).
+//   C. (x is garbage) means (x is neither dead nor live).
+//   D. (x is live) implies:
+//     I. (y is a [WeakRef] of x) implies [y.deref() === x]. (Deducible from 1.D, 3, B)
+//     II. (x strongly references y) implies (y is live).    (Deducible from 2, A)
+//     III. x was always live.
+//   E. (x is garbage) implies:
+//     I. (y is a [WeakRef] of x) implies [y.deref() === x]. (Deducible from 3, B, 1.D)
+//     II. (y strongly references x) implies (y is garbage).
+//     III. x was always (live or garbage).
+//     IV. x will always be (garbage or dead).
+//   F. (x is dead) implies:
+//     I. nothing strongly references x.
+//     II. x strongly references nothing.
+//     III. x will always be dead.
 // (Garbage collection) means (some garbage x become dead).
 // A sink   means a ([EventSink]   or [BehaviorSink]).
 // A source means a ([EventSource] or [BehaviorSource]).
