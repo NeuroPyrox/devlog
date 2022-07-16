@@ -14,6 +14,7 @@ const k = (x) => () => x;
 //   No infinite loops.
 //   Only modulators, parents, and pushers can strongly reference a sink.
 //   Only children and and lazy constructors can strongly reference a source.
+//   Parents will only change on pushable sinks.
 //   The graph of sources lines up with the graph of sinks.
 //   Sink destructors remove all strong references to the object.
 //   Source destructors remove all strong references to the objecct except from lazy constructors.
@@ -32,9 +33,8 @@ const k = (x) => () => x;
 //   D. (z is a [WeakRef] of x) implies (at all points in time [y.deref() === x.deref()]).
 // 2. ((x strongly references y) and (y strongly references z)) implies (x strongly references z).
 // 3. for all x, exactly one is true: (x is live), (x is garbage), (x is dead).
-//   We treat the times when x was uninitialized as non-existant, and any expressions on x inherit that non-existance.
-//   For example, where any member of an expression is uninitialized, conjunctions default to true and disjunctions default to false.
-//   This is a very subtle point, but you don't need it to understand the rest of these comments.
+//   We don't consider the case of x being uninitialized, because all the logic still works if we ignore those moments.
+//   For example, 1.D only counts the moments after x, y, and z were all initialized.
 //   A. (x is live) means ((the root object) strongly references x).
 //   B. (x is dead) means ((y is a [WeakRef] of x) implies [y.deref() === undefined]).
 //   C. (x is garbage) means (x is neither dead nor live).
