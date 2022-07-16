@@ -39,11 +39,11 @@ const k = (x) => () => x;
 //   B. (x is dead) means ((y is a [WeakRef] of x) implies [y.deref() === undefined]).
 //   C. (x is garbage) means (x is neither dead nor live).
 //   D. (x is live) implies:
-//     I. (y is a [WeakRef] of x) implies [y.deref() === x]. (Deducible from 1.D, 3, B)
+//     I. (y is a [WeakRef] of x) implies [y.deref() === x]. (Deducible from 1, 1.D, 3, B)
 //     II. (x strongly references y) implies (y is live).    (Deducible from 2, A)
 //     III. x was always live.
 //   E. (x is garbage) implies:
-//     I. (y is a [WeakRef] of x) implies [y.deref() === x]. (Deducible from 3, B, 1.D)
+//     I. (y is a [WeakRef] of x) implies [y.deref() === x]. (Deducible from 1, 1.D, 3, B)
 //     II. (y strongly references x) implies (y is garbage). (Deducible from 2, 3, A, F.II)
 //     III. x was always (live or garbage).                  (Deducible from 1, 1.B, 1.D, 3, B)
 //     IV. x will always be (garbage or dead).               (Deducible from 3, D.III)
