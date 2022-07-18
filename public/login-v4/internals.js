@@ -54,6 +54,10 @@ const k = (x) => () => x;
 // (Garbage collection) means (some garbage x become dead).
 // A sink   means a ([EventSink]   or [BehaviorSink]).
 // A source means a ([EventSource] or [BehaviorSource]).
+// TODO when can parents change?
+// TODO when can children change?
+// TODO fill in missing definitions and double check
+// (source x is a parent of source y) iff (((the sink of x) was a parent of (the sink of y)) when ((the sink of x) was most recently (not dead)))
 // TODO delay parent definitions
 // (Sink   x is a parent of sink   y) means (x is live and [x.#children] contains y).
 // (Source x is a parent of source y) means (y is live and [y.#parents]  contains x).
