@@ -45,7 +45,7 @@ const k = (x) => () => x;
 //   E. (x is garbage) implies:
 //     I. (y is a [WeakRef] of x) implies [y.deref() === x]. (Deducible from 1, 1.D, 3, B)
 //     II. (y strongly references x) implies (y is garbage). (Deducible from 2, 3, A, F.II)
-//     III. x was always (live or garbage).                  (Deducible from 1, 1.B, 1.D, 3, B)
+//     III. x was always (live or garbage).                  (Deducible from 1, 1.B, 3, B)
 //     IV. x will always be (garbage or dead).               (Deducible from 3, D.III)
 //   F. (x is dead) implies:
 //     I. nothing strongly references x.
