@@ -30,7 +30,7 @@ const k = (x) => () => x;
 //   A. At some point in time [y.deref() === x].
 //   B. [y.deref() === x]         implies (always in the past   [y.deref() === x]).
 //   C. [y.deref() === undefined] implies (always in the future [y.deref() === undefined]). (Deducible from 1, B)
-//   D. (z is a [WeakRef] of x) implies (at all points in time [y.deref() === x.deref()]).
+//   D. (z is a [WeakRef] of x) implies (at all points in time [y.deref() === z.deref()]).
 // 2. ((x strongly references y) and (y strongly references z)) implies (x strongly references z).
 // 3. for all x, exactly one is true: (x is live), (x is garbage), (x is dead).
 //   We don't consider the case of x being uninitialized, because all the logic still works if we ignore those moments.
@@ -57,7 +57,7 @@ const k = (x) => () => x;
 // TODO when can parents change?
 // TODO when can children change?
 // TODO fill in missing definitions and double check
-// (source x is a parent of source y) iff (((the sink of x) was a parent of (the sink of y)) when ((the sink of x) was most recently (not dead)))
+// (source x is a parent of source y) iff (((the sink of x) was a parent of (the sink of y)) when ((the sink of x) was most recently (not dead))).
 // TODO delay parent definitions
 // (Sink   x is a parent of sink   y) means (x is live and [x.#children] contains y).
 // (Source x is a parent of source y) means (y is live and [y.#parents]  contains x).
