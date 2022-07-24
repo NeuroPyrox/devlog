@@ -26,6 +26,8 @@ const k = (x) => () => x;
 //   Only computed behaviors get pushed.
 //   Only computed behaviors can have computed children.
 //   Only uncomputed behaviors can have uncomputed parents.
+// These invariants might not hold true during a microtask, but they're true between each microtask.
+// We also disregard the moments when one or more of the members of an expression haven't been initialized.
 // 1. (A [WeakRef] of x) means (y where (at all points in time [(y.deref() === x) !== (y.deref() === undefined)])).
 //   A. At some point in time [y.deref() === x].
 //   B. [y.deref() === x]         implies (always in the past   [y.deref() === x]).
@@ -33,8 +35,6 @@ const k = (x) => () => x;
 //   D. (z is a [WeakRef] of x) implies (at all points in time [y.deref() === z.deref()]).
 // 2. ((x strongly references y) and (y strongly references z)) implies (x strongly references z).
 // 3. for all x, exactly one is true: (x is live), (x is garbage), (x is dead).
-//   We don't consider the case of x being uninitialized, because all the logic still works if we ignore those moments.
-//   For example, 1.D only counts the moments after x, y, and z were all initialized.
 //   A. (x is live) means ((the root object) strongly references x).
 //   B. (x is dead) means ((y is a [WeakRef] of x) implies [y.deref() === undefined]).
 //   C. (x is garbage) means (x is neither dead nor live).
@@ -42,6 +42,7 @@ const k = (x) => () => x;
 //     I. (y is a [WeakRef] of x) implies [y.deref() === x]. (Deducible from 1, 1.D, 3, B)
 //     II. (x strongly references y) implies (y is live).    (Deducible from 2, A)
 //     III. x was always live.
+//       Not necessarily true. Dereffing a [WeakRef] with garbage and storing a strong reference to it would break this guarantee
 //   E. (x is garbage) implies:
 //     I. (y is a [WeakRef] of x) implies [y.deref() === x]. (Deducible from 1, 1.D, 3, B)
 //     II. (y strongly references x) implies (y is garbage). (Deducible from 2, 3, A, F.II)
@@ -55,6 +56,7 @@ const k = (x) => () => x;
 // A sink   means a ([EventSink]   or [BehaviorSink]).
 // A source means a ([EventSource] or [BehaviorSource]).
 // TODO when can parents change?
+// 
 // TODO when can children change?
 // TODO fill in missing definitions and double check
 // (source x is a parent of source y) iff (((the sink of x) was a parent of (the sink of y)) when ((the sink of x) was most recently (not dead))).
