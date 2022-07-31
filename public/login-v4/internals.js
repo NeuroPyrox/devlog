@@ -59,6 +59,7 @@ const k = (x) => () => x;
 //   A sink can only gain parents when it's initialized or when it's live.
 //   A sink can only lose parents when it's not dead.
 //   A sink will lose parents when it's modulated, the parent dies, or the sink is destroyed.
+//   A sink can only gain children when its source is strongly referenced by a lazy constructor.
 // TODO when can children change?
 // TODO fill in missing definitions and double check
 // (source x is a parent of source y) iff (((the sink of x) was a parent of (the sink of y)) when ((the sink of x) was most recently (not dead))).
