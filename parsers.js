@@ -1,5 +1,7 @@
 "use strict";
 
+// TODO convert to library
+
 const { just, nothing } = require("./maybe.js");
 
 // In this module, "str" refers to a string and "string" refers to the parser conbinator
