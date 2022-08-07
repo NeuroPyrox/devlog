@@ -111,7 +111,19 @@
 
     const digit = charClass((c) => "0" <= c && c <= "9");
 
-    const repeat = undefined;
+    const repeat = (p, iterations) => parser((str, index) => {
+      const result = [];
+      while (iterations--) {
+        let next = p.parse(str, index);
+        if (next === nothing) {
+          return nothing;
+        }
+        next = next.unwrap();
+        result.push(next[0]);
+        index = next[1];
+      }
+      return just([result, index]);
+    });
 
     const mbv = undefined;
 
