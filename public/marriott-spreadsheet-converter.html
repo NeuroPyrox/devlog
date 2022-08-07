@@ -29,101 +29,105 @@
     } from "https://cdn.jsdelivr.net/gh/NeuroPyrox/maybe-js/maybe.js";
 
     // TODO import parser library
-    const parser = (parse) => ({
-      parse,
-      // TODO better error messages
-      parseWhole: (str) => parse(str, 0).unwrap()[0],
-      map: (f) =>
-        parser((str, index) =>
-          parse(str, index).map(([result, index]) => [f(result), index])
-        ),
-      apply: (other) =>
-        parser((str, index) =>
-          parse(str, index).chain(([f, indexF]) =>
-            other.parse(str, indexF).map(([x, indexX]) => [f(x), indexX])
-          )
-        ),
-      skipLeft: (other) =>
-        parser(parse)
-          .map((a) => (b) => b)
-          .apply(other),
-      skipRight: (other) =>
-        parser(parse)
-          .map((a) => (b) => a)
-          .apply(other),
-      or: (other) =>
-        parser((str, index) =>
-          parse(str, index).or(() => other.parse(str, index))
-        ),
-    });
-
-    const constant = (x) => parser((_, index) => just([x, index]));
-
-    const lazy = (p) => parser((str, index) => p().parse(str, index));
-
-    const fail = parser(() => nothing);
-
-    const any = parser((str, index) => just([str.slice(index), str.length]));
-
-    const end = parser((str, index) =>
-      str.length === index ? just([null, index]) : nothing
-    );
-
-    const endIn = (rest) =>
-      parser((str, index) =>
-        str.slice(index) === rest ? just([null, str.length]) : nothing
-      );
-
-    const string = (expected) =>
-      parser((str, start) => {
-        const end = start + expected.length;
-        return end <= str.length && expected === str.slice(start, end)
-          ? just([expected, end])
-          : nothing;
+    const P = (() => {
+      const parser = (parse) => ({
+        parse,
+        // TODO better error messages
+        parseWhole: (str) => parse(str, 0).unwrap()[0],
+        map: (f) =>
+          parser((str, index) =>
+            parse(str, index).map(([result, index]) => [f(result), index])
+          ),
+        apply: (other) =>
+          parser((str, index) =>
+            parse(str, index).chain(([f, indexF]) =>
+              other.parse(str, indexF).map(([x, indexX]) => [f(x), indexX])
+            )
+          ),
+        skipLeft: (other) =>
+          parser(parse)
+            .map((a) => (b) => b)
+            .apply(other),
+        skipRight: (other) =>
+          parser(parse)
+            .map((a) => (b) => a)
+            .apply(other),
+        or: (other) =>
+          parser((str, index) =>
+            parse(str, index).or(() => other.parse(str, index))
+          ),
       });
 
-    const charClass = (predicate) =>
-      parser((str, index) =>
-        index < str.length && predicate(str[index])
-          ? just([str[index], index + 1])
-          : nothing
+      const constant = (x) => parser((_, index) => just([x, index]));
+
+      const lazy = (p) => parser((str, index) => p().parse(str, index));
+
+      const fail = parser(() => nothing);
+
+      const any = parser((str, index) => just([str.slice(index), str.length]));
+
+      const end = parser((str, index) =>
+        str.length === index ? just([null, index]) : nothing
       );
 
-    const inParentheses = (p) => string("(").skipLeft(p).skipRight(string(")"));
+      const endIn = (rest) =>
+        parser((str, index) =>
+          str.slice(index) === rest ? just([null, str.length]) : nothing
+        );
 
-    const many = (p) => many1(p).or(constant([]));
+      const string = (expected) =>
+        parser((str, start) => {
+          const end = start + expected.length;
+          return end <= str.length && expected === str.slice(start, end)
+            ? just([expected, end])
+            : nothing;
+        });
 
-    const many1 = (p) =>
-      p.map((head) => (tail) => [head, ...tail]).apply(lazy(() => many(p)));
+      const charClass = (predicate) =>
+        parser((str, index) =>
+          index < str.length && predicate(str[index])
+            ? just([str[index], index + 1])
+            : nothing
+        );
 
-    const spaces1 = many1(charClass((char) => char === " "));
+      const inParentheses = (p) => string("(").skipLeft(p).skipRight(string(")"));
 
-    const simpleString = string('"')
-      .skipLeft(
-        many(charClass((char) => char !== '"')).map((chars) => chars.join(""))
-      )
-      .skipRight(string('"'));
+      const many = (p) => many1(p).or(constant([]));
 
-    const untilChar = (endChar) =>
-      many(charClass((char) => char !== endChar)).map((chars) =>
-        chars.join("")
-      );
+      const many1 = (p) =>
+        p.map((head) => (tail) => [head, ...tail]).apply(lazy(() => many(p)));
 
-    const digit = charClass((c) => "0" <= c && c <= "9");
+      const spaces1 = many1(charClass((char) => char === " "));
 
-    const repeat = (p, iterations) => parser((str, index) => {
-      const result = [];
-      while (iterations--) {
-        let next = p.parse(str, index);
-        if (next === nothing) {
-          return nothing;
+      const simpleString = string('"')
+        .skipLeft(
+          many(charClass((char) => char !== '"')).map((chars) => chars.join(""))
+        )
+        .skipRight(string('"'));
+
+      const untilChar = (endChar) =>
+        many(charClass((char) => char !== endChar)).map((chars) =>
+          chars.join("")
+        );
+
+      const digit = charClass((c) => "0" <= c && c <= "9");
+
+      const repeat = (p, iterations) => parser((str, index) => {
+        const result = [];
+        while (iterations--) {
+          let next = p.parse(str, index);
+          if (next === nothing) {
+            return nothing;
+          }
+          next = next.unwrap();
+          result.push(next[0]);
+          index = next[1];
         }
-        next = next.unwrap();
-        result.push(next[0]);
-        index = next[1];
-      }
-      return just([result, index]);
-    });
+        return just([result, index]);
+      });
+      
+      return {};
+    })();
 
     const mbv = undefined;
 
