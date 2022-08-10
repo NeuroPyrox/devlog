@@ -8,6 +8,14 @@ const k = (x) => () => x;
 // TODO rename "poll"
 // TODO update "EventSink", "EventSource", "BehaviorSink", "BehaviorSource" comments
 
+// TODO make rigorous and prove it
+// If a sink and its source are both live, then it's wet.
+// Not wet is dry.
+// A parent relationship between sinks (x,y) is wet iff both of them are wet.
+// If a parent relationship is dry, it will always be dry.
+// All parent relationships are wet when they're created.
+// In a wet parent relationship between sinks (x,y), x is a parent of y and (the source of x) is a parent of (the source of y).
+
 // The purpose of all these complicated comments is to clarify what could otherwise be vague language.
 // There's still a lot of vagueness remaining, but I think the exact meanings can be inferred.
 // TODO rigorously define these properties:
