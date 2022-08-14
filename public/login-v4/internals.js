@@ -8,16 +8,9 @@ const k = (x) => () => x;
 // TODO rename "poll"
 // TODO update "EventSink", "EventSource", "BehaviorSink", "BehaviorSource" comments
 
-// TODO make rigorous and prove it
-// If a sink and its source are both live, then it's wet.
-// Not wet is dry.
-// A parent relationship between sinks (x,y) is wet iff both of them are wet.
-// If a parent relationship is dry, it will always be dry.
-// All parent relationships are wet when they're created.
-// In a wet parent relationship between sinks (x,y), x is a parent of y and (the source of x) is a parent of (the source of y).
-
 // The purpose of all these complicated comments is to clarify what could otherwise be vague language.
-// There's still a lot of vagueness remaining, but I think the exact meanings can be inferred.
+// There's still a lot of vagueness remaining, especially around the temporal logic,
+// but I think the exact meanings can be inferred.
 // TODO rigorously define these properties:
 //   No infinite loops.
 //   Only modulators, parents, and pushers can strongly reference a sink.
@@ -50,7 +43,7 @@ const k = (x) => () => x;
 //     I. (y is a [WeakRef] of x) implies [y.deref() === x]. (Deducible from 1, 1.D, 3, B)
 //     II. (x strongly references y) implies (y is live).    (Deducible from 2, A)
 //     III. x was always live.
-//       Not necessarily true. Dereffing a [WeakRef] with garbage and storing a strong reference to it would break this guarantee
+//       Not necessarily true. Reviving garbage by accessing a [WeakRef] to it would contradict this proposition.
 //   E. (x is garbage) implies:
 //     I. (y is a [WeakRef] of x) implies [y.deref() === x]. (Deducible from 1, 1.D, 3, B)
 //     II. (y strongly references x) implies (y is garbage). (Deducible from 2, 3, A, F.II)
@@ -61,9 +54,17 @@ const k = (x) => () => x;
 //     II. x strongly references nothing.
 //     III. x will always be dead.                           (Deducible from 3, D.III, E.III)
 // (Garbage collection) means (some garbage [Object]s x become dead).
+// (Perfect garbage collection) means ((all garbage [Object]s become dead) and (all [FinalizationRegistry]s TODO))
+// ([Object] x is extensional garbage) means ((x would be dead) after (perfect garbage collection)).
 // A sink   means a ([EventSink]   or [BehaviorSink]).
 // A source means a ([EventSource] or [BehaviorSource]).
 // TODO make rigorous
+//   If a sink and its source are both live, then it's wet.
+//   Not wet is dry.
+//   A parent relationship between sinks (x,y) is wet iff both of them are wet.
+//   If a parent relationship is dry, it will always be dry.
+//   All parent relationships are wet when they're created.
+//   In a wet parent relationship between sinks (x,y), x is a parent of y and (the source of x) is a parent of (the source of y).
 //   A sink can only gain parents when it's initialized or when it's live.
 //   A sink can only lose parents when it's not dead.
 //   A sink will lose parents when it's modulated, the parent dies, or the sink is destroyed.
