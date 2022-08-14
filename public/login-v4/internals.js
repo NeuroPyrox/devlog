@@ -36,13 +36,13 @@ const k = (x) => () => x;
 //   Only uncomputed behaviors can have uncomputed parents.
 // These invariants might not hold true during a microtask, but they're true between each microtask.
 // We also disregard the moments when one or more of the members of an expression haven't been initialized.
-// 1. (A [WeakRef] of x) means (y where (at all points in time [(y.deref() === x) !== (y.deref() === undefined)])).
+// 1. (A [WeakRef] y of [Object] x) means (y where (at all points in time [(y.deref() === x) !== (y.deref() === undefined)])).
 //   A. At some point in time [y.deref() === x].
 //   B. [y.deref() === x]         implies (always in the past   [y.deref() === x]).
 //   C. [y.deref() === undefined] implies (always in the future [y.deref() === undefined]). (Deducible from 1, B)
 //   D. (z is a [WeakRef] of x) implies (at all points in time [y.deref() === z.deref()]).
 // 2. ((x strongly references y) and (y strongly references z)) implies (x strongly references z).
-// 3. for all x, exactly one is true: (x is live), (x is garbage), (x is dead).
+// 3. for all [Object]s x, exactly one is true: (x is live), (x is garbage), (x is dead).
 //   A. (x is live) means ((the root object) strongly references x).
 //   B. (x is dead) means ((y is a [WeakRef] of x) implies [y.deref() === undefined]).
 //   C. (x is garbage) means (x is neither dead nor live).
@@ -60,7 +60,7 @@ const k = (x) => () => x;
 //     I. nothing strongly references x.
 //     II. x strongly references nothing.
 //     III. x will always be dead.                           (Deducible from 3, D.III, E.III)
-// (Garbage collection) means (some garbage x become dead).
+// (Garbage collection) means (some garbage [Object]s x become dead).
 // A sink   means a ([EventSink]   or [BehaviorSink]).
 // A source means a ([EventSource] or [BehaviorSource]).
 // TODO make rigorous
