@@ -28,4 +28,5 @@ module.exports = P.end
   .or(moduleHandler("lazyConstructors"))
   .or(moduleHandler("pull"))
   .or(moduleHandler("push"))
-  .or(moduleHandler("internals"));
+  .or(moduleHandler("internals"))
+  .or(moduleHandler("chronomancy"));
