@@ -17,7 +17,7 @@
   <script type="module">
     import {
       loop,
-      pullStart,
+      start,
       never,
       input,
       map,
@@ -494,7 +494,7 @@
 
       let publishStartPage;
       const startPage = input((p) => (publishStartPage = p));
-      const start = (_) => publishStartPage(createLoginDiv);
+      const publishLoginDiv = (_) => publishStartPage(createLoginDiv);
 
       const authPages = yield loop;
       const appPages = observeE(merge(authPages, startPage));
@@ -512,9 +512,9 @@
         yield* switchE(map(appPages, ([, nextAuthPage]) => nextAuthPage))
       );
 
-      return start;
+      return publishLoginDiv;
     }
 
-    pullStart(main)();
+    start(main)();
   </script>
 </html>
