@@ -35,7 +35,6 @@
       getClicks,
       getInputValues,
     } from "./chronomancy.js";
-    const Pull = { loop, pullStart };
     const k = (x) => () => x;
 
     function* userDatabase({
@@ -47,7 +46,7 @@
       const noCoincidence = () => {
         throw "Shouldn't be simultaneous";
       };
-      const internalTableB = yield Pull.loop;
+      const internalTableB = yield loop;
 
       const protoFindUsername = (table, start, end, username) => {
         if (start === end) {
@@ -290,7 +289,7 @@
         ({ username, password }) => username !== "" && password !== ""
       );
 
-      const usernamesToRemove = yield Pull.loop;
+      const usernamesToRemove = yield loop;
 
       const { createdUsers, passwordChanges, removedUsers, clears, tryLogins } =
         yield* userDatabase({
@@ -341,7 +340,7 @@
 
     // Pull monad
     function* main() {
-      const signupAttempts = yield Pull.loop;
+      const signupAttempts = yield loop;
 
       //div(yield* userTable(signupAttempts).var("userTable"), slot(loginDiv))
       const { userTableDiv, passwordChanges, removedUsers, clears, tryLogins } =
@@ -498,10 +497,11 @@
       const startPage = input((p) => (publishStartPage = p));
       const start = (_) => publishStartPage(createLoginDiv);
 
-      const authPages = yield Pull.loop;
+      const authPages = yield loop;
       const appPages = observeE(merge(authPages, startPage));
 
       yield output(appPages, ([appDiv, ,]) => {
+        // TODO debug
         document.body.lastElementChild.remove();
         document.body.appendChild(appDiv);
       });
@@ -516,6 +516,6 @@
       return start;
     }
 
-    Pull.pullStart(main)();
+    pullStart(main)();
   </script>
 </html>
