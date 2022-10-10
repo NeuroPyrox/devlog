@@ -501,8 +501,8 @@
       const appPages = observeE(merge(authPages, startPage));
 
       yield output(appPages, ([appDiv, ,]) => {
-        // TODO debug
-        document.body.lastElementChild.remove();
+        document.getElementById("appPage")?.remove();
+        appDiv.id = "appPage";
         document.body.appendChild(appDiv);
       });
 
