@@ -1,4 +1,4 @@
-import { nothing, monadicMethod, runMonad } from "./util.js";
+import { nothing, monadicMethod, runMonad, once } from "./util.js";
 import {
   lazyConstructor,
   lazyLoop,
@@ -36,6 +36,7 @@ const loop = monadicMethod("loop")();
 
 // Only used by [pullStart] and [Combinators.observeE].
 const pull = (monadicValue) => runMonad(context, monadicValue());
-const pullStart = delayConstructionDuring(pull);
+// TODO rename
+const pullStart = once(delayConstructionDuring(pull));
 
 export { output, loop, pull, pullStart };
