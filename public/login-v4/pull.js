@@ -34,9 +34,8 @@ const context = {
 const output = monadicMethod("output");
 const loop = monadicMethod("loop")();
 
-// Only used by [pullStart] and [Combinators.observeE].
+// Only used by [start] and [Combinators.observeE].
 const pull = (monadicValue) => runMonad(context, monadicValue());
-// TODO rename
-const pullStart = once(delayConstructionDuring(pull));
+const start = once(delayConstructionDuring(pull));
 
-export { output, loop, pull, pullStart };
+export { output, loop, pull, start };

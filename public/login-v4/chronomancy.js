@@ -185,7 +185,7 @@ const getClicks = (domNode) =>
 // TODO replace with behavior
 const getInputValues = (domNode) => () => domNode.value;
 
-export { output, loop, pullStart } from "./pull.js";
+export { output, loop, start } from "./pull.js";
 
 export {
   never,
