@@ -4,7 +4,7 @@ import {
   lazyConstructor,
   lazyLoop,
 } from "./lazyConstructors.js";
-import * as Pull from "./pull.js";
+import { output } from "./pull.js";
 import * as Push from "./push.js";
 import { newEventPair, newBehaviorPair } from "./internals.js";
 const k = (x) => () => x;
@@ -109,8 +109,6 @@ const observeE = (parent) =>
     parent
   );
 
-const output = Pull.output;
-
 // Loopable
 function* switchE(newParents) {
   // We're safe evaluating the event pair eagerly instead of using [lazyConstructor]
@@ -187,11 +185,9 @@ const getClicks = (domNode) =>
 // TODO replace with behavior
 const getInputValues = (domNode) => () => domNode.value;
 
-const { loop, pullStart } = Pull;
+export { loop, pullStart } from "./pull.js";
 
 export {
-  loop,
-  pullStart,
   never,
   input,
   map,
