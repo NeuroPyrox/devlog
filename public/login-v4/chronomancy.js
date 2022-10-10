@@ -185,7 +185,7 @@ const getClicks = (domNode) =>
 // TODO replace with behavior
 const getInputValues = (domNode) => () => domNode.value;
 
-export { loop, pullStart } from "./pull.js";
+export { output, loop, pullStart } from "./pull.js";
 
 export {
   never,
@@ -198,7 +198,6 @@ export {
   tagB,
   tag,
   observeE,
-  output,
   switchE,
   stepper,
   mergeBind,
