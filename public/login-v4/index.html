@@ -346,7 +346,6 @@
       const { userTableDiv, passwordChanges, removedUsers, clears, tryLogins } =
         yield* userTable(signupAttempts);
       document.body.appendChild(userTableDiv);
-      document.body.appendChild(document.createElement("p"));
 
       function* createLoginDiv() {
         const {
