@@ -17,18 +17,19 @@ import { newEventPair, newBehaviorPair } from "./internals.js";
 // TODO make topology changes more explicit.
 // Lifecycle: out, pull, constructEvents, repeat(out, push, constructEvents)
 
-// lazyConstructor during !constructAll
-// lazyLoop during !constructAll & delayConstructionDuring & pullLazy
-
-// lazyConstructor         -----------------------
-//                         Push.push
-// Callable functions
-///////////////////////////////////////////////////////////
-// Call Stack
-//                construct
-//  delayConstructionDuring                       construct
-//  Pull.pull--------------         delayConstructionDuring
-// scriptInitialization----         Push.push--------------
+// Combinators are either time-dependent or not.
+//   Time-dependent:     [switchE, stepper, mergeBind, output, loop]
+//   Non-time-dependent: [input, never, map, filter, merge, mapTag, tag, observeE, getClicks]
+// Two non-time-dependent combinators will produce the same outputs as long as
+//   they have the same inputs and they've both been initialized,
+//   even if they were initialized at different times.
+// Time-dependent combinators produce different outputs depending on when you initialize them.
+// In other words, non-time-depencent combinators obey referential transparency
+//   whereas time-dependent combinators violate it.
+// To deal with this, we wrap time-dependent combinators in the Pull monad
+//   so that semantically we're dealing with stream of combinators,
+//   different versions of the same combinator that were initialized at different times.
+// We sample from such a semantic stream using [observeE].
 
 const input = (subscribe) =>
   lazyConstructor(() => {
