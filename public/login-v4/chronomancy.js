@@ -7,7 +7,6 @@ import {
 import { output } from "./pull.js";
 import * as Push from "./push.js";
 import { newEventPair, newBehaviorPair } from "./internals.js";
-const k = (x) => () => x;
 
 // TODO make a graph over time of the call stack and which functions are callable.
 // TODO consolidate all lifecycle assertions under one module.
@@ -45,7 +44,7 @@ const input = (subscribe) =>
     return source;
   });
 
-const never = input(k());
+const never = input(() => {});
 
 const mapSource = (parentSource, f) =>
   newEventPair([parentSource], function* (value) {
