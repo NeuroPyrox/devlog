@@ -18,15 +18,15 @@ import { newEventPair, newBehaviorPair } from "./internals.js";
 // Lifecycle: out, pull, constructEvents, repeat(out, push, constructEvents)
 
 // Combinators are either time-dependent or not.
-//   Time-dependent:     [switchE, stepper, mergeBind, output, loop]
-//   Non-time-dependent: [input, never, map, filter, merge, mapTag, tag, observeE, getClicks]
+//   Time-dependent:   [switchE, stepper, mergeBind, output, loop]
+//   Time-independent: [input, never, map, filter, merge, mapTag, tag, observeE, getClicks]
 // Time-dependent combinators act differently depending on when you initialized them,
-//   but non-time-dependent combinators don't care when you initialize them.
-// In other words, non-time-depencent combinators obey referential transparency
+//   but time-independent combinators don't care when you initialize them.
+// In other words, time-independent combinators obey referential transparency
 //   whereas time-dependent combinators violate it.
 // A third way of saying it is:
 //   Time-dependent combinators depend on the history of their inputs.
-//   Non-time-dependent combinators only depent on their inputs' current values.
+//   Time-independent combinators only depend on their inputs' current values.
 // To deal with this, we wrap time-dependent combinators in the Pull monad
 //   so that semantically we're dealing with streams of combinators,
 //   different versions of the same combinator that were initialized at different times.
@@ -36,6 +36,7 @@ import { newEventPair, newBehaviorPair } from "./internals.js";
 //   If the [output] gets initialized too late, the text won't be displayed.
 // [loop] isn't really time-dependent, but the Pull monad is the only place you need to use it,
 //   so why not restrict its interface by treating it as time-dependent?
+// [input]'s time-independence is contractual. I'm trusting the library user to ensure it.
 
 const input = (subscribe) =>
   lazyConstructor(() => {
