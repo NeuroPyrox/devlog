@@ -20,12 +20,13 @@ import { newEventPair, newBehaviorPair } from "./internals.js";
 // Combinators are either time-dependent or not.
 //   Time-dependent:     [switchE, stepper, mergeBind, output, loop]
 //   Non-time-dependent: [input, never, map, filter, merge, mapTag, tag, observeE, getClicks]
-// Two non-time-dependent combinators will produce the same outputs as long as
-//   they have the same inputs and they've both been initialized,
-//   even if they were initialized at different times.
-// Time-dependent combinators produce different outputs depending on when you initialize them.
+// Time-dependent combinators act differently depending on when you initialized them,
+//   but non-time-dependent combinators don't care when you initialize them.
 // In other words, non-time-depencent combinators obey referential transparency
 //   whereas time-dependent combinators violate it.
+// A third way of saying it is:
+//   Time-dependent combinators depend on the history of their inputs.
+//   Non-time-dependent combinators only depent on their inputs' current values.
 // To deal with this, we wrap time-dependent combinators in the Pull monad
 //   so that semantically we're dealing with streams of combinators,
 //   different versions of the same combinator that were initialized at different times.
