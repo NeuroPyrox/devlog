@@ -27,9 +27,14 @@ import { newEventPair, newBehaviorPair } from "./internals.js";
 // In other words, non-time-depencent combinators obey referential transparency
 //   whereas time-dependent combinators violate it.
 // To deal with this, we wrap time-dependent combinators in the Pull monad
-//   so that semantically we're dealing with stream of combinators,
+//   so that semantically we're dealing with streams of combinators,
 //   different versions of the same combinator that were initialized at different times.
 // We sample from such a semantic stream using [observeE].
+
+// [output] is time-dependent because consider an app where you use an [output] to display text.
+//   If the [output] gets initialized too late, the text won't be displayed.
+// [loop] isn't really time-dependent, but the Pull monad is the only place you need to use it,
+//   so why not restrict its interface by treating it as time-dependent?
 
 const input = (subscribe) =>
   lazyConstructor(() => {
