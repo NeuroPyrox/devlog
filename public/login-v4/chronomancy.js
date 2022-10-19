@@ -8,6 +8,7 @@ import { output } from "./pull.js";
 import * as Push from "./push.js";
 import { newEventPair, newBehaviorPair } from "./internals.js";
 
+// TODO distinguish between combinators and reactives
 // TODO consolidate all lifecycle assertions under one module.
 // TODO update comments with [constructEvents].
 // TODO what are the atomic operations on the graph?
@@ -40,6 +41,9 @@ import { newEventPair, newBehaviorPair } from "./internals.js";
 //     doOutputCommands();
 //   }
 
+// For clarity, "input" only ever refers the [input] combinator,
+// and "parent" refers to the combinators that feed into another combinator.
+
 // Combinators are either time-dependent or not.
 //   Time-dependent:   [switchE, stepper, mergeBind, output, loop]
 //   Time-independent: [input, never, map, filter, merge, mapTag, tag, observeE, getClicks]
@@ -48,8 +52,8 @@ import { newEventPair, newBehaviorPair } from "./internals.js";
 // In other words, time-independent combinators obey referential transparency
 //   whereas time-dependent combinators violate it.
 // A third way of saying it is:
-//   Time-dependent combinators depend on the history of their inputs.
-//   Time-independent combinators only depend on their inputs' current values.
+//   Time-dependent combinators depend on the history of their parents.
+//   Time-independent combinators only depend on their parents' current values.
 // To deal with this, we wrap time-dependent combinators in the Pull monad
 //   so that semantically we're dealing with streams of combinators,
 //   different versions of the same combinator that were initialized at different times.
