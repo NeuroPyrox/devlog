@@ -8,55 +8,54 @@ import { output } from "./pull.js";
 import * as Push from "./push.js";
 import { newEventPair, newBehaviorPair } from "./internals.js";
 
-// TODO distinguish between combinators and reactives
 // TODO consolidate all lifecycle assertions under one module.
 // TODO update comments with [constructEvents].
 // TODO what are the atomic operations on the graph?
 // TODO add assertions on which functions can be called during which stages.
 // TODO make topology changes more explicit.
 
-// Lifecycle:
+// Approximate lifecycle:
 //   while(waitingForStart()) {
 //     codeFromOutsideTheLibrary();
-//     eagerlyCreateTimeIndependentCombinator();
+//     eagerlyCreateTimeIndependentReactives();
 //     codeFromOutsideTheLibrary();
 //   }
-//   lazilyCreateCombinatorsWithinPullMonad();
-//   constructCombinators();
+//   lazilyCreateReactivesWithinPullMonad();
+//   constructReactives();
 //   while(true) {
 //     while(waitingForInput()) {
 //       codeFromOutsideTheLibrary();
-//       eagerlyCreateTimeIndependentCombinator();
+//       eagerlyCreateTimeIndependentReactive();
 //       codeFromOutsideTheLibrary();
 //     }
 //     while(pushingInput()) {
 //       writeEventValues();
 //       enqueueBehaviorValues();
-//       lazilyCreateCombinatorsWithinPullMonad();
+//       lazilyCreateReactivesWithinPullMonad();
 //       propagateEventValues();
 //     }
 //     dequeueBehaviorValues();
 //     propagateBehaviorValues();
-//     constructCombinators();
+//     constructReactives();
 //     doOutputCommands();
 //   }
 
-// For clarity, "input" only ever refers the [input] combinator,
-// and "parent" refers to the combinators that feed into another combinator.
+// For clarity, "input" only ever refers to [input] reactives,
+// and "parent" refers to the reactives that feed into another reactive.
 
-// Combinators are either time-dependent or not.
+// Reactives are either time-dependent or not.
 //   Time-dependent:   [switchE, stepper, mergeBind, output, loop]
 //   Time-independent: [input, never, map, filter, merge, mapTag, tag, observeE, getClicks]
-// Time-dependent combinators act differently depending on when you initialized them,
-//   but time-independent combinators don't care when you initialize them.
-// In other words, time-independent combinators obey referential transparency
-//   whereas time-dependent combinators violate it.
+// Time-dependent reactives act differently depending on when you initialized them,
+//   but time-independent reactives don't care when you initialize them.
+// In other words, time-independent reactives obey referential transparency
+//   whereas time-dependent reactives violate it.
 // A third way of saying it is:
-//   Time-dependent combinators depend on the history of their parents.
-//   Time-independent combinators only depend on their parents' current values.
-// To deal with this, we wrap time-dependent combinators in the Pull monad
-//   so that semantically we're dealing with streams of combinators,
-//   different versions of the same combinator that were initialized at different times.
+//   Time-dependent reactives depend on the history of their parents.
+//   Time-independent reactives only depend on their parents' current values.
+// To deal with this, we wrap time-dependent reactives in the Pull monad
+//   so that semantically (but not implementationally) we're dealing with behaviors of reactives,
+//   different versions of the same reactives that were initialized at different times.
 // We sample from such a semantic stream using [observeE].
 
 // [output] is time-dependent because consider an app where you use an [output] to display text.
