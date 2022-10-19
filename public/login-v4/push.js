@@ -11,6 +11,7 @@ class Context {
     this._behaviorValues = [];
   }
 
+  // TODO rename to reflect the fact that this is only for events
   writeSink(sink, value) {
     // Store an object so that we can differentiate between
     // an unwritten sink and a sink that had [undefined] written to it.

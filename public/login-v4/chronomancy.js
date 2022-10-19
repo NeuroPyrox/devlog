@@ -8,14 +8,37 @@ import { output } from "./pull.js";
 import * as Push from "./push.js";
 import { newEventPair, newBehaviorPair } from "./internals.js";
 
-// TODO make a graph over time of the call stack and which functions are callable.
 // TODO consolidate all lifecycle assertions under one module.
 // TODO update comments with [constructEvents].
 // TODO what are the atomic operations on the graph?
 // TODO add assertions on which functions can be called during which stages.
-// TODO factor behaviors into the lifecycle.
 // TODO make topology changes more explicit.
-// Lifecycle: out, pull, constructEvents, repeat(out, push, constructEvents)
+
+// Lifecycle:
+//   while(waitingForStart()) {
+//     codeFromOutsideTheLibrary();
+//     eagerlyCreateTimeIndependentCombinator();
+//     codeFromOutsideTheLibrary();
+//   }
+//   lazilyCreateCombinatorsWithinPullMonad();
+//   constructCombinators();
+//   while(true) {
+//     while(waitingForInput()) {
+//       codeFromOutsideTheLibrary();
+//       eagerlyCreateTimeIndependentCombinator();
+//       codeFromOutsideTheLibrary();
+//     }
+//     while(pushingInput()) {
+//       writeEventValues();
+//       enqueueBehaviorValues();
+//       lazilyCreateCombinatorsWithinPullMonad();
+//       propagateEventValues();
+//     }
+//     dequeueBehaviorValues();
+//     propagateBehaviorValues();
+//     constructCombinators();
+//     doOutputCommands();
+//   }
 
 // Combinators are either time-dependent or not.
 //   Time-dependent:   [switchE, stepper, mergeBind, output, loop]
