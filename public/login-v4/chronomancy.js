@@ -57,6 +57,9 @@ import { newEventPair, newBehaviorPair } from "./internals.js";
 //   so that semantically (but not implementationally) we're dealing with behaviors of reactives,
 //   different versions of the same reactives that were initialized at different times.
 // We sample from such a semantic stream using [observeE].
+// The Pull monad is basically the same as the Behavior monad,
+//   but I separated them for ease of implementation,
+//   and I generalized Behavior from monadic to applicative.
 
 // [output] is time-dependent because consider an app where you use an [output] to display text.
 //   If the [output] gets initialized too late, the text won't be displayed.
