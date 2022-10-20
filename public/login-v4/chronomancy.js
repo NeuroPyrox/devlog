@@ -18,6 +18,7 @@ import { newEventPair, newBehaviorPair } from "./internals.js";
 //   while(waitingForStart()) {
 //     codeFromOutsideTheLibrary();
 //     eagerlyCreateTimeIndependentReactives();
+//     doNothingOnInput();
 //     codeFromOutsideTheLibrary();
 //   }
 //   lazilyCreateReactivesWithinPullMonad();
@@ -70,13 +71,15 @@ import { newEventPair, newBehaviorPair } from "./internals.js";
 const input = (subscribe) =>
   lazyConstructor(() => {
     let sink, source;
-    // [unsubscribe] must remove all strong references of the push callback passed to [subscribe],
-    // or there will be a memory leak.
-    // The push callback can't be called until [subscribe] ends.
-    // Other than that, the requirements for [subscribe] and [unsubscribe] are surprisingly lenient.
-    // For example, you could push the input during [unsubscribe] before discarding the callback,
-    // although the event wouldn't reach any outputs.
-    const unsubscribe = subscribe((x) => Push.push(sink, x));
+    // Memory leak if [unsubscribe] doesn't remove all strong references to [push].
+    // Error if [push] is called before [subscribe] ends.
+    // Error if [push] is called during another [push], even from a different [input].
+    // Error if [push] is called during [start].
+    // [push] does nothing if called before [start].
+    // [push] does nothing if called during [unsubscribe], but it may be computationally expensive,
+    //   and I don't care to optimize it because why in the world would you use the library that way?
+    const push = (x) => Push.push(sink, x);
+    const unsubscribe = subscribe(push);
     [sink, source] = newEventPair([], null, unsubscribe);
     return source;
   });
@@ -215,6 +218,7 @@ function* mergeBind(eventOfEvent, f) {
   return yield* switchE(next);
 }
 
+// TODO unsubscribe
 const getClicks = (domNode) =>
   input((push) => domNode.addEventListener("click", push));
 
