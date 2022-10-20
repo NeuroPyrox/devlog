@@ -148,6 +148,7 @@ const observeE = (parent) =>
     parent
   );
 
+// TODO what did I mean by "Loopable"?
 // Loopable
 function* switchE(newParents) {
   // We're safe evaluating the event pair eagerly instead of using [lazyConstructor]
@@ -218,9 +219,11 @@ function* mergeBind(eventOfEvent, f) {
   return yield* switchE(next);
 }
 
-// TODO unsubscribe
 const getClicks = (domNode) =>
-  input((push) => domNode.addEventListener("click", push));
+  input((push) => {
+    domNode.addEventListener("click", push);
+    return () => domNode.removeEventListener("click", push);
+  });
 
 // TODO replace with behavior
 const getInputValues = (domNode) => () => domNode.value;
