@@ -55,6 +55,7 @@ const constructAll = () => {
   constructors = "eager";
 };
 
+// TODO double check unnestibility
 // TODO remove return value when we have an html monad.
 // Only called on startup and wrapping the [Push] monad.
 const delayConstructionDuring = (f) =>
