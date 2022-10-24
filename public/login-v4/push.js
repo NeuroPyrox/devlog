@@ -47,8 +47,8 @@ const readSink = monadicMethod("readSink");
 const liftPull = monadicMethod("liftPull");
 const setBehavior = monadicMethod("setBehavior");
 
-// Delay construction because we don't want to visit newly created events and behaviors.
-const push = delayConstructionDuring((sink, value) => {
+// Delay construction because we don't want to visit newly created reactives.
+const push = (sink, value) => delayConstructionDuring(() => {
   const context = new Context();
   context.writeSink(sink, value);
   const heap = new Heap((a, b) => a.getPriority() < b.getPriority());
