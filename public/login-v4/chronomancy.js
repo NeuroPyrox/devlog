@@ -60,7 +60,9 @@ import { newEventPair, newBehaviorPair } from "./internals.js";
 // We sample from such a semantic stream using [observeE].
 // The Pull monad is basically the same as the Behavior monad,
 //   but I separated them for ease of implementation,
-//   and I generalized Behavior from monadic to applicative.
+//   and Behavior only has an applicative interface.
+//   It might be useful to remove the separation between the Pull and Behavior monads,
+//   but right now it only seems like an intellectual exercise without practical applications.
 
 // Some time-dependent reactives are loopable: [switchE, stepper, mergeBind]
 // TODO elaborate
