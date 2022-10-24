@@ -2,6 +2,7 @@ import { assert, memoize, unnestable } from "./util.js";
 
 const construct = Symbol();
 
+// TODO don't put different types in the same variable
 let constructors = "eager";
 
 const constConstructor = (x) => ({
