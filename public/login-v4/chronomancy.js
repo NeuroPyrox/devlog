@@ -65,7 +65,9 @@ import { newEventPair, newBehaviorPair } from "./internals.js";
 //   but right now it only seems like an intellectual exercise without practical applications.
 
 // Some time-dependent reactives are loopable: [switchE, stepper, mergeBind]
-// TODO elaborate
+// This means that you're able to create a loop using one of these.
+// A loop of reactives is legal if and only if there's at least one loopable reactive in the loop.
+// TODO what internal features makes a reactive loopable?
 
 // [output] is time-dependent because consider an app where you use an [output] to display text.
 //   If the [output] gets initialized too late, the text won't be displayed.
