@@ -102,6 +102,7 @@ const monadicMethod =
 // Used when we want nullable values, but don't want the library user to create a null value.
 const nothing = Symbol();
 
+// TODO remove [result] and [...args] once they're no longer needed
 const unnestable = (f) => {
   let running = false;
   return (...args) => {
@@ -130,6 +131,7 @@ const log = (x) => {
 const derefMany = (weakRefs) =>
   weakRefs.map((weakRef) => weakRef.deref()).filter((ref) => ref !== undefined);
 
+// TODO remove [result] and [...args] once they're no longer needed
 const once = (f) => {
   let hasRun = false;
   return (...args) => {

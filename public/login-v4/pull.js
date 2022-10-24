@@ -36,6 +36,6 @@ const loop = monadicMethod("loop")();
 
 // Only used by [start] and [Combinators.observeE].
 const pull = (monadicValue) => runMonad(context, monadicValue());
-const start = once(delayConstructionDuring(pull));
+const start = once((monadicValue) => delayConstructionDuring(() => pull(monadicValue)));
 
 export { output, loop, pull, start };
