@@ -11,7 +11,6 @@ import { newEventPair, newBehaviorPair } from "./internals.js";
 // TODO consolidate all lifecycle assertions under one module.
 // TODO update comments with [constructEvents].
 // TODO what are the atomic operations on the graph?
-// TODO add assertions on which functions can be called during which stages.
 // TODO make topology changes more explicit.
 
 // Approximate lifecycle:
@@ -43,6 +42,7 @@ import { newEventPair, newBehaviorPair } from "./internals.js";
 
 // For clarity, "input" only ever refers to [input] reactives,
 // and "parent" refers to the reactives that feed into another reactive.
+// "Reactive" means an event or a behavior.
 
 // Reactives are either time-dependent or not.
 //   Time-dependent:   [switchE, stepper, mergeBind, output, loop]
@@ -60,7 +60,12 @@ import { newEventPair, newBehaviorPair } from "./internals.js";
 // We sample from such a semantic stream using [observeE].
 // The Pull monad is basically the same as the Behavior monad,
 //   but I separated them for ease of implementation,
-//   and I generalized Behavior from monadic to applicative.
+//   and Behavior only has an applicative interface.
+//   It might be useful to remove the separation between the Pull and Behavior monads,
+//   but right now it only seems like an intellectual exercise without practical applications.
+
+// Some time-dependent reactives are loopable: [switchE, stepper, mergeBind]
+// TODO elaborate
 
 // [output] is time-dependent because consider an app where you use an [output] to display text.
 //   If the [output] gets initialized too late, the text won't be displayed.
@@ -215,6 +220,7 @@ function* stepper(initialValue, newValues) {
 function* mergeBind(eventOfEvent, f) {
   let current = never;
   const next = map(eventOfEvent, (event) => merge(f(event), current));
+  // TODO memory management
   yield output(next, (event) => (current = event));
   return yield* switchE(next);
 }
