@@ -57,7 +57,7 @@ import { newEventPair, newBehaviorPair } from "./internals.js";
 // To deal with this, we wrap time-dependent reactives in the Pull monad
 //   so that semantically (but not implementationally) we're dealing with behaviors of reactives,
 //   different versions of the same reactives that were initialized at different times.
-// We sample from such a semantic stream using [observeE].
+// We sample from such a semantic behavior using [observeE].
 // The Pull monad is basically the same as the Behavior monad,
 //   but I separated them for ease of implementation,
 //   and Behavior only has an applicative interface.
@@ -66,8 +66,9 @@ import { newEventPair, newBehaviorPair } from "./internals.js";
 
 // Some time-dependent reactives are loopable: [switchE, stepper, mergeBind]
 // This means that you're able to create a loop using one of these.
-// A loop of reactives is legal if and only if there's at least
+//   A loop of reactives is legal if and only if there's at least
 //   one loopable reactive in the loop at initialization time.
+//   We check the legality of loops at runtime, but there's probably some fancy type system for it.
 // To be loopable, a reactive's parent must use an [output] or something equivalent to modify the reactive.
 // Such imperative modifications make the loopable reactives be time-dependent.
 // The crucial property that makes loops legal is that the parent's modifications get delayed
