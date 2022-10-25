@@ -35,6 +35,7 @@ class Context {
     this._behaviorValues.push([sink, value]);
   }
   
+  // TODO rename to "dequeue"
   flushBehaviorValues() {
     for (const [sink, value] of this._behaviorValues) {
       sink.setValue(value);

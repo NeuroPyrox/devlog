@@ -2,8 +2,9 @@ import { assert, memoize, unnestable } from "./util.js";
 
 const construct = Symbol();
 
-// TODO don't put different types in the same variable
-let constructors = "eager";
+let state = "eager";
+
+let constructors = [];
 
 const constConstructor = (x) => ({
   [construct]: () => x,
@@ -13,10 +14,10 @@ const constConstructor = (x) => ({
 // but the tasks only get delayed during [delayConstructionDuring].
 const lazyConstructor = (f, ...args) => {
   // TODO remove this assertion if needed for behaviors
-  assert(constructors !== "constructing");
+  assert(state !== "constructing");
   args.forEach((arg) => assert(arg[construct]));
   // We allow construction outside of [delayConstructionDuring] to improve garbage collection.
-  if (constructors === "eager") {
+  if (state === "eager") {
     return constConstructor(f(...args));
   }
   // The order of composition between [Util.memoize] and [Util.unnestable] doesn't matter,
@@ -35,7 +36,7 @@ const lazyConstructor = (f, ...args) => {
 // We don't need assertions for that because eager evaluation will throw an error.
 const lazyLoop = () => {
   // TODO remove this assertion if needed for behaviors
-  assert(constructors !== "constructing");
+  assert(state !== "constructing");
   const result = {
     [construct]: () => {
       throw new Error("Must call [lazyLoop.loop] on every [lazyLoop]!");
@@ -50,10 +51,10 @@ const lazyLoop = () => {
 
 // Only has one callsite, but it's helpful to think of it as a separate function.
 const constructAll = () => {
-  const temp = constructors;
-  constructors = "constructing";
-  temp.forEach((constructor) => constructor[construct]());
-  constructors = "eager";
+  state = "constructing";
+  constructors.forEach((constructor) => constructor[construct]());
+  constructors = [];
+  state = "eager";
 };
 
 // TODO remove return value when we have an html monad.
@@ -64,7 +65,7 @@ const constructAll = () => {
 //   so that the blocking occurs while [f] is being called.
 //   [unnestable((f, ...args) => {...})] would work, but that would be awkward.
 const delayConstructionDuring = unnestable((f) => {
-  constructors = [];
+  state = "lazy";
   const result = f();
   constructAll();
   return result;
