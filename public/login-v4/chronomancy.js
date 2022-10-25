@@ -32,6 +32,7 @@ import { newEventPair, newBehaviorPair } from "./internals.js";
 //       writeEventValues();
 //       enqueueBehaviorValues();
 //       lazilyCreateReactivesWithinPullMonad();
+//       lazilyCreateTimeIndependentReactives();
 //       propagateEventValues();
 //     }
 //     dequeueBehaviorValues();
@@ -162,8 +163,6 @@ const observeE = (parent) =>
     parent
   );
 
-// TODO what did I mean by "Loopable"?
-// Loopable
 function* switchE(newParents) {
   // We're safe evaluating the event pair eagerly instead of using [lazyConstructor]
   // because there are no parents yet.
