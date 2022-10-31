@@ -115,12 +115,15 @@ const unnestable = (f) => {
   };
 };
 
+// I'm an encapsulation simp
+const done = Symbol();
+const value = Symbol();
 const memoize = (f) => () => {
-  if (!f.done) {
+  if (!f[done]) {
     // Overwrite [f] to free memory. TODO test if it actually frees memory.
-    f = { done: true, value: f() };
+    f = { [done]: true, [value]: f() };
   }
-  return f.value;
+  return f[value];
 };
 
 const log = (x) => {

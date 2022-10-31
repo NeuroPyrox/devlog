@@ -29,7 +29,7 @@ const constConstructor = (x) => ({
   [construct]: () => x,
 });
 
-// Kind of like an applicative [queueMicrotask],
+// Like an applicative [queueMicrotask],
 // but the tasks only get delayed during [delayConstructionDuring].
 const lazyConstructor = (f, ...args) => {
   // TODO remove this assertion if needed for behaviors
@@ -40,7 +40,7 @@ const lazyConstructor = (f, ...args) => {
     return constConstructor(f(...args));
   }
   // The order of composition between [Util.memoize] and [Util.unnestable] doesn't matter,
-  // but [Util.memoize(Util.unnestable(...))] seems like it'd be more efficient.
+  // but [Util.memoize(Util.unnestable(...))] heuristically seems like it'd be more efficient.
   const result = {
     [construct]: memoize(
       unnestable(() => f(...args.map((arg) => arg[construct]())))
