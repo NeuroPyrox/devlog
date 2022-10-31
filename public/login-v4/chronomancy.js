@@ -100,12 +100,14 @@ const input = (subscribe) =>
 
 const never = input(() => () => {});
 
-const mapSource = (parentSource, f) =>
-  newEventPair([parentSource], function* (value) {
-    return f(value);
-  })[1];
 const map = (parent, f) =>
-  lazyConstructor((parentSource) => mapSource(parentSource, f), parent);
+  lazyConstructor(
+    (parentSource) =>
+      newEventPair([parentSource], function* (value) {
+        return f(value);
+      })[1],
+    parent
+  );
 
 const filter = (parent, predicate) =>
   map(parent, (value) => (predicate(value) ? value : Util.nothing));
@@ -140,9 +142,9 @@ const merge = (
 const mapTagB = (event, behavior, combine) =>
   lazyConstructor(
     (eventSource, behaviorSource) =>
-      mapSource(eventSource, (x) =>
-        combine(x, behaviorSource.getCurrentValue())
-      ),
+      newEventPair([eventSource], function* (value) {
+        return combine(value, behaviorSource.getCurrentValue());
+      })[1],
     event,
     behavior
   );
