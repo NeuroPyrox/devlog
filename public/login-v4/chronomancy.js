@@ -67,14 +67,13 @@ import { newEventPair, newBehaviorPair } from "./internals.js";
 
 // Some time-dependent reactives are loopable: [switchE, stepper, mergeBind]
 // This means that you're able to create a loop using one of these.
-//   A loop of reactives is legal if and only if there's at least
-//   one loopable reactive in the loop at initialization time.
-//   We check the legality of loops at runtime, but there's probably some fancy type system for it.
-// To be loopable, a reactive's parent must use an [output] or something equivalent to modify the reactive.
-// Such imperative modifications make the loopable reactives be time-dependent.
+//   A loop of reactives is legal if and only if there's at least one loopable reactive in the loop.
+//   We check the legality of loops whenever reactives are initialized or they get new parents.
+//   To anyone else reading this, it would be an interesting project to make a type system for legal loops.
+// To be loopable, a reactive's parent must use an [output] or something equivalent to modify the child reactive.
 // The crucial property that makes loops legal is that the parent's modifications get delayed
-//   until the end of the Push monad, so a loopable reactive can only depend on its past values.
-//   In contrast, a loop of time-independent reactives would depend on its current values,
+//   until the end of the Push monad, so a loopable reactive can only depend on its own past values.
+//   In contrast, a loop of time-independent reactives would depend on its own current values,
 //   causing infinite recursion unless I implemented some unnecessary black-magic laziness.
 
 // [output] is time-dependent because consider an app where you use an [output] to display text.
