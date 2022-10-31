@@ -82,6 +82,8 @@ import { newEventPair, newBehaviorPair } from "./internals.js";
 //   so why not restrict its interface by treating it as time-dependent?
 // [input]'s time-independence is contractual. I'm trusting the library user to ensure it.
 
+// Note to self: Avoid the temptation to reduce the LOC in this file by refactoring!
+
 const input = (subscribe) =>
   lazyConstructor(() => {
     let sink, source;

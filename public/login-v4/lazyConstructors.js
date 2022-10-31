@@ -1,10 +1,29 @@
 import { assert, memoize, unnestable } from "./util.js";
 
+// TODO take behaviors into account
+
 const construct = Symbol();
 
 let state = "eager";
-
 let constructors = [];
+
+// TODO remove return value when we have an html monad.
+// This is the only function that modifies [state].
+// Only called on startup and wrapping the [Push] monad.
+// It's important to keep [unnestable] on the outside instead of within a lambda
+//   so that [Pull.start] and [Push.push] are mutually unnestable.
+// It's important to use [unnestable((f) => {...})] instead of [unnestable((f) => (...args) => {...})]
+//   so that the blocking occurs while [f] is being called.
+//   [unnestable((f, ...args) => {...})] would work, but that would be awkward.
+const delayConstructionDuring = unnestable((f) => {
+  state = "lazy";
+  const result = f();
+  state = "constructing";
+  constructors.forEach((constructor) => constructor[construct]());
+  constructors = [];
+  state = "eager";
+  return result;
+});
 
 const constConstructor = (x) => ({
   [construct]: () => x,
@@ -48,27 +67,5 @@ const lazyLoop = () => {
   };
   return result;
 };
-
-// Only has one callsite, but it's helpful to think of it as a separate function.
-const constructAll = () => {
-  state = "constructing";
-  constructors.forEach((constructor) => constructor[construct]());
-  constructors = [];
-  state = "eager";
-};
-
-// TODO remove return value when we have an html monad.
-// Only called on startup and wrapping the [Push] monad.
-// It's important to keep [unnestable] on the outside instead of within a lambda
-//   so that [Pull.start] and [Push.push] are mutually unnestable.
-// It's important to use [unnestable((f) => {...})] instead of [unnestable((f) => (...args) => {...})]
-//   so that the blocking occurs while [f] is being called.
-//   [unnestable((f, ...args) => {...})] would work, but that would be awkward.
-const delayConstructionDuring = unnestable((f) => {
-  state = "lazy";
-  const result = f();
-  constructAll();
-  return result;
-});
 
 export { constConstructor, lazyConstructor, lazyLoop, delayConstructionDuring };
