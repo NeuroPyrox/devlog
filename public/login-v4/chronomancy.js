@@ -98,7 +98,7 @@ const input = (subscribe) =>
     return source;
   });
 
-const never = input(() => {});
+const never = input(() => () => {});
 
 const mapSource = (parentSource, f) =>
   newEventPair([parentSource], function* (value) {
