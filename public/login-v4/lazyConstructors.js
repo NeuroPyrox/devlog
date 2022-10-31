@@ -1,7 +1,5 @@
 import { assert, memoize, unnestable } from "./util.js";
 
-// TODO take behaviors into account
-
 const construct = Symbol();
 
 let state = "eager";
@@ -32,7 +30,7 @@ const constConstructor = (x) => ({
 // Like an applicative [queueMicrotask],
 // but the tasks only get delayed during [delayConstructionDuring].
 const lazyConstructor = (f, ...args) => {
-  // TODO remove this assertion if needed for behaviors
+  // Violation of this assertion could mean it's time to implement recursion.
   assert(state !== "constructing");
   args.forEach((arg) => assert(arg[construct]));
   // We allow construction outside of [delayConstructionDuring] to improve garbage collection.
@@ -52,10 +50,9 @@ const lazyConstructor = (f, ...args) => {
 
 // Unusable outside of [delayConstructionDuring] because you'd need to
 // call the [loop] method before passing it to [lazyConstructor].
-// We don't need assertions for that because eager evaluation will throw an error.
 const lazyLoop = () => {
-  // TODO remove this assertion if needed for behaviors
-  assert(state !== "constructing");
+  // Violation of this assertion could mean it's time to implement recursion.
+  assert(state === "lazy");
   const result = {
     [construct]: () => {
       throw new Error("Must call [lazyLoop.loop] on every [lazyLoop]!");
