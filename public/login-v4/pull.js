@@ -1,4 +1,4 @@
-import { nothing, monadicMethod, runMonad, once } from "./util.js";
+import { nothing, createGeneratorMonad, once } from "./util.js";
 import {
   lazyConstructor,
   lazyLoop,
@@ -31,11 +31,15 @@ const context = {
     }, parent),
   loop: lazyLoop,
 };
+
+const [runPullMonad, monadicMethod] = createGeneratorMonad();
 const output = monadicMethod("output");
 const loop = monadicMethod("loop")();
 
 // Only used by [start] and [Combinators.observeE].
-const pull = (monadicValue) => runMonad(context, monadicValue());
-const start = once((monadicValue) => delayConstructionDuring(() => pull(monadicValue)));
+const pull = (monadicValue) => runPullMonad(context, monadicValue());
+const start = once((monadicValue) =>
+  delayConstructionDuring(() => pull(monadicValue))
+);
 
 export { output, loop, pull, start };
