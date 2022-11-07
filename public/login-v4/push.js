@@ -1,5 +1,5 @@
 import Heap from "https://cdn.jsdelivr.net/gh/NeuroPyrox/heap/heap.js";
-import { nothing, monadicMethod, runMonad } from "./util.js";
+import { nothing, createGeneratorMonad } from "./util.js";
 import { delayConstructionDuring } from "./lazyConstructors.js";
 
 import { pull } from "./pull.js"; // Circular dependency
@@ -34,7 +34,7 @@ class Context {
   setBehavior(sink, value) {
     this._behaviorValues.push([sink, value]);
   }
-  
+
   // TODO rename to "dequeue"
   flushBehaviorValues() {
     for (const [sink, value] of this._behaviorValues) {
@@ -44,29 +44,32 @@ class Context {
 }
 
 // TODO directly export poll functions instead of these monadic methods.
+const [runPushMonad, monadicMethod] = createGeneratorMonad();
 const readSink = monadicMethod("readSink");
 const liftPull = monadicMethod("liftPull");
 const setBehavior = monadicMethod("setBehavior");
 
 // Delay construction because we don't want to visit newly created reactives.
-const push = (sink, value) => delayConstructionDuring(() => {
-  const context = new Context();
-  context.writeSink(sink, value);
-  const heap = new Heap((a, b) => a.getPriority() < b.getPriority());
-  for (const childSink of sink.iterateActiveChildren()) {
-    heap.push(childSink);
-  }
-  for (const sink of heap) {
-    const value = runMonad(context, sink.poll());
-    if (value !== nothing) {
-      context.writeSink(sink, value);
-      for (const child of sink.iterateActiveChildren()) {
-        // Mutating the heap while iterating over it.
-        heap.push(child);
+const push = (sink, value) =>
+  delayConstructionDuring(() => {
+    const context = new Context();
+    context.writeSink(sink, value);
+    const heap = new Heap((a, b) => a.getPriority() < b.getPriority());
+    for (const childSink of sink.iterateActiveChildren()) {
+      heap.push(childSink);
+    }
+    for (const sink of heap) {
+      // TODO is a monad really the best way to do this?
+      const value = runPushMonad(context, sink.poll());
+      if (value !== nothing) {
+        context.writeSink(sink, value);
+        for (const child of sink.iterateActiveChildren()) {
+          // Mutating the heap while iterating over it.
+          heap.push(child);
+        }
       }
     }
-  }
-  context.flushBehaviorValues();
-});
+    context.flushBehaviorValues();
+  });
 
 export { readSink, liftPull, setBehavior, push };

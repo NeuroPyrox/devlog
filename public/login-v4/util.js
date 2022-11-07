@@ -80,24 +80,22 @@ class ShrinkingListNode {
 
 const weakRefUndefined = { deref: () => undefined };
 
-// TODO replace with private encapsulation
-const monadicMutator = Symbol();
-
-const runMonad = (context, generator) => {
-  let step = generator.next();
-  while (!step.done) {
-    step = generator.next(step.value[monadicMutator](context));
-  }
-  return step.value;
+const createGeneratorMonad = () => {
+  const key = Symbol();
+  const runMonad = (context, generator) => {
+    let step = generator.next();
+    while (!step.done) {
+      step = generator.next(step.value[key](context));
+    }
+    return step.value;
+  };
+  const monadicMethod =
+    (field) =>
+    (...args) => ({
+      [key]: (context) => context[field](...args),
+    });
+  return [runMonad, monadicMethod];
 };
-
-// TODO make even more private by requiring a reference to the class
-// TODO maybe a makeMonad function that takes a class and a list of methods?
-const monadicMethod =
-  (field) =>
-  (...args) => ({
-    [monadicMutator]: (context) => context[field](...args),
-  });
 
 // Used when we want nullable values, but don't want the library user to create a null value.
 const nothing = Symbol();
@@ -115,6 +113,7 @@ const unnestable = (f) => {
   };
 };
 
+// TODO do these symbols even do anything?
 // I'm an encapsulation simp
 const done = Symbol();
 const value = Symbol();
@@ -148,8 +147,7 @@ export {
   assert,
   ShrinkingList,
   weakRefUndefined,
-  runMonad,
-  monadicMethod,
+  createGeneratorMonad,
   nothing,
   unnestable,
   memoize,
