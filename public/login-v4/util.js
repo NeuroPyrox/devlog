@@ -119,10 +119,37 @@ const done = Symbol();
 const value = Symbol();
 const memoize = (f) => () => {
   if (!f[done]) {
-    // Overwrite [f] to free memory. TODO test if it actually frees memory.
+    // Overwrite [f] to free memory.
     f = { [done]: true, [value]: f() };
   }
   return f[value];
+};
+
+// Idk how to force GC, so this function logs every second whether [garbage] was collected yet.
+// Idk how to automate it without false positives, but it passed last time I ran it.
+// The reason for all the indirection is to avoid unintentional strong references to [garbage].
+// This is why I hate JavaScript!
+const testGarbageCollectionInMemoize = () => {
+  const createGarbageWasCollectedFunction = garbage => {
+    const weak = new WeakRef(garbage);
+    return () => weak.deref() === undefined;
+  }
+  const [memoized, garbageWasCollected] = (() => {
+    const garbage = {};
+    const garbageWasCollected = createGarbageWasCollectedFunction(garbage);
+    // [memoized] strongly references [garbage].
+    const memoized = memoize(() => {
+      assert(!garbage.nonExistantField);
+    })
+    return [memoized, garbageWasCollected];
+  })();
+  // [memoized] should no longer strongly refernce [garbage].
+  memoized();
+  setInterval(() => {
+    // Keep a strong reference to [memoized].
+    assert(!memoized.nonExistantField);
+    console.log(garbageWasCollected());
+  }, 1000);
 };
 
 const log = (x) => {
