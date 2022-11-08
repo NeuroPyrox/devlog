@@ -1,6 +1,6 @@
 import { assert, ShrinkingList, weakRefUndefined, derefMany } from "./util.js";
 
-import { readSink } from "./push.js"; // Circular dependency
+import { readEvent } from "./push.js"; // Circular dependency
 
 const k = (x) => () => x;
 
@@ -169,7 +169,7 @@ class ReactiveSink {
   *readParents() {
     const parentValues = [];
     for (const weakParent of this.#weakParents) {
-      parentValues.push(yield readSink(weakParent.deref()));
+      parentValues.push(yield readEvent(weakParent.deref()));
     }
     return parentValues;
   }
@@ -429,7 +429,7 @@ class BehaviorSink extends ReactiveSink {
   getPriority() {
     return this.#priority;
   }
-  
+
   setValue(value) {
     // The change gets propagated to the source because the source has a reference to [this._weakVariable.deref()].
     this._weakVariable.deref().thunk = () => value;
