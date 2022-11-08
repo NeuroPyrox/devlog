@@ -2,7 +2,6 @@ import { assert, memoize, unnestable } from "./util.js";
 
 const construct = Symbol();
 
-// TODO when we implement recursion, add another state
 let state = "eager";
 let constructors = [];
 
