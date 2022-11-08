@@ -11,14 +11,13 @@ class Context {
     this._behaviorValues = [];
   }
 
-  // TODO rename to reflect the fact that this is only for events
-  writeSink(sink, value) {
+  writeEvent(sink, value) {
     // Store an object so that we can differentiate between
     // an unwritten sink and a sink that had [undefined] written to it.
     this._values.set(sink, { value });
   }
 
-  readSink(sink) {
+  readEvent(sink) {
     const value = this._values.get(sink);
     if (value === undefined) {
       return nothing;
@@ -43,7 +42,7 @@ class Context {
 }
 
 const [runPushMonad, monadicMethod] = createGeneratorMonad();
-const readSink = monadicMethod("readSink");
+const readEvent = monadicMethod("readEvent");
 const liftPull = monadicMethod("liftPull");
 const enqueueBehavior = monadicMethod("enqueueBehavior");
 
@@ -51,7 +50,7 @@ const enqueueBehavior = monadicMethod("enqueueBehavior");
 const push = (sink, value) =>
   delayConstructionDuring(() => {
     const context = new Context();
-    context.writeSink(sink, value);
+    context.writeEvent(sink, value);
     const heap = new Heap((a, b) => a.getPriority() < b.getPriority());
     for (const childSink of sink.iterateActiveChildren()) {
       heap.push(childSink);
@@ -59,7 +58,7 @@ const push = (sink, value) =>
     for (const sink of heap) {
       const value = runPushMonad(context, sink.poll());
       if (value !== nothing) {
-        context.writeSink(sink, value);
+        context.writeEvent(sink, value);
         for (const child of sink.iterateActiveChildren()) {
           // Mutating the heap while iterating over it.
           heap.push(child);
@@ -69,4 +68,4 @@ const push = (sink, value) =>
     context.dequeueBehaviorValues();
   });
 
-export { readSink, liftPull, enqueueBehavior, push };
+export { readEvent, liftPull, enqueueBehavior, push };
