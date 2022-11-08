@@ -31,23 +31,21 @@ class Context {
   }
 
   // TODO make separate PushEvents and PushBehaviors monads
-  setBehavior(sink, value) {
+  enqueueBehavior(sink, value) {
     this._behaviorValues.push([sink, value]);
   }
 
-  // TODO rename to "dequeue"
-  flushBehaviorValues() {
+  dequeueBehaviorValues() {
     for (const [sink, value] of this._behaviorValues) {
       sink.setValue(value);
     }
   }
 }
 
-// TODO directly export poll functions instead of these monadic methods.
 const [runPushMonad, monadicMethod] = createGeneratorMonad();
 const readSink = monadicMethod("readSink");
 const liftPull = monadicMethod("liftPull");
-const setBehavior = monadicMethod("setBehavior");
+const enqueueBehavior = monadicMethod("enqueueBehavior");
 
 // Delay construction because we don't want to visit newly created reactives.
 const push = (sink, value) =>
@@ -59,7 +57,6 @@ const push = (sink, value) =>
       heap.push(childSink);
     }
     for (const sink of heap) {
-      // TODO is a monad really the best way to do this?
       const value = runPushMonad(context, sink.poll());
       if (value !== nothing) {
         context.writeSink(sink, value);
@@ -69,7 +66,7 @@ const push = (sink, value) =>
         }
       }
     }
-    context.flushBehaviorValues();
+    context.dequeueBehaviorValues();
   });
 
-export { readSink, liftPull, setBehavior, push };
+export { readSink, liftPull, enqueueBehavior, push };

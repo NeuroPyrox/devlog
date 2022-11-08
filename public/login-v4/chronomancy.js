@@ -214,7 +214,7 @@ function* stepper(initialValue, newValues) {
     const [modSink, modSource] = newEventPair(
       [parentSource],
       function* (value) {
-        yield Push.setBehavior(sink, value);
+        yield Push.enqueueBehavior(sink, value);
         return Util.nothing;
       }
     );
