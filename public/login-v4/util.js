@@ -144,10 +144,14 @@ const testGarbageCollectionInMemoize = () => {
     return [memoized, garbageWasCollected];
   })();
   // [memoized] should no longer strongly refernce [garbage].
+  // Another test you can do is commenting out this code and making sure "false" is always logged.
   memoized();
+  const weakMemoized = new WeakRef(memoized);
   setInterval(() => {
     // Keep a strong reference to [memoized].
     assert(!memoized.nonExistantField);
+    // Make sure the above line of code is doing its job.
+    assert(weakMemoized.deref() !== undefined);
     console.log(garbageWasCollected());
   }, 1000);
 };
