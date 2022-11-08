@@ -1,5 +1,3 @@
-// TODO which exports are only used in one other module?
-
 const assert = (condition) => {
   if (!condition) {
     throw new Error("Assertion failed");
@@ -113,16 +111,18 @@ const unnestable = (f) => {
   };
 };
 
-// TODO do these symbols even do anything?
-// I'm an encapsulation simp
-const done = Symbol();
-const value = Symbol();
-const memoize = (f) => () => {
-  if (!f[done]) {
-    // Overwrite [f] to free memory.
-    f = { [done]: true, [value]: f() };
-  }
-  return f[value];
+const memoize = (f) => {
+  let done = false;
+  let value;
+  return () => {
+    if (!done) {
+      done = true;
+      value = f();
+      // Free memory
+      f = null;
+    }
+    return value;
+  };
 };
 
 // Idk how to force GC, so this function logs every second whether [garbage] was collected yet.
@@ -130,17 +130,17 @@ const memoize = (f) => () => {
 // The reason for all the indirection is to avoid unintentional strong references to [garbage].
 // This is why I hate JavaScript!
 const testGarbageCollectionInMemoize = () => {
-  const createGarbageWasCollectedFunction = garbage => {
+  const createGarbageWasCollectedFunction = (garbage) => {
     const weak = new WeakRef(garbage);
     return () => weak.deref() === undefined;
-  }
+  };
   const [memoized, garbageWasCollected] = (() => {
     const garbage = {};
     const garbageWasCollected = createGarbageWasCollectedFunction(garbage);
     // [memoized] strongly references [garbage].
     const memoized = memoize(() => {
       assert(!garbage.nonExistantField);
-    })
+    });
     return [memoized, garbageWasCollected];
   })();
   // [memoized] should no longer strongly refernce [garbage].
