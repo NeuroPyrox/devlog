@@ -8,8 +8,6 @@ import { output } from "./pull.js";
 import * as Push from "./push.js";
 import { newEventPair, newBehaviorPair } from "./internals.js";
 
-// TODO consolidate all lifecycle assertions under one module.
-// TODO update comments with [constructEvents].
 // TODO what are the atomic operations on the graph?
 // TODO make topology changes more explicit.
 

@@ -4,6 +4,7 @@ import { readEvent } from "./push.js"; // Circular dependency
 
 const k = (x) => () => x;
 
+// TODO would it make sense to factor out modulators?
 // TODO restrict surface area by making mutations monadic
 // TODO rename "poll"
 // TODO update "EventSink", "EventSource", "BehaviorSink", "BehaviorSource" comments

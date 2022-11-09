@@ -4,21 +4,24 @@ import { delayConstructionDuring } from "./lazyConstructors.js";
 
 import { pull } from "./pull.js"; // Circular dependency
 
-// We create a new instance of [Context] during every [push] so we can garbage collect [_values].
+// We create a new instance of [Context] during every [push] so we can garbage collect [#eventValues].
 class Context {
+  #eventValues;
+  #behaviorValues;
+
   constructor() {
-    this._values = new WeakMap();
-    this._behaviorValues = [];
+    this.#eventValues = new WeakMap();
+    this.#behaviorValues = [];
   }
 
   writeEvent(sink, value) {
     // Store an object so that we can differentiate between
     // an unwritten sink and a sink that had [undefined] written to it.
-    this._values.set(sink, { value });
+    this.#eventValues.set(sink, { value });
   }
 
   readEvent(sink) {
-    const value = this._values.get(sink);
+    const value = this.#eventValues.get(sink);
     if (value === undefined) {
       return nothing;
     }
@@ -31,11 +34,11 @@ class Context {
 
   // TODO make separate PushEvents and PushBehaviors monads
   enqueueBehavior(sink, value) {
-    this._behaviorValues.push([sink, value]);
+    this.#behaviorValues.push([sink, value]);
   }
 
   dequeueBehaviorValues() {
-    for (const [sink, value] of this._behaviorValues) {
+    for (const [sink, value] of this.#behaviorValues) {
       sink.setValue(value);
     }
   }
