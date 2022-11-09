@@ -4,6 +4,7 @@ const assert = (condition) => {
   }
 };
 
+// TODO private variables
 class ShrinkingList {
   constructor() {
     this._prev = this;
@@ -45,6 +46,7 @@ class ShrinkingList {
   }
 }
 
+// TODO private variables
 class ShrinkingListNode {
   constructor(prev, value, next) {
     this._prev = prev;
