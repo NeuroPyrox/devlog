@@ -31,18 +31,12 @@ class ShrinkingList {
   }
 
   // Assumes no nodes will be removed while iterating
-  [Symbol.iterator]() {
+  *[Symbol.iterator]() {
     let current = this._next;
-    return {
-      next: () => {
-        if (current === this) {
-          return { done: true };
-        }
-        const value = current._value;
-        current = current._next;
-        return { done: false, value };
-      },
-    };
+    while (current !== this) {
+      yield current.get();
+      current = current._next;
+    }
   }
 }
 
