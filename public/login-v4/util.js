@@ -12,8 +12,8 @@ const nothing = Symbol();
 const prev = Symbol();
 const next = Symbol();
 
-// TODO why doesn't the loop have a break?
 // We use a doubly linked list because if it was singly linked, then [ShrinkingListNode.remove] couldn't be idempotent.
+// The list is a loop because otherwise we'd have to add more [if] statements.
 class ShrinkingList {
   constructor() {
     this[prev] = this;
@@ -39,7 +39,8 @@ class ShrinkingList {
     return this[prev];
   }
 
-  // Assumes no nodes will be removed while iterating
+  // If you edit the list while iterating, the iterator will still terminate,
+  // but it may continue visiting removed nodes and/or ignoring added nodes.
   *[Symbol.iterator]() {
     let current = this[next];
     while (current !== this) {
@@ -51,7 +52,7 @@ class ShrinkingList {
 
 class ShrinkingListNode {
   #value;
-  
+
   constructor(prevNode, value, nextNode) {
     this[prev] = prevNode;
     this.#value = value;
@@ -79,6 +80,7 @@ class ShrinkingListNode {
     this[prev][next] = this[next];
     this[next][prev] = this[prev];
     this.#value = nothing;
+    // Don't overwrite [this[next]] in case an iterator is visiting this node.
   }
 }
 
