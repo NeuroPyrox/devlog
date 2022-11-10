@@ -45,33 +45,35 @@ class ShrinkingList {
 
 // TODO private variables
 class ShrinkingListNode {
+  #value;
+  
   constructor(prev, value, next) {
     this._prev = prev;
-    this._value = value;
+    this.#value = value;
     this._next = next;
   }
 
   set(value) {
-    this._value = value;
+    this.#value = value;
   }
 
   get() {
-    return this._value;
+    return this.#value;
   }
 
   remove() {
-    if (this._value !== nothing) {
+    if (this.#value !== nothing) {
       this.removeOnce();
     }
   }
 
   removeOnce() {
-    assert(this._value !== nothing);
+    assert(this.#value !== nothing);
     assert(this._prev._next === this);
     assert(this._next._prev === this);
     this._prev._next = this._next;
     this._next._prev = this._prev;
-    this._value = nothing;
+    this.#value = nothing;
   }
 }
 
