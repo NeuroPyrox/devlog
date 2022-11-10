@@ -7,50 +7,55 @@ const assert = (condition) => {
 // Used when we want nullable values, but don't want the library user to create a null value.
 const nothing = Symbol();
 
-// TODO private variables
+// Use symbols instead of plain private fields because
+// [ShrinkingList] and [ShrinkingListNode] need to access these fields from each other.
+const prev = Symbol();
+const next = Symbol();
+
+// TODO why doesn't the loop have a break?
+// We use a doubly linked list because if it was singly linked, then [ShrinkingListNode.remove] couldn't be idempotent.
 class ShrinkingList {
   constructor() {
-    this._prev = this;
-    this._next = this;
+    this[prev] = this;
+    this[next] = this;
   }
 
   add(value) {
-    const result = new ShrinkingListNode(this._prev, value, this);
-    this._prev._next = result;
-    this._prev = result;
+    const result = new ShrinkingListNode(this[prev], value, this);
+    this[prev][next] = result;
+    this[prev] = result;
     return result;
   }
 
   isEmpty() {
-    return this._next === this;
+    return this[next] === this;
   }
 
   getFirst() {
-    return this._next;
+    return this[next];
   }
 
   getLast() {
-    return this._prev;
+    return this[prev];
   }
 
   // Assumes no nodes will be removed while iterating
   *[Symbol.iterator]() {
-    let current = this._next;
+    let current = this[next];
     while (current !== this) {
       yield current.get();
-      current = current._next;
+      current = current[next];
     }
   }
 }
 
-// TODO private variables
 class ShrinkingListNode {
   #value;
   
-  constructor(prev, value, next) {
-    this._prev = prev;
+  constructor(prevNode, value, nextNode) {
+    this[prev] = prevNode;
     this.#value = value;
-    this._next = next;
+    this[next] = nextNode;
   }
 
   set(value) {
@@ -69,10 +74,10 @@ class ShrinkingListNode {
 
   removeOnce() {
     assert(this.#value !== nothing);
-    assert(this._prev._next === this);
-    assert(this._next._prev === this);
-    this._prev._next = this._next;
-    this._next._prev = this._prev;
+    assert(this[prev][next] === this);
+    assert(this[next][prev] === this);
+    this[prev][next] = this[next];
+    this[next][prev] = this[prev];
     this.#value = nothing;
   }
 }
