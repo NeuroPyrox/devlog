@@ -4,6 +4,9 @@ const assert = (condition) => {
   }
 };
 
+// Used when we want nullable values, but don't want the library user to create a null value.
+const nothing = Symbol();
+
 // TODO private variables
 class ShrinkingList {
   constructor() {
@@ -57,18 +60,18 @@ class ShrinkingListNode {
   }
 
   remove() {
-    if (this._value !== null) {
+    if (this._value !== nothing) {
       this.removeOnce();
     }
   }
 
   removeOnce() {
-    assert(this._value !== null);
+    assert(this._value !== nothing);
     assert(this._prev._next === this);
     assert(this._next._prev === this);
     this._prev._next = this._next;
     this._next._prev = this._prev;
-    this._value = null;
+    this._value = nothing;
   }
 }
 
@@ -90,9 +93,6 @@ const createGeneratorMonad = () => {
     });
   return [runMonad, monadicMethod];
 };
-
-// Used when we want nullable values, but don't want the library user to create a null value.
-const nothing = Symbol();
 
 // TODO remove [result] and [...args] once they're no longer needed
 const unnestable = (f) => {
