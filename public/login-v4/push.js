@@ -37,6 +37,7 @@ class Context {
   // TODO make separate PushEvents and PushBehaviors monads
   enqueueBehavior(sink, value) {
     this.#behaviorValues.push([sink, value]);
+    return nothing;
   }
 
   dequeueBehaviorValues() {
@@ -48,8 +49,15 @@ class Context {
 
 const [runPushMonad, monadicMethod] = createGeneratorMonad();
 export const readEvent = monadicMethod("readEvent");
-export const liftPull = monadicMethod("liftPull");
-export const enqueueBehavior = monadicMethod("enqueueBehavior");
+
+const key = Symbol();
+export const pure = (value) => ({ [key]: (context) => value });
+export const liftPull = (monadicValue) => ({
+  [key]: (context) => context.liftPull(monadicValue),
+});
+export const enqueueBehavior = (sink, value) => ({
+  [key]: (context) => context.enqueueBehavior(sink, value),
+});
 
 // Delay construction because we don't want to visit newly created reactives.
 export const push = (sink, value) =>
@@ -61,7 +69,7 @@ export const push = (sink, value) =>
       heap.push(childSink);
     }
     for (const sink of heap) {
-      const value = runPushMonad(context, sink.poll());
+      const value = runPushMonad(context, sink.poll())[key](context);
       if (value !== nothing) {
         context.writeEvent(sink, value);
         for (const child of sink.iterateActiveChildren()) {

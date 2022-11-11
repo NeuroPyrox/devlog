@@ -104,7 +104,7 @@ export const map = (parent, f) =>
   lazyConstructor(
     (parentSource) =>
       newEventPair([parentSource], function* (value) {
-        return f(value);
+        return Push.pure(f(value));
       })[1],
     parent
   );
@@ -125,12 +125,12 @@ export const merge = (
         [parentASource, parentBSource],
         function* (parentAValue, parentBValue) {
           if (parentAValue === Util.nothing) {
-            return BtoC(parentBValue);
+            return Push.pure(BtoC(parentBValue));
           }
           if (parentBValue === Util.nothing) {
-            return AtoC(parentAValue);
+            return Push.pure(AtoC(parentAValue));
           }
-          return ABtoC(parentAValue, parentBValue);
+          return Push.pure(ABtoC(parentAValue, parentBValue));
         }
       )[1],
     parentA,
@@ -143,7 +143,7 @@ export const mapTagB = (event, behavior, combine) =>
   lazyConstructor(
     (eventSource, behaviorSource) =>
       newEventPair([eventSource], function* (value) {
-        return combine(value, behaviorSource.getCurrentValue());
+        return Push.pure(combine(value, behaviorSource.getCurrentValue()));
       })[1],
     event,
     behavior
@@ -159,7 +159,7 @@ export const observeE = (parent) =>
   lazyConstructor(
     (parentSource) =>
       newEventPair([parentSource], function* (value) {
-        return yield Push.liftPull(value);
+        return Push.liftPull(value);
       })[1],
     parent
   );
@@ -168,7 +168,7 @@ export function* switchE(newParents) {
   // We're safe evaluating the event pair eagerly instead of using [lazyConstructor]
   // because there are no parents yet.
   const [sink, source] = newEventPair([], function* (value) {
-    return value;
+    return Push.pure(value);
   });
   lazyConstructor((newParentsSource) => {
     const weakSource = new WeakRef(source);
@@ -190,7 +190,7 @@ export function* switchE(newParents) {
             sink.switch(newParentSource.getWeakSink());
           }, newParent);
         }
-        return Util.nothing;
+        return Push.pure(Util.nothing);
       }
     );
     // The order of these 2 statements doesn't matter because
@@ -212,8 +212,7 @@ export function* stepper(initialValue, newValues) {
     const [modSink, modSource] = newEventPair(
       [parentSource],
       function* (value) {
-        yield Push.enqueueBehavior(sink, value);
-        return Util.nothing;
+        return Push.enqueueBehavior(sink, value);
       }
     );
     // The order of these 2 statements doesn't matter because

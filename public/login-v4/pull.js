@@ -6,6 +6,7 @@ import {
 } from "./lazyConstructors.js";
 
 import { newEventPair } from "./internals.js"; // Circular dependency
+import { pure } from "./push.js"; // Circular dependency
 
 // TODO garbage collection.
 const outputs = [];
@@ -23,7 +24,7 @@ const context = {
     lazyConstructor((parentSource) => {
       const [sink, source] = newEventPair([parentSource], function* (value) {
         lazyConstructor(() => handle(value));
-        return nothing;
+        return pure(nothing);
       });
       sink.activate();
       outputs.push(source); // TODO remove
