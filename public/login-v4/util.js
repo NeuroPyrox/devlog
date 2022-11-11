@@ -1,11 +1,11 @@
-const assert = (condition) => {
+export const assert = (condition) => {
   if (!condition) {
     throw new Error("Assertion failed");
   }
 };
 
 // Used when we want nullable values, but don't want the library user to create a null value.
-const nothing = Symbol();
+export const nothing = Symbol();
 
 // Use symbols instead of plain private fields because
 // [ShrinkingList] and [ShrinkingListNode] need to access these fields from each other.
@@ -14,7 +14,7 @@ const next = Symbol();
 
 // We use a doubly linked list because if it was singly linked, then [ShrinkingListNode.remove] couldn't be idempotent.
 // The list is a loop because otherwise we'd have to add more [if] statements.
-class ShrinkingList {
+export class ShrinkingList {
   constructor() {
     this[prev] = this;
     this[next] = this;
@@ -84,9 +84,9 @@ class ShrinkingListNode {
   }
 }
 
-const weakRefUndefined = { deref: () => undefined };
+export const weakRefUndefined = { deref: () => undefined };
 
-const createGeneratorMonad = () => {
+export const createGeneratorMonad = () => {
   const key = Symbol();
   const runMonad = (context, generator) => {
     let step = generator.next();
@@ -104,7 +104,7 @@ const createGeneratorMonad = () => {
 };
 
 // TODO remove [result] and [...args] once they're no longer needed
-const unnestable = (f) => {
+export const unnestable = (f) => {
   let running = false;
   return (...args) => {
     // TODO better error message
@@ -116,7 +116,7 @@ const unnestable = (f) => {
   };
 };
 
-const memoize = (f) => {
+export const memoize = (f) => {
   let done = false;
   let value;
   return () => {
@@ -161,33 +161,20 @@ const testGarbageCollectionInMemoize = () => {
   }, 1000);
 };
 
-const log = (x) => {
+export const log = (x) => {
   console.log(x);
   return x;
 };
 
-const derefMany = (weakRefs) =>
+export const derefMany = (weakRefs) =>
   weakRefs.map((weakRef) => weakRef.deref()).filter((ref) => ref !== undefined);
 
 // TODO remove [result] and [...args] once they're no longer needed
-const once = (f) => {
+export const once = (f) => {
   let hasRun = false;
   return (...args) => {
     assert(!hasRun);
     hasRun = true;
     return f(...args);
   };
-};
-
-export {
-  assert,
-  ShrinkingList,
-  weakRefUndefined,
-  createGeneratorMonad,
-  nothing,
-  unnestable,
-  memoize,
-  log,
-  derefMany,
-  once,
 };

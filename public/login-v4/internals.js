@@ -274,7 +274,7 @@ class EventSource {
 // Some of the event's parents may not be passed into this function but added via [EventSource.addParent].
 // The only parents passed here are the ones that [EventSink.poll] immediately depends on.
 // Possible O(1) optimization: similar function that has a special case for all [parentSources] being unpushable.
-const newEventPair = (parentSources, poll, unsubscribe = () => {}) => {
+export const newEventPair = (parentSources, poll, unsubscribe = () => {}) => {
   const sink = new EventSink(
     parentSources.map((source) => source.getWeakSink()),
     poll,
@@ -318,7 +318,7 @@ class BehaviorSource extends EventSource {
 }
 
 // TODO factor out similarities with [newEventPair].
-const newBehaviorPair = (parentSources, initialValue, poll) => {
+export const newBehaviorPair = (parentSources, initialValue, poll) => {
   const sink = new BehaviorSink(
     parentSources.map((source) => source.getWeakSink()),
     initialValue,
@@ -329,5 +329,3 @@ const newBehaviorPair = (parentSources, initialValue, poll) => {
   finalizers.register(source, source.getWeakSink());
   return [sink, source];
 };
-
-export { newEventPair, newBehaviorPair };

@@ -13,7 +13,7 @@ let constructors = [];
 // It's important to use [unnestable((f) => {...})] instead of [unnestable((f) => (...args) => {...})]
 //   so that the blocking occurs while [f] is being called.
 //   [unnestable((f, ...args) => {...})] would work, but that would be awkward.
-const delayConstructionDuring = unnestable((f) => {
+export const delayConstructionDuring = unnestable((f) => {
   state = "lazy";
   const result = f();
   state = "constructing";
@@ -23,13 +23,13 @@ const delayConstructionDuring = unnestable((f) => {
   return result;
 });
 
-const constConstructor = (x) => ({
+export const constConstructor = (x) => ({
   [construct]: () => x,
 });
 
 // Like an applicative [queueMicrotask],
 // but the tasks only get delayed during [delayConstructionDuring].
-const lazyConstructor = (f, ...args) => {
+export const lazyConstructor = (f, ...args) => {
   // Violation of this assertion could mean it's time to implement recursion.
   assert(state !== "constructing");
   args.forEach((arg) => assert(arg[construct]));
@@ -50,7 +50,7 @@ const lazyConstructor = (f, ...args) => {
 
 // Unusable outside of [delayConstructionDuring] because you'd need to
 // call the [loop] method before passing it to [lazyConstructor].
-const lazyLoop = () => {
+export const lazyLoop = () => {
   // Violation of this assertion could mean it's time to implement recursion.
   assert(state === "lazy");
   const result = {
@@ -64,5 +64,3 @@ const lazyLoop = () => {
   };
   return result;
 };
-
-export { constConstructor, lazyConstructor, lazyLoop, delayConstructionDuring };

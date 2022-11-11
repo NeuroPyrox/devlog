@@ -82,7 +82,7 @@ import { newEventPair, newBehaviorPair } from "./internals.js";
 
 // Note to self: Avoid the temptation to reduce the LOC in this file by refactoring!
 
-const input = (subscribe) =>
+export const input = (subscribe) =>
   lazyConstructor(() => {
     let sink, source;
     // Memory leak if [unsubscribe] doesn't remove all strong references to [push].
@@ -98,9 +98,9 @@ const input = (subscribe) =>
     return source;
   });
 
-const never = input(() => () => {});
+export const never = input(() => () => {});
 
-const map = (parent, f) =>
+export const map = (parent, f) =>
   lazyConstructor(
     (parentSource) =>
       newEventPair([parentSource], function* (value) {
@@ -109,10 +109,10 @@ const map = (parent, f) =>
     parent
   );
 
-const filter = (parent, predicate) =>
+export const filter = (parent, predicate) =>
   map(parent, (value) => (predicate(value) ? value : Util.nothing));
 
-const merge = (
+export const merge = (
   parentA,
   parentB,
   ABtoC = (a, b) => a,
@@ -139,7 +139,7 @@ const merge = (
 
 // TODO
 // TODO are there any possible short circuits based on [behavior]'s state?
-const mapTagB = (event, behavior, combine) =>
+export const mapTagB = (event, behavior, combine) =>
   lazyConstructor(
     (eventSource, behaviorSource) =>
       newEventPair([eventSource], function* (value) {
@@ -148,14 +148,14 @@ const mapTagB = (event, behavior, combine) =>
     event,
     behavior
   );
-const mapTag = (parent, latchGet, combine) =>
+export const mapTag = (parent, latchGet, combine) =>
   map(parent, (x) => combine(x, latchGet()));
 
 // TODO
-const tagB = (event, behavior) => mapTagB(event, behavior, (e, b) => b);
-const tag = (parent, latchGet) => map(parent, () => latchGet());
+export const tagB = (event, behavior) => mapTagB(event, behavior, (e, b) => b);
+export const tag = (parent, latchGet) => map(parent, () => latchGet());
 
-const observeE = (parent) =>
+export const observeE = (parent) =>
   lazyConstructor(
     (parentSource) =>
       newEventPair([parentSource], function* (value) {
@@ -164,7 +164,7 @@ const observeE = (parent) =>
     parent
   );
 
-function* switchE(newParents) {
+export function* switchE(newParents) {
   // We're safe evaluating the event pair eagerly instead of using [lazyConstructor]
   // because there are no parents yet.
   const [sink, source] = newEventPair([], function* (value) {
@@ -203,7 +203,7 @@ function* switchE(newParents) {
 }
 
 // TODO lift boundary cases up the call stack
-function* stepper(initialValue, newValues) {
+export function* stepper(initialValue, newValues) {
   // TODO define poll
   // We're safe evaluating the behavior pair eagerly instead of using [lazyConstructor]
   // because there are no parents yet.
@@ -226,7 +226,7 @@ function* stepper(initialValue, newValues) {
 }
 
 // TODO optimize with binary tree
-function* mergeBind(eventOfEvent, f) {
+export function* mergeBind(eventOfEvent, f) {
   let current = never;
   const next = map(eventOfEvent, (event) => merge(f(event), current));
   // TODO memory management
@@ -234,31 +234,13 @@ function* mergeBind(eventOfEvent, f) {
   return yield* switchE(next);
 }
 
-const getClicks = (domNode) =>
+export const getClicks = (domNode) =>
   input((push) => {
     domNode.addEventListener("click", push);
     return () => domNode.removeEventListener("click", push);
   });
 
 // TODO replace with behavior
-const getInputValues = (domNode) => () => domNode.value;
+export const getInputValues = (domNode) => () => domNode.value;
 
 export { output, loop, start } from "./pull.js";
-
-export {
-  never,
-  input,
-  map,
-  filter,
-  merge,
-  mapTagB,
-  mapTag,
-  tagB,
-  tag,
-  observeE,
-  switchE,
-  stepper,
-  mergeBind,
-  getClicks,
-  getInputValues,
-};
