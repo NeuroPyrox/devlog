@@ -81,9 +81,6 @@ class ReactiveSink {
   }
 }
 
-// TODO define "active"
-// TODO define "inactive"
-// TODO define "push"
 // There's an efficiency tradeoff for long chains of events of size s that only rarely get pushed.
 //   In     the current   implementation,      pushing an event implies pushing its active children.
 //   There's an alternate implementation where pushing an event implies pushing its        children.
@@ -97,7 +94,7 @@ class ReactiveSink {
 //     Case a    O(1)      O(s)
 //     Case b    O(s)      O(1)
 //     Case c    O(s)      O(1)
-//   We prefer the current implementation because:
+//   I prefer the current implementation because:
 //     Case a in the alternate implementation may be cost much more than O(s) if some events are expensive to compute.
 //     I can't think of any non-contrived examples where this tradeoff would matter.
 //     Long chains of events can typically be refactored into state machines anyways.
