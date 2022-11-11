@@ -33,13 +33,11 @@ const context = {
 };
 
 const [runPullMonad, monadicMethod] = createGeneratorMonad();
-const output = monadicMethod("output");
-const loop = monadicMethod("loop")();
+export const output = monadicMethod("output");
+export const loop = monadicMethod("loop")();
 
 // Only used by [start] and [Combinators.observeE].
-const pull = (monadicValue) => runPullMonad(context, monadicValue());
-const start = once((monadicValue) =>
+export const pull = (monadicValue) => runPullMonad(context, monadicValue());
+export const start = once((monadicValue) =>
   delayConstructionDuring(() => pull(monadicValue))
 );
-
-export { output, loop, pull, start };

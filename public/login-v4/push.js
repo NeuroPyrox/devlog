@@ -4,6 +4,8 @@ import { delayConstructionDuring } from "./lazyConstructors.js";
 
 import { pull } from "./pull.js"; // Circular dependency
 
+// TODO don't use a monad
+
 // We create a new instance of [Context] during every [push] so we can garbage collect [#eventValues].
 class Context {
   #eventValues;
@@ -45,12 +47,12 @@ class Context {
 }
 
 const [runPushMonad, monadicMethod] = createGeneratorMonad();
-const readEvent = monadicMethod("readEvent");
-const liftPull = monadicMethod("liftPull");
-const enqueueBehavior = monadicMethod("enqueueBehavior");
+export const readEvent = monadicMethod("readEvent");
+export const liftPull = monadicMethod("liftPull");
+export const enqueueBehavior = monadicMethod("enqueueBehavior");
 
 // Delay construction because we don't want to visit newly created reactives.
-const push = (sink, value) =>
+export const push = (sink, value) =>
   delayConstructionDuring(() => {
     const context = new Context();
     context.writeEvent(sink, value);
@@ -70,5 +72,3 @@ const push = (sink, value) =>
     }
     context.dequeueBehaviorValues();
   });
-
-export { readEvent, liftPull, enqueueBehavior, push };
