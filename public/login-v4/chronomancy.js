@@ -103,9 +103,7 @@ export const never = input(() => () => {});
 export const map = (parent, f) =>
   lazyConstructor(
     (parentSource) =>
-      newEventPair([parentSource], function* (value) {
-        return Push.pure(f(value));
-      })[1],
+      newEventPair([parentSource], (value) => Push.pure(f(value)))[1],
     parent
   );
 
@@ -123,7 +121,7 @@ export const merge = (
     (parentASource, parentBSource) =>
       newEventPair(
         [parentASource, parentBSource],
-        function* (parentAValue, parentBValue) {
+        (parentAValue, parentBValue) => {
           if (parentAValue === Util.nothing) {
             return Push.pure(BtoC(parentBValue));
           }
@@ -142,9 +140,9 @@ export const merge = (
 export const mapTagB = (event, behavior, combine) =>
   lazyConstructor(
     (eventSource, behaviorSource) =>
-      newEventPair([eventSource], function* (value) {
-        return Push.pure(combine(value, behaviorSource.getCurrentValue()));
-      })[1],
+      newEventPair([eventSource], (value) =>
+        Push.pure(combine(value, behaviorSource.getCurrentValue()))
+      )[1],
     event,
     behavior
   );
@@ -157,19 +155,14 @@ export const tag = (parent, latchGet) => map(parent, () => latchGet());
 
 export const observeE = (parent) =>
   lazyConstructor(
-    (parentSource) =>
-      newEventPair([parentSource], function* (value) {
-        return Push.liftPull(value);
-      })[1],
+    (parentSource) => newEventPair([parentSource], Push.liftPull)[1],
     parent
   );
 
 export function* switchE(newParents) {
   // We're safe evaluating the event pair eagerly instead of using [lazyConstructor]
   // because there are no parents yet.
-  const [sink, source] = newEventPair([], function* (value) {
-    return Push.pure(value);
-  });
+  const [sink, source] = newEventPair([], Push.pure);
   lazyConstructor((newParentsSource) => {
     const weakSource = new WeakRef(source);
     // Strongly references [sink] but weakly references [source] because
@@ -178,7 +171,7 @@ export function* switchE(newParents) {
     // because [modSink] doesn't directly push to [sink].
     const [modSink, modSource] = newEventPair(
       [newParentsSource],
-      function* (newParent) {
+      (newParent) => {
         const source = weakSource.deref(); // Weakness prevents memory leaks of unpullable but pushable [source]s.
         if (source !== undefined) {
           lazyConstructor((newParentSource) => {
@@ -209,11 +202,8 @@ export function* stepper(initialValue, newValues) {
   // because there are no parents yet.
   const [sink, source] = newBehaviorPair([], initialValue, undefined);
   lazyConstructor((parentSource) => {
-    const [modSink, modSource] = newEventPair(
-      [parentSource],
-      function* (value) {
-        return Push.enqueueBehavior(sink, value);
-      }
+    const [modSink, modSource] = newEventPair([parentSource], (value) =>
+      Push.enqueueBehavior(sink, value)
     );
     // The order of these 2 statements doesn't matter because
     // the branching in both only depends on whether [parentSource] is pushable.

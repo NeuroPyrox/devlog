@@ -176,7 +176,7 @@ class EventSink extends EventSinkActivation {
   }
 
   *poll() {
-    return yield* this.#poll(...(yield* this.readParents()));
+    return this.#poll(...(yield* this.readParents()));
   }
 
   // TODO when can this be called?
