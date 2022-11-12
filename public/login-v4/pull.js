@@ -22,7 +22,7 @@ const context = {
   // and for the ability to control when the output starts.
   output: (parent, handle) =>
     lazyConstructor((parentSource) => {
-      const [sink, source] = newEventPair([parentSource], function* (value) {
+      const [sink, source] = newEventPair([parentSource], (value) => {
         lazyConstructor(() => handle(value));
         return pure(nothing);
       });
