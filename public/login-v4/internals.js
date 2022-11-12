@@ -1,7 +1,5 @@
 import { assert, ShrinkingList, weakRefUndefined, derefMany } from "./util.js";
 
-import { readEvent } from "./push.js"; // Circular dependency
-
 const k = (x) => () => x;
 
 // TODO would it make sense to factor out modulators?
@@ -35,11 +33,12 @@ class ReactiveSink {
     this.#unsubscribe = unsubscribe; // Only used for input events
   }
 
+  // TODO refactor
   // TODO can we use this both for behaviors and events?
-  *readParents() {
+  *readParents(readEvent) {
     const parentValues = [];
     for (const weakParent of this.#weakParents) {
-      parentValues.push(yield readEvent(weakParent.deref()));
+      parentValues.push(readEvent(weakParent.deref()));
     }
     return parentValues;
   }
@@ -175,8 +174,8 @@ class EventSink extends EventSinkActivation {
     return this.#priority;
   }
 
-  *poll() {
-    return this.#poll(...(yield* this.readParents()));
+  *poll(readEvent) {
+    return this.#poll(...(yield* this.readParents(readEvent)));
   }
 
   // TODO when can this be called?

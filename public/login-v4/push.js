@@ -48,7 +48,6 @@ class Context {
 }
 
 const [runPushMonad, monadicMethod] = createGeneratorMonad();
-export const readEvent = monadicMethod("readEvent");
 
 const key = Symbol();
 export const pure = (value) => ({ [key]: (context) => value });
@@ -63,13 +62,14 @@ export const enqueueBehavior = (sink, value) => ({
 export const push = (sink, value) =>
   delayConstructionDuring(() => {
     const context = new Context();
+    const readEvent = (sink) => context.readEvent(sink);
     context.writeEvent(sink, value);
     const heap = new Heap((a, b) => a.getPriority() < b.getPriority());
     for (const childSink of sink.iterateActiveChildren()) {
       heap.push(childSink);
     }
     for (const sink of heap) {
-      const value = runPushMonad(context, sink.poll())[key](context);
+      const value = runPushMonad(context, sink.poll(readEvent))[key](context);
       if (value !== nothing) {
         context.writeEvent(sink, value);
         for (const child of sink.iterateActiveChildren()) {
