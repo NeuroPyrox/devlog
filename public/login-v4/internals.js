@@ -35,7 +35,7 @@ class ReactiveSink {
 
   // TODO refactor
   // TODO can we use this both for behaviors and events?
-  *readParents(readEvent) {
+  readParents(readEvent) {
     const parentValues = [];
     for (const weakParent of this.#weakParents) {
       parentValues.push(readEvent(weakParent.deref()));
@@ -174,8 +174,8 @@ class EventSink extends EventSinkActivation {
     return this.#priority;
   }
 
-  *poll(readEvent) {
-    return this.#poll(...(yield* this.readParents(readEvent)));
+  poll(readEvent) {
+    return this.#poll(...this.readParents(readEvent));
   }
 
   // TODO when can this be called?

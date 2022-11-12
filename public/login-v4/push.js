@@ -1,5 +1,5 @@
 import Heap from "https://cdn.jsdelivr.net/gh/NeuroPyrox/heap/heap.js";
-import { nothing, createGeneratorMonad } from "./util.js";
+import { nothing } from "./util.js";
 import { delayConstructionDuring } from "./lazyConstructors.js";
 
 import { pull } from "./pull.js"; // Circular dependency
@@ -47,8 +47,6 @@ class Context {
   }
 }
 
-const [runPushMonad, monadicMethod] = createGeneratorMonad();
-
 const key = Symbol();
 export const pure = (value) => ({ [key]: (context) => value });
 export const liftPull = (monadicValue) => ({
@@ -69,7 +67,7 @@ export const push = (sink, value) =>
       heap.push(childSink);
     }
     for (const sink of heap) {
-      const value = runPushMonad(context, sink.poll(readEvent))[key](context);
+      const value = sink.poll(readEvent)[key](context);
       if (value !== nothing) {
         context.writeEvent(sink, value);
         for (const child of sink.iterateActiveChildren()) {
