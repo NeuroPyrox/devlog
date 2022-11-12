@@ -4,8 +4,8 @@ import {
   lazyLoop,
   delayConstructionDuring,
 } from "./lazyConstructors.js";
+import { newEventPair } from "./internals.js";
 
-import { newEventPair } from "./internals.js"; // Circular dependency
 import { pure } from "./push.js"; // Circular dependency
 
 // TODO garbage collection.
