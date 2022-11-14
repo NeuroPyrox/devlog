@@ -4,8 +4,6 @@ import { delayConstructionDuring } from "./lazyConstructors.js";
 
 import { pull } from "./pull.js"; // Circular dependency
 
-// TODO don't use a monad
-
 // We create a new instance of [Context] during every [push] so we can garbage collect [#eventValues].
 class Context {
   #eventValues;
@@ -34,7 +32,7 @@ class Context {
     return pull(monadicValue);
   }
 
-  // TODO make separate PushEvents and PushBehaviors monads
+  // TODO make PushBehavior monad
   enqueueBehavior(sink, value) {
     this.#behaviorValues.push([sink, value]);
     return nothing;
