@@ -197,7 +197,6 @@ export function* switchE(newParents) {
 
 // TODO lift boundary cases up the call stack
 export function* stepper(initialValue, newValues) {
-  // TODO define poll
   // We're safe evaluating the behavior pair eagerly instead of using [lazyConstructor]
   // because there are no parents yet.
   const [sink, source] = newBehaviorPair([], initialValue, undefined);

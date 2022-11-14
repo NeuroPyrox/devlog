@@ -2,7 +2,6 @@ import { assert, ShrinkingList, weakRefUndefined, derefMany } from "./util.js";
 
 const k = (x) => () => x;
 
-// TODO would it make sense to factor out modulators?
 // TODO restrict surface area by making mutations monadic
 // TODO rename "poll"
 // TODO update "EventSink", "EventSource", "BehaviorSink", "BehaviorSource" comments
@@ -33,14 +32,9 @@ class ReactiveSink {
     this.#unsubscribe = unsubscribe; // Only used for input events
   }
 
-  // TODO refactor
   // TODO can we use this both for behaviors and events?
   readParents(readEvent) {
-    const parentValues = [];
-    for (const weakParent of this.#weakParents) {
-      parentValues.push(readEvent(weakParent.deref()));
-    }
-    return parentValues;
+    return this.#weakParents.map((weakParent) => readEvent(weakParent.deref()));
   }
 
   // First parent is [undefined] if not found.
