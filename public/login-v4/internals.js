@@ -6,6 +6,17 @@ const k = (x) => () => x;
 // TODO rename "poll"
 // TODO update "EventSink", "EventSource", "BehaviorSink", "BehaviorSource" comments
 
+// TODO
+// Surface area:
+//   Constructing:
+//     EventSink.activate
+//     EventSource.addParent
+//     EventSink.switch
+//     EventSource.switch
+//   Lazy:
+//     EventSink.iterateActiveChildren
+//     EventSink.poll
+
 const incrementPriority = (weakParents) =>
   Math.max(
     -1,
@@ -164,6 +175,7 @@ class EventSink extends EventSinkActivation {
     this.#poll = poll;
   }
 
+  // TODO can this be private?
   getPriority() {
     return this.#priority;
   }
