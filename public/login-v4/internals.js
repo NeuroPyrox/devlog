@@ -245,7 +245,7 @@ class EventSource {
     // There's a lot of coupling here, but basically [switchE]s can either have 1 or 2 parents.
     // The first parent is the modulator and the second parent
     // if it exists is the parent that pushes [this.#weakSink].
-    // Check if there's more than one parent.
+    // If there's more than one parent, remove the last one.
     if (this.#parents.getLast() !== this.#parents.getFirst()) {
       this.#parents.getLast().removeOnce();
     }

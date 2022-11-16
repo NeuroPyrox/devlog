@@ -159,15 +159,17 @@ export const observeE = (parent) =>
     parent
   );
 
+// TODO make sure the pull monad is the caller
 export function* switchE(newParents) {
   // We're safe evaluating the event pair eagerly instead of using [lazyConstructor]
   // because there are no parents yet.
   const [sink, source] = newEventPair([], Push.pure);
   lazyConstructor((newParentsSource) => {
     const weakSource = new WeakRef(source);
-    // Strongly references [sink] but weakly references [source] because
-    // [modSinks]'s pushability implies [sink]'s pushability.
-    // We put the reference in the poll function instead of [modSink]'s children
+    // Strongly references [sink] because [modSinks]'s pushability implies [sink]'s pushability.
+    // Weakly references [source] because we can't access it from [sink],
+    // and it's weak because pushability doesn't imply pullability.
+    // We reference [sink] in the poll function instead of [modSink]'s children
     // because [modSink] doesn't directly push to [sink].
     const [modSink, modSource] = newEventPair(
       [newParentsSource],
