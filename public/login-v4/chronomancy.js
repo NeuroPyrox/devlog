@@ -4,7 +4,7 @@ import {
   lazyConstructor,
   lazyLoop,
 } from "./lazyConstructors.js";
-import { output, assertPullMonad } from "./pull.js";
+import { assertPullMonad } from "./pull.js";
 import * as Push from "./push.js";
 import { newEventPair, newBehaviorPair } from "./internals.js";
 
@@ -159,6 +159,30 @@ export const observeE = (parent) =>
     parent
   );
 
+// TODO remove and replace with proper garbage collection.
+const outputs = [];
+
+// TODO update comments
+// To stop the output, call [source.getWeakSink().deref()?.deactivate()].
+// When the return value loses all its references,
+// we assert that the sink is not active,
+// and later the output gets garbage collected.
+// Implementation-wise, there's no need to put this function
+// in the Pull monad, but we do it to make the semantics cleaner
+// and for the ability to control when the output starts.
+export function* output(parent, handle) {
+  yield* assertPullMonad();
+  lazyConstructor((parentSource) => {
+    const [sink, source] = newEventPair([parentSource], (value) => {
+      lazyConstructor(() => handle(value));
+      return Push.pure(Util.nothing);
+    });
+    sink.activate();
+    outputs.push(source); // TODO remove.
+    return source;
+  }, parent);
+}
+
 export function* switchE(newParents) {
   yield* assertPullMonad();
   // We're safe evaluating the event pair eagerly instead of using [lazyConstructor]
@@ -221,7 +245,7 @@ export function* mergeBind(eventOfEvent, f) {
   let current = never;
   const next = map(eventOfEvent, (event) => merge(f(event), current));
   // TODO memory management
-  yield output(next, (event) => (current = event));
+  yield* output(next, (event) => (current = event));
   return yield* switchE(next);
 }
 
@@ -234,4 +258,4 @@ export const getClicks = (domNode) =>
 // TODO replace with behavior
 export const getInputValues = (domNode) => () => domNode.value;
 
-export { output, loop, start } from "./pull.js";
+export { loop, start } from "./pull.js";

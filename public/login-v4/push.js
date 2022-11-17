@@ -1,8 +1,7 @@
 import Heap from "https://cdn.jsdelivr.net/gh/NeuroPyrox/heap/heap.js";
 import { nothing } from "./util.js";
 import { delayConstructionDuring } from "./lazyConstructors.js";
-
-import { pull } from "./pull.js"; // Circular dependency
+import { pull } from "./pull.js";
 
 // We create a new instance of [Context] during every [push] so we can garbage collect [#eventValues].
 class Context {
