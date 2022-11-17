@@ -8,6 +8,7 @@ import { assertPullMonad } from "./pull.js";
 import * as Push from "./push.js";
 import { newEventPair, newBehaviorPair } from "./internals.js";
 
+// TODO use freeze and seal to make things more functional
 // TODO what are the atomic operations on the graph?
 // TODO make topology changes more explicit.
 
@@ -162,6 +163,19 @@ export const observeE = (parent) =>
 // TODO remove and replace with proper garbage collection.
 const outputs = [];
 
+function* modulate(parent, handle) {
+  yield* assertPullMonad();
+  return lazyConstructor((parentSource) => {
+    const [sink, source] = newEventPair([parentSource], (value) => {
+      handle(value);
+      return Push.pure(Util.nothing);
+    });
+    sink.activate();
+    outputs.push(source); // TODO remove.
+    return source;
+  }, parent);
+}
+
 // TODO update comments
 // To stop the output, call [source.getWeakSink().deref()?.deactivate()].
 // When the return value loses all its references,
@@ -172,7 +186,7 @@ const outputs = [];
 // and for the ability to control when the output starts.
 export function* output(parent, handle) {
   yield* assertPullMonad();
-  lazyConstructor((parentSource) => {
+  return lazyConstructor((parentSource) => {
     const [sink, source] = newEventPair([parentSource], (value) => {
       lazyConstructor(() => handle(value));
       return Push.pure(Util.nothing);
@@ -184,40 +198,34 @@ export function* output(parent, handle) {
 }
 
 export function* switchE(newParents) {
-  yield* assertPullMonad();
   // We're safe evaluating the event pair eagerly instead of using [lazyConstructor]
   // because there are no parents yet.
   const [sink, source] = newEventPair([], Push.pure);
-  lazyConstructor((newParentsSource) => {
-    const weakSource = new WeakRef(source);
-    // Strongly references [sink] because [modSinks]'s pushability implies [sink]'s pushability.
-    // Weakly references [source] because we can't access it from [sink],
-    // and it's weak because pushability doesn't imply pullability.
-    // We reference [sink] in the poll function instead of [modSink]'s children
-    // because [modSink] doesn't directly push to [sink].
-    const [modSink, modSource] = newEventPair(
-      [newParentsSource],
-      (newParent) => {
-        const source = weakSource.deref(); // Weakness prevents memory leaks of unpullable but pushable [source]s.
-        if (source !== undefined) {
-          lazyConstructor((newParentSource) => {
-            // It's not possible to switch to an unpullable [newParentSource].
-            // If [newParentSource] is unpushable, [source.switch] has a case that deals with it.
-            source.switch(newParentSource);
-            // If we switch to an unpushable sink that's not GC'd yet,
-            // then it will still get GC'd properly.
-            sink.switch(newParentSource.getWeakSink());
-          }, newParent);
-        }
-        return Push.pure(Util.nothing);
-      }
-    );
-    // The order of these 2 statements doesn't matter because
-    // the branching in both only depends on whether [parentSource] is pushable.
-    modSink.activate();
-    // [source]'s pullability implies [modSource]'s pullability.
-    source.addParent(modSource);
-  }, newParents);
+  const weakSource = new WeakRef(source);
+  // Strongly references [sink] because [modulator]'s pushability implies [sink]'s pushability.
+  // Weakly references [source] because we can't access it from [sink],
+  // and it's weak because pushability doesn't imply pullability.
+  // We reference [sink] in the poll function instead of [modulator]'s children
+  // because [modulator] doesn't directly push to [sink].
+  const modulator = yield* modulate(newParents, (newParent) => {
+    const source = weakSource.deref(); // Weakness prevents memory leaks of unpullable but pushable [source]s.
+    if (source !== undefined) {
+      lazyConstructor((newParentSource) => {
+        // It's not possible to switch to an unpullable [newParentSource].
+        // If [newParentSource] is unpushable, [source.switch] has a case that deals with it.
+        source.switch(newParentSource);
+        // If we switch to an unpushable sink that's not GC'd yet,
+        // then it will still get GC'd properly.
+        sink.switch(newParentSource.getWeakSink());
+      }, newParent);
+    }
+    return Push.pure(Util.nothing);
+  });
+  // [source]'s pullability implies [modulatorSource]'s pullability.
+  lazyConstructor(
+    (modulatorSource) => source.addParent(modulatorSource),
+    modulator
+  );
   return constConstructor(source);
 }
 
