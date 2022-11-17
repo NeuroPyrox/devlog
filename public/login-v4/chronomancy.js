@@ -81,8 +81,6 @@ import { newEventPair, newBehaviorPair } from "./internals.js";
 //   so why not restrict its interface by treating it as time-dependent?
 // [input]'s time-independence is contractual. I'm trusting the library user to ensure it.
 
-// Note to self: Avoid the temptation to reduce the LOC in this file by refactoring!
-
 export const input = (subscribe) =>
   lazyConstructor(() => {
     let sink, source;
@@ -213,6 +211,7 @@ export function* switchE(newParents) {
     }
     return Push.pure(Util.nothing);
   });
+  // TODO is there a memory leak?
   // [source]'s pullability implies [modulatorSource]'s pullability.
   lazyConstructor(
     (modulatorSource) => source.addParent(modulatorSource),
@@ -223,20 +222,16 @@ export function* switchE(newParents) {
 
 // TODO lift boundary cases up the call stack
 export function* stepper(initialValue, newValues) {
-  yield* assertPullMonad();
   // We're safe evaluating the behavior pair eagerly instead of using [lazyConstructor]
   // because there are no parents yet.
   const [sink, source] = newBehaviorPair([], initialValue, undefined);
-  lazyConstructor((parentSource) => {
-    const [modSink, modSource] = newEventPair([parentSource], (value) =>
-      Push.enqueueBehavior(sink, value)
-    );
-    // The order of these 2 statements doesn't matter because
-    // the branching in both only depends on whether [parentSource] is pushable.
-    modSink.activate();
-    // [source]'s pullability implies [modSource]'s pullability.
-    source.addParent(modSource);
-  }, newValues);
+  const modulator = yield* modulate(newValues, (value) => Push.enqueueBehavior(sink, value));
+  // TODO is there a memory leak?
+  // [source]'s pullability implies [modulatorSource]'s pullability.
+  lazyConstructor(
+    (modulatorSource) => source.addParent(modulatorSource),
+    modulator
+  );
   return constConstructor(source);
 }
 
