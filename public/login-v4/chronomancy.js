@@ -4,7 +4,7 @@ import {
   lazyConstructor,
   lazyLoop,
 } from "./lazyConstructors.js";
-import { output } from "./pull.js";
+import { output, assertPullMonad } from "./pull.js";
 import * as Push from "./push.js";
 import { newEventPair, newBehaviorPair } from "./internals.js";
 
@@ -159,8 +159,8 @@ export const observeE = (parent) =>
     parent
   );
 
-// TODO make sure the pull monad is the caller
 export function* switchE(newParents) {
+  yield* assertPullMonad();
   // We're safe evaluating the event pair eagerly instead of using [lazyConstructor]
   // because there are no parents yet.
   const [sink, source] = newEventPair([], Push.pure);
@@ -199,6 +199,7 @@ export function* switchE(newParents) {
 
 // TODO lift boundary cases up the call stack
 export function* stepper(initialValue, newValues) {
+  yield* assertPullMonad();
   // We're safe evaluating the behavior pair eagerly instead of using [lazyConstructor]
   // because there are no parents yet.
   const [sink, source] = newBehaviorPair([], initialValue, undefined);
