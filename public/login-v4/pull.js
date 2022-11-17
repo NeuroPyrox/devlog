@@ -1,4 +1,4 @@
-import { nothing, createGeneratorMonad, once } from "./util.js";
+import { assert, nothing, createGeneratorMonad, once } from "./util.js";
 import {
   lazyConstructor,
   lazyLoop,
@@ -10,6 +10,8 @@ import { pure } from "./push.js"; // Circular dependency
 
 // TODO garbage collection.
 const outputs = [];
+
+const key = Symbol();
 
 const context = {
   // TODO update comments
@@ -31,11 +33,17 @@ const context = {
       return source;
     }, parent),
   loop: lazyLoop,
+  getKey: () => key,
 };
 
 const [runPullMonad, monadicMethod] = createGeneratorMonad();
 export const output = monadicMethod("output");
 export const loop = monadicMethod("loop")();
+const getKey = monadicMethod("getKey")();
+
+export function* assertPullMonad() {
+  assert((yield getKey) === key);
+}
 
 // Only used by [start] and [Combinators.observeE].
 export const pull = (monadicValue) => runPullMonad(context, monadicValue());
