@@ -169,7 +169,7 @@ const outputs = [];
 // Implementation-wise, there's no need to put this function
 // in the Pull monad, but we do it to make the semantics cleaner
 // and for the ability to control when the output starts.
-function* modulate(parent, handle) {
+function* eagerOutput(parent, handle) {
   yield* assertPullMonad();
   return lazyConstructor((parentSource) => {
     const [sink, source] = newEventPair([parentSource], (value) => {
@@ -182,7 +182,7 @@ function* modulate(parent, handle) {
   }, parent);
 }
 export function* output(parent, handle) {
-  return yield* modulate(parent, (value) =>
+  return yield* eagerOutput(parent, (value) =>
     lazyConstructor(() => handle(value))
   );
 }
@@ -197,7 +197,7 @@ export function* switchE(newParents) {
   // and it's weak because pushability doesn't imply pullability.
   // We reference [sink] in the poll function instead of [modulator]'s children
   // because [modulator] doesn't directly push to [sink].
-  const modulator = yield* modulate(newParents, (newParent) => {
+  const modulator = yield* eagerOutput(newParents, (newParent) => {
     const source = weakSource.deref(); // Weakness prevents memory leaks of unpullable but pushable [source]s.
     if (source === undefined) {
       return;
@@ -225,7 +225,7 @@ export function* stepper(initialValue, newValues) {
   // We're safe evaluating the behavior pair eagerly instead of using [lazyConstructor]
   // because there are no parents yet.
   const [sink, source] = newBehaviorPair([], initialValue, undefined);
-  const modulator = yield* modulate(newValues, (value) =>
+  const modulator = yield* eagerOutput(newValues, (value) =>
     Push.enqueueBehavior(sink, value)
   );
   // TODO is there a memory leak?
