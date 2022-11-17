@@ -299,7 +299,7 @@
           signupAttempts,
         });
 
-      yield output(insertions, () => {
+      yield* output(insertions, () => {
         usernameInsertInput.value = "";
         passwordInsertInput.value = "";
       });
@@ -324,16 +324,16 @@
         })
       );
 
-      yield output(passwordChanges, ({ index, password }) => {
+      yield* output(passwordChanges, ({ index, password }) => {
         const rowElement = userTableBody.children[index];
         rowElement.children[1].textContent = password;
       });
 
-      yield output(removedUsers, ({ index }) =>
+      yield* output(removedUsers, ({ index }) =>
         userTableBody.children[index].remove()
       );
 
-      yield output(clears, (_) => (userTableBody.innerHTML = ""));
+      yield* output(clears, (_) => (userTableBody.innerHTML = ""));
 
       return { userTableDiv, passwordChanges, removedUsers, clears, tryLogins };
     }
@@ -374,11 +374,11 @@
             password,
           })
         );
-        yield output(
+        yield* output(
           filter(loginAttempts, ({ username }) => username === ""),
           () => (statusText.textContent = "Username required!")
         );
-        yield output(
+        yield* output(
           filter(
             loginAttempts,
             ({ username, password }) => username !== "" && password === ""
@@ -391,7 +391,7 @@
             ({ username, password }) => username !== "" && password !== ""
           )
         );
-        yield output(
+        yield* output(
           filter(loginAttempts, (success) => !success),
           () => (statusText.textContent = `Invalid login!`)
         );
@@ -439,11 +439,11 @@
             password,
           })
         );
-        yield output(
+        yield* output(
           filter(signupAttempts, ({ username }) => username === ""),
           () => (statusText.textContent = "Username required!")
         );
-        yield output(
+        yield* output(
           filter(
             signupAttempts,
             ({ username, password }) => username !== "" && password === ""
@@ -499,7 +499,7 @@
       const authPages = yield loop;
       const appPages = observeE(merge(authPages, startPage));
 
-      yield output(appPages, ([appDiv, ,]) => {
+      yield* output(appPages, ([appDiv, ,]) => {
         document.getElementById("appPage")?.remove();
         appDiv.id = "appPage";
         document.body.appendChild(appDiv);
