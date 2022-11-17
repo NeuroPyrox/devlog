@@ -199,17 +199,17 @@ export function* switchE(newParents) {
   // because [modulator] doesn't directly push to [sink].
   const modulator = yield* modulate(newParents, (newParent) => {
     const source = weakSource.deref(); // Weakness prevents memory leaks of unpullable but pushable [source]s.
-    if (source !== undefined) {
-      lazyConstructor((newParentSource) => {
-        // It's not possible to switch to an unpullable [newParentSource].
-        // If [newParentSource] is unpushable, [source.switch] has a case that deals with it.
-        source.switch(newParentSource);
-        // If we switch to an unpushable sink that's not GC'd yet,
-        // then it will still get GC'd properly.
-        sink.switch(newParentSource.getWeakSink());
-      }, newParent);
+    if (source === undefined) {
+      return;
     }
-    return Push.pure(Util.nothing);
+    lazyConstructor((newParentSource) => {
+      // It's not possible to switch to an unpullable [newParentSource].
+      // If [newParentSource] is unpushable, [source.switch] has a case that deals with it.
+      source.switch(newParentSource);
+      // If we switch to an unpushable sink that's not GC'd yet,
+      // then it will still get GC'd properly.
+      sink.switch(newParentSource.getWeakSink());
+    }, newParent);
   });
   // TODO is there a memory leak?
   // [source]'s pullability implies [modulatorSource]'s pullability.
@@ -225,7 +225,9 @@ export function* stepper(initialValue, newValues) {
   // We're safe evaluating the behavior pair eagerly instead of using [lazyConstructor]
   // because there are no parents yet.
   const [sink, source] = newBehaviorPair([], initialValue, undefined);
-  const modulator = yield* modulate(newValues, (value) => Push.enqueueBehavior(sink, value));
+  const modulator = yield* modulate(newValues, (value) =>
+    Push.enqueueBehavior(sink, value)
+  );
   // TODO is there a memory leak?
   // [source]'s pullability implies [modulatorSource]'s pullability.
   lazyConstructor(
