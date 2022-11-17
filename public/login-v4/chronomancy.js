@@ -181,10 +181,25 @@ function* eagerOutput(parent, handle) {
     return source;
   }, parent);
 }
+
 export function* output(parent, handle) {
   return yield* eagerOutput(parent, (value) =>
     lazyConstructor(() => handle(value))
   );
+}
+
+// [handle] must strongly reference the target's sink to enforce pushability.
+// [handle] must not strong reference to [targetSource] because pushability doesn't imply pullability.
+// [modulator] doesn't store the target as a child because it doesn't directly push to the target,
+// only adds new parents to it or modifies it in other ways through [handle].
+function* modulate(targetSource, parent, handle) {
+  const modulator = yield* eagerOutput(parent, handle);
+  // [targetSource]'s pullability implies [modulatorSource]'s pullability.
+  lazyConstructor(
+    (modulatorSource) => targetSource.addParent(modulatorSource),
+    modulator
+  );
+  return constConstructor(targetSource);
 }
 
 export function* switchE(newParents) {
@@ -192,12 +207,9 @@ export function* switchE(newParents) {
   // because there are no parents yet.
   const [sink, source] = newEventPair([], Push.pure);
   const weakSource = new WeakRef(source);
-  // Strongly references [sink] because [modulator]'s pushability implies [sink]'s pushability.
   // Weakly references [source] because we can't access it from [sink],
   // and it's weak because pushability doesn't imply pullability.
-  // We reference [sink] in the poll function instead of [modulator]'s children
-  // because [modulator] doesn't directly push to [sink].
-  const modulator = yield* eagerOutput(newParents, (newParent) => {
+  return yield* modulate(source, newParents, (newParent) => {
     const source = weakSource.deref(); // Weakness prevents memory leaks of unpullable but pushable [source]s.
     if (source === undefined) {
       return;
@@ -211,13 +223,6 @@ export function* switchE(newParents) {
       sink.switch(newParentSource.getWeakSink());
     }, newParent);
   });
-  // TODO is there a memory leak?
-  // [source]'s pullability implies [modulatorSource]'s pullability.
-  lazyConstructor(
-    (modulatorSource) => source.addParent(modulatorSource),
-    modulator
-  );
-  return constConstructor(source);
 }
 
 // TODO lift boundary cases up the call stack
@@ -225,16 +230,9 @@ export function* stepper(initialValue, newValues) {
   // We're safe evaluating the behavior pair eagerly instead of using [lazyConstructor]
   // because there are no parents yet.
   const [sink, source] = newBehaviorPair([], initialValue, undefined);
-  const modulator = yield* eagerOutput(newValues, (value) =>
+  return yield* modulate(source, newValues, (value) =>
     Push.enqueueBehavior(sink, value)
   );
-  // TODO is there a memory leak?
-  // [source]'s pullability implies [modulatorSource]'s pullability.
-  lazyConstructor(
-    (modulatorSource) => source.addParent(modulatorSource),
-    modulator
-  );
-  return constConstructor(source);
 }
 
 // TODO optimize with binary tree
