@@ -172,10 +172,7 @@ const outputs = [];
 function* eagerOutput(parent, handle) {
   yield* assertPullMonad();
   return lazyConstructor((parentSource) => {
-    const [sink, source] = newEventPair([parentSource], (value) => {
-      handle(value);
-      return Push.pure(Util.nothing);
-    });
+    const [sink, source] = newEventPair([parentSource], handle);
     sink.activate();
     outputs.push(source); // TODO remove.
     return source;
@@ -183,8 +180,11 @@ function* eagerOutput(parent, handle) {
 }
 
 export function* output(parent, handle) {
-  return yield* eagerOutput(parent, (value) =>
-    lazyConstructor(() => handle(value))
+  yield* eagerOutput(parent, (value) => {
+    lazyConstructor(() => handle(value));
+    // TODO factor this out
+    return Push.pure(Util.nothing);
+  }
   );
 }
 
@@ -211,17 +211,17 @@ export function* switchE(newParents) {
   // and it's weak because pushability doesn't imply pullability.
   return yield* modulate(source, newParents, (newParent) => {
     const source = weakSource.deref(); // Weakness prevents memory leaks of unpullable but pushable [source]s.
-    if (source === undefined) {
-      return;
+    if (source !== undefined) {
+      lazyConstructor((newParentSource) => {
+        // It's not possible to switch to an unpullable [newParentSource].
+        // If [newParentSource] is unpushable, [source.switch] has a case that deals with it.
+        source.switch(newParentSource);
+        // If we switch to an unpushable sink that's not GC'd yet,
+        // then it will still get GC'd properly.
+        sink.switch(newParentSource.getWeakSink());
+      }, newParent);
     }
-    lazyConstructor((newParentSource) => {
-      // It's not possible to switch to an unpullable [newParentSource].
-      // If [newParentSource] is unpushable, [source.switch] has a case that deals with it.
-      source.switch(newParentSource);
-      // If we switch to an unpushable sink that's not GC'd yet,
-      // then it will still get GC'd properly.
-      sink.switch(newParentSource.getWeakSink());
-    }, newParent);
+    return Push.pure(Util.nothing);
   });
 }
 

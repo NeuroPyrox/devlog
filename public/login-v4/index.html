@@ -152,10 +152,11 @@
         ),
         noCoincidence
       );
-      clears = filter(
+      const tableLengthOnClear = map(
         tagB(clears, internalTableB),
-        (table) => table.length !== 0
+        (table) => table.length
       );
+      clears = filter(tableLengthOnClear, (length) => length !== 0);
       tableTransform = merge(
         tableTransform,
         map(clears, () => (table) => (table.length = 0)),
@@ -164,16 +165,16 @@
 
       // TODO make a combinator for this use case.
       // The copy prevents side-effects if we want to access internalTableB arbitrarily.
-      internalTableB.loop(
-        yield* stepper(
-          [],
-          mapTagB(tableTransform, internalTableB, (transform, table) => {
-            const copy = [...table];
-            transform(copy);
-            return copy;
-          })
-        )
+      const newInternalTables = mapTagB(
+        tableTransform,
+        internalTableB,
+        (transform, table) => {
+          const copy = [...table];
+          transform(copy);
+          return copy;
+        }
       );
+      internalTableB.loop(yield* stepper([], newInternalTables));
 
       const tryLogins = (event) =>
         mapTagB(event, internalTableB, ({ username, password }, table) => {
