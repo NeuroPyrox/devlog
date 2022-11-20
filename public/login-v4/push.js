@@ -47,11 +47,10 @@ class Context {
 const key = Symbol();
 export const pure = (value) => ({ [key]: (context) => value });
 export const liftPull = (monadicValue) => ({
-  [key]: (context) => context.liftPull(monadicValue)
+  [key]: (context) => context.liftPull(monadicValue),
 });
 export const enqueueBehavior = (sink, value) => ({
   [key]: (context) => context.enqueueBehavior(sink, value),
-  type: "enqueueBehavior"
 });
 
 // Delay construction because we don't want to visit newly created reactives.

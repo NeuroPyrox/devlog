@@ -10,12 +10,14 @@ const k = (x) => () => x;
 // Surface area:
 //   Constructing:
 //     EventSink.activate
-//     EventSource.addParent
+//     EventSink.deactivate
 //     EventSink.switch
 //     EventSource.switch
+//     EventSource.addParent
 //   Lazy:
 //     EventSink.iterateActiveChildren
 //     EventSink.poll
+// Private EventSink methods: readParents, isFirstParent, forEachParent, destroy, getPriority
 
 const incrementPriority = (weakParents) =>
   Math.max(
