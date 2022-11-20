@@ -161,14 +161,8 @@ export const observeE = (parent) =>
 // TODO remove and replace with proper garbage collection.
 const outputs = [];
 
-// TODO update comments
-// To stop the output, call [source.getWeakSink().deref()?.deactivate()].
-// When the return value loses all its references,
-// we assert that the sink is not active,
-// and later the output gets garbage collected.
-// Implementation-wise, there's no need to put this function
-// in the Pull monad, but we do it to make the semantics cleaner
-// and for the ability to control when the output starts.
+// Don't make this a monadic method because we'd still to call [assertPullMonad] anyways.
+// To deactivate it, call [source.getWeakSink().deref()?.deactivate()].
 function* eagerOutput(parent, handle) {
   yield* assertPullMonad();
   return lazyConstructor((parentSource) => {
@@ -179,12 +173,13 @@ function* eagerOutput(parent, handle) {
   }, parent);
 }
 
+// TODO deactivateability.
+// TODO assert deactivation before garbage collection.
 export function* output(parent, handle) {
   yield* eagerOutput(parent, (value) => {
     lazyConstructor(() => handle(value));
     return Push.pure(Util.nothing);
-  }
-  );
+  });
 }
 
 // [handle] must strongly reference the target's sink to enforce pushability.
