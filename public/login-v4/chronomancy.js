@@ -182,7 +182,6 @@ function* eagerOutput(parent, handle) {
 export function* output(parent, handle) {
   yield* eagerOutput(parent, (value) => {
     lazyConstructor(() => handle(value));
-    // TODO factor this out
     return Push.pure(Util.nothing);
   }
   );
