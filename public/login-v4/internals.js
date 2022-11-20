@@ -277,7 +277,6 @@ class EventSource {
 
 // Some of the event's parents may not be passed into this function but added via [EventSource.addParent].
 // The only parents passed here are the ones that [EventSink.poll] immediately depends on.
-// Possible O(1) optimization: similar function that has a special case for all [parentSources] being unpushable.
 export const newEventPair = (parentSources, poll, unsubscribe = () => {}) => {
   const sink = new EventSink(
     parentSources.map((source) => source.getWeakSink()),
