@@ -19,6 +19,10 @@ const k = (x) => () => x;
 //     EventSink.poll
 // Private EventSink methods: readParents, isFirstParent, forEachParent, destroy, getPriority
 
+// Used to make methods private to this module.
+// I'd name the variable "private", but that keyword is reserved.
+const priv = Symbol();
+
 const incrementPriority = (weakParents) =>
   Math.max(
     -1,
@@ -32,6 +36,63 @@ const finalizers = new FinalizationRegistry((weakRef) =>
 const sourceLinkFinalizers = new FinalizationRegistry((weakChildLink) =>
   weakChildLink.deref()?.removeOnce()
 );
+
+// "EventSink" is left off variable names, but it's implied.
+class EventSinkChildren {
+  #weakParents;
+  #weakParentLinks;
+  #children;
+  #unsubscribe;
+
+  // [unsubscribe] is highly coupled. It's only used for [input] events
+  constructor(weakParents, unsubscribe) {
+    this.#setWeakParents(weakParents);
+    this.#children = new ShrinkingList();
+    this.#unsubscribe = unsubscribe;
+  }
+
+  // TODO can we use this both for behaviors and events?
+  readParents(read) {
+    return this.#weakParents.map((weakParent) => read(weakParent.deref()));
+  }
+
+  // First parent is [undefined] if not found.
+  // Used for early exits from [EventSink.switch]
+  isFirstParent(parent) {
+    return parent === this.#weakParents[0]?.deref();
+  }
+
+  switch(weakParent) {
+    assert(this.#weakParents.length <= 1);
+    this.#removeFromParents();
+    // TODO why do we need this branching?
+    this.#setWeakParents(weakParent.deref() === undefined ? [] : [weakParent]);
+  }
+
+  forEachParent(f) {
+    derefMany(this.#weakParents).forEach(f);
+  }
+
+  // Guarantees the garbage collection of this sink because the only strong references
+  // to it are from the parents' [#children], unpullable modulators, and input callbacks.
+  destroy() {
+    this.#removeFromParents();
+    this.#unsubscribe(); // Contractually removes strong references from input callbacks.
+  }
+
+  #setWeakParents(weakParents) {
+    this.#weakParents = weakParents;
+    this.#weakParentLinks = derefMany(weakParents).map(
+      (parent) => new WeakRef(parent[private].#children.add(this))
+    );
+  }
+
+  #removeFromParents() {
+    for (const weakParentLink of this.#weakParentLinks) {
+      weakParentLink.deref()?.removeOnce();
+    }
+  }
+}
 
 class ReactiveSink {
   #weakParents;
