@@ -162,7 +162,7 @@ class ReactiveSink {
 //     Case b    O(s)      O(1)
 //     Case c    O(s)      O(1)
 //   I prefer the current implementation because:
-//     Case a in the alternate implementation may be cost much more than O(s) if some events are expensive to compute.
+//     The costs of pushing may dwarf the costs of activation and deactivations, making case a more important.
 //     I can't think of any non-contrived examples where this tradeoff would matter.
 //     Long chains of events can typically be refactored into state machines anyways.
 class EventSinkActivation extends ReactiveSink {

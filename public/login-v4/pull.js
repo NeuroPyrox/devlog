@@ -4,6 +4,8 @@ import {
   delayConstructionDuring,
 } from "./lazyConstructors.js";
 
+// This file used to be much bigger, but the semantic purpose of keeping it separate remains.
+
 const key = Symbol();
 
 const context = {

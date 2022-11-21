@@ -27,6 +27,8 @@ class Context {
     return value.value;
   }
 
+  // We use "lift" in the name of this method because [Context] resembles a monad.
+  // In fact, it used to be a monad before I refactored it.
   liftPull(monadicValue) {
     return pull(monadicValue);
   }
