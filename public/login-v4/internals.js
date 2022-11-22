@@ -2,9 +2,10 @@ import { assert, ShrinkingList, weakRefUndefined, derefMany } from "./util.js";
 
 const k = (x) => () => x;
 
-// TODO restrict surface area by making mutations monadic
-// TODO rename "poll"
-// TODO update "EventSink", "EventSource", "BehaviorSink", "BehaviorSource" comments
+// TODO restrict surface area.
+// TODO assert times when public methods can be called.
+// TODO rename "poll" to "push" and update comments accordingly.
+// TODO update all comments.
 
 // TODO
 // Surface area:
@@ -83,7 +84,7 @@ class EventSinkChildren {
   #setWeakParents(weakParents) {
     this.#weakParents = weakParents;
     this.#weakParentLinks = derefMany(weakParents).map(
-      (parent) => new WeakRef(parent[private].#children.add(this))
+      (parent) => new WeakRef(parent[priv].#children.add(this))
     );
   }
 
@@ -91,6 +92,84 @@ class EventSinkChildren {
     for (const weakParentLink of this.#weakParentLinks) {
       weakParentLink.deref()?.removeOnce();
     }
+  }
+}
+
+// TODO
+// There's an efficiency tradeoff for long chains of events of size s that only rarely get pushed.
+//   In     the current   implementation,      pushing an event implies pushing its active children.
+//   There's an alternate implementation where pushing an event implies pushing its        children.
+//   Case a means (we push a parent of the first event) while (the first event is inactive).
+//   Case b means (we [activate]       the last  event) while (the first event is inactive).
+//   Case c means (we [deactivate]     the last  event) while
+//     (the first event's active nested children are all
+//       ((a nested parent of the last event) or (equal to the last event))).
+//   Computation costs of each case in each implementation:
+//            Current Alternate
+//     Case a    O(1)      O(s)
+//     Case b    O(s)      O(1)
+//     Case c    O(s)      O(1)
+//   I prefer the current implementation because:
+//     The costs of pushing may dwarf the costs of activation and deactivations, making case a more important.
+//     I can't think of any non-contrived examples where this tradeoff would matter.
+//     Long chains of events can typically be refactored into state machines anyways.
+class EventSinkActivationAlt extends EventSinkChildren {
+  #activeChildren;
+  #deactivators;
+
+  constructor(weakParents, unsubscribe) {
+    super(weakParents, unsubscribe);
+    this.#activeChildren = new ShrinkingList();
+    this.#deactivators = [];
+  }
+
+  // Iterate instead of returning the list itself because we don't
+  // want the function caller to add or remove any children.
+  *iterateActiveChildren() {
+    yield* this.#activeChildren;
+  }
+
+  activate() {
+    if (this.#deactivators.length !== 0) {
+      // Filters out all sinks that are already active, except for inputs.
+      return;
+    }
+    this.forEachParent((parent) => {
+      parent.activate();
+      this.#deactivators.push(new WeakRef(parent[priv].#activeChildren.add(this)));
+    });
+  }
+
+  deactivate() {
+    for (const deactivator of this.#deactivators) {
+      deactivator.deref()?.removeOnce();
+    }
+    this.#deactivators = [];
+    this.forEachParent((parent) => {
+      if (parent[priv].#activeChildren.isEmpty()) {
+        // From one to zero children.
+        parent.deactivate();
+      }
+    });
+  }
+
+  switch(weakParent) {
+    this.deactivate();
+    super.switch(weakParent);
+    const hasActiveChild = !this.#activeChildren.isEmpty();
+    if (hasActiveChild) {
+      this.activate();
+    }
+  }
+
+  // Guarantees the garbage collection of this sink because [#activeChildren]
+  // has the only strong references that [super] doesn't account for.
+  // The deativation should only be needed for modulators or their nested parents.
+  // It doesn't matter how long you wait to call this method
+  // because pushing an unpullable sink has no side effects.
+  destroy() {
+    this.deactivate();
+    super.destroy();
   }
 }
 

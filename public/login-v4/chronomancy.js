@@ -152,6 +152,7 @@ export const mapTag = (parent, latchGet, combine) =>
 export const tagB = (event, behavior) => mapTagB(event, behavior, (e, b) => b);
 export const tag = (parent, latchGet) => map(parent, () => latchGet());
 
+// TODO rename to "pull" and update comments accordingly.
 export const observeE = (parent) =>
   lazyConstructor(
     (parentSource) => newEventPair([parentSource], Push.liftPull)[1],
