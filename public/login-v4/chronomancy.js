@@ -164,6 +164,7 @@ const outputs = [];
 
 // Don't make this a monadic method because we'd still to call [assertPullMonad] anyways.
 // To deactivate it, call [source.getWeakSink().deref()?.deactivate()].
+// TODO does the deactivation need to be in a [lazyConstructor]?
 function* eagerOutput(parent, handle) {
   yield* assertPullMonad();
   return lazyConstructor((parentSource) => {
