@@ -250,6 +250,21 @@ class EventSinkPublic {
   }
 }
 
+// Some of the event's parents may not be passed into this function but added via [EventSource.addParent].
+// The only parents passed here are the ones that [EventSink.poll] immediately depends on.
+export const newEventPair = (parentSources, poll, unsubscribe = () => {}) => {
+  const sink = new EventSinkPublic(
+    parentSources.map((source) => source.getWeakSink()),
+    poll,
+    unsubscribe
+  );
+  const source = new EventSource(parentSources, sink);
+  finalizers.register(sink, new WeakRef(source));
+  // TODO remove the need for [priv] here
+  finalizers.register(source, new WeakRef(sink[priv]));
+  return [sink, source];
+};
+
 class ReactiveSink {
   #weakParents;
   #weakParentLinks;
@@ -494,7 +509,7 @@ class EventSource {
 
 // Some of the event's parents may not be passed into this function but added via [EventSource.addParent].
 // The only parents passed here are the ones that [EventSink.poll] immediately depends on.
-export const newEventPair = (parentSources, poll, unsubscribe = () => {}) => {
+export const newEventPairOld = (parentSources, poll, unsubscribe = () => {}) => {
   const sink = new EventSink(
     parentSources.map((source) => source.getWeakSink()),
     poll,
