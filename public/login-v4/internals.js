@@ -219,6 +219,37 @@ class EventSinkPrivate extends EventSinkActivationAlt {
   }
 }
 
+class EventSinkPublic {
+  constructor(...args) {
+    this[priv] = new EventSinkPrivate(...args);
+  }
+  
+  // TODO limit to lazyConstructor state "constructing"
+  activate() {
+    this[priv].activate();
+  }
+  
+  // TODO limit to lazyConstructor state "constructing"
+  deactivate() {
+    this[priv].deactivate();
+  }
+  
+  // TODO limit to lazyConstructor state "constructing"
+  switch(weakParent) {
+    this[priv].switch(weakParent);
+  }
+  
+  // TODO limit to lazyConstructor state "lazy"
+  *iterateActiveChildren() {
+    yield* this[priv].iterateActiveChildren();
+  }
+  
+  // TODO limit to lazyConstructor state "lazy"
+  poll(readEvent) {
+    this[priv].poll(readEvent);
+  }
+}
+
 class ReactiveSink {
   #weakParents;
   #weakParentLinks;
