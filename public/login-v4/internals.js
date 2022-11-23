@@ -29,6 +29,11 @@ const incrementPriority = (weakParents) =>
     -1,
     ...derefMany(weakParents).map((parent) => parent.getPriority())
   ) + 1;
+const incrementPriorityAlt = (weakParents) =>
+  Math.max(
+    -1,
+    ...derefMany(weakParents).map((parent) => parent[priv].getPriority())
+  ) + 1;
 
 // Neither of these will interrupt [Push.push]
 const finalizers = new FinalizationRegistry((weakRef) =>
@@ -95,7 +100,6 @@ class EventSinkChildren {
   }
 }
 
-// TODO
 // There's an efficiency tradeoff for long chains of events of size s that only rarely get pushed.
 //   In     the current   implementation,      pushing an event implies pushing its active children.
 //   There's an alternate implementation where pushing an event implies pushing its        children.
@@ -136,7 +140,9 @@ class EventSinkActivationAlt extends EventSinkChildren {
     }
     this.forEachParent((parent) => {
       parent.activate();
-      this.#deactivators.push(new WeakRef(parent[priv].#activeChildren.add(this)));
+      this.#deactivators.push(
+        new WeakRef(parent[priv].#activeChildren.add(this))
+      );
     });
   }
 
@@ -170,6 +176,46 @@ class EventSinkActivationAlt extends EventSinkChildren {
   destroy() {
     this.deactivate();
     super.destroy();
+  }
+}
+
+// We split this class up into an inheritance chain
+// because the variable interactions cluster together,
+// and it's easier for me to keep it all in my head this way.
+class EventSinkPrivate extends EventSinkActivationAlt {
+  #priority;
+  #poll;
+
+  constructor(weakParents, poll, unsubscribe) {
+    super(weakParents, unsubscribe);
+    this.#priority = incrementPriorityAlt(weakParents);
+    this.#poll = poll;
+  }
+
+  getPriority() {
+    return this.#priority;
+  }
+
+  poll(readEvent) {
+    return this.#poll(...this.readParents(readEvent));
+  }
+
+  // TODO when can this be called?
+  switch(weakParent) {
+    const parent = weakParent.deref();
+    if (this.isFirstParent(parent)) {
+      return;
+    }
+    super.switch(weakParent);
+    parent?.[priv].#switchPriority(this.#priority);
+  }
+
+  // TODO custom error message for infinite recursion
+  #switchPriority(childPriority) {
+    if (childPriority <= this.#priority) {
+      this.#priority = childPriority - 1;
+      this.forEachParent((parent) => parent[priv].#switchPriority(this.#priority));
+    }
   }
 }
 
