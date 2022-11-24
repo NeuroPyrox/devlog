@@ -5,7 +5,7 @@ export const assert = (condition) => {
 };
 
 // Used when we want nullable values, but don't want the library user to create a null value.
-export const nothing = Symbol();
+export const nothing = Symbol("Nothing");
 
 // Use symbols instead of plain private fields because
 // [ShrinkingList] and [ShrinkingListNode] need to access these fields from each other.

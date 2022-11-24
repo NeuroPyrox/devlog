@@ -22,7 +22,7 @@ const k = (x) => () => x;
 
 // Used to make methods private to this module.
 // I'd name the variable "private", but that keyword is reserved.
-const priv = Symbol();
+const priv = Symbol("Private");
 
 const incrementPriority = (weakParents) =>
   Math.max(
@@ -43,23 +43,22 @@ const sourceLinkFinalizers = new FinalizationRegistry((weakChildLink) =>
   weakChildLink.deref()?.removeOnce()
 );
 
-// "EventSink" is left off variable names, but it's implied.
-class EventSinkChildren {
+// TODO implied variable name prefixes
+class ReactiveSink {
   #weakParents;
   #weakParentLinks;
   #children;
   #unsubscribe;
 
-  // [unsubscribe] is highly coupled. It's only used for [input] events
   constructor(weakParents, unsubscribe) {
     this.#setWeakParents(weakParents);
     this.#children = new ShrinkingList();
-    this.#unsubscribe = unsubscribe;
+    this.#unsubscribe = unsubscribe; // Only used for input events
   }
 
   // TODO can we use this both for behaviors and events?
-  readParents(read) {
-    return this.#weakParents.map((weakParent) => read(weakParent.deref()));
+  readParents(readEvent) {
+    return this.#weakParents.map((weakParent) => readEvent(weakParent.deref()));
   }
 
   // First parent is [undefined] if not found.
@@ -117,12 +116,15 @@ class EventSinkChildren {
 //     The costs of pushing may dwarf the costs of activation and deactivations, making case a more important.
 //     I can't think of any non-contrived examples where this tradeoff would matter.
 //     Long chains of events can typically be refactored into state machines anyways.
-class EventSinkActivationAlt extends EventSinkChildren {
+// TODO explain reasoning for inheritance over composition
+class EventSinkActivation extends ReactiveSink {
+  #publicThis;
   #activeChildren;
   #deactivators;
 
-  constructor(weakParents, unsubscribe) {
+  constructor(publicThis, weakParents, unsubscribe) {
     super(weakParents, unsubscribe);
+    this.#publicThis = publicThis;
     this.#activeChildren = new ShrinkingList();
     this.#deactivators = [];
   }
@@ -138,11 +140,10 @@ class EventSinkActivationAlt extends EventSinkChildren {
       // Filters out all sinks that are already active, except for inputs.
       return;
     }
+    // We use [publicThis] because [activeChildren] is made public through [iterateActiveChildren].
     this.forEachParent((parent) => {
       parent.activate();
-      this.#deactivators.push(
-        new WeakRef(parent[priv].#activeChildren.add(this))
-      );
+      this.#deactivators.push(new WeakRef(parent[priv].#activeChildren.add(this.#publicThis)));
     });
   }
 
@@ -167,61 +168,46 @@ class EventSinkActivationAlt extends EventSinkChildren {
       this.activate();
     }
   }
-
+  
   // Guarantees the garbage collection of this sink because [#activeChildren]
   // has the only strong references that [super] doesn't account for.
   // The deativation should only be needed for modulators or their nested parents.
   // It doesn't matter how long you wait to call this method
   // because pushing an unpullable sink has no side effects.
   destroy() {
-    this.deactivate();
+    this.deactivate(); // Modulators are an example of a sink that will only deactivate once it's unpullable.
     super.destroy();
   }
 }
 
-// We split this class up into an inheritance chain
-// because the variable interactions cluster together,
+// We split this class up into multiple classes because the variable interactions cluster together,
 // and it's easier for me to keep it all in my head this way.
-class EventSinkPrivate extends EventSinkActivationAlt {
+// The reason we use inheritance instead of composition is because the elements of
+// [#weakParents], [#weakParentLinks], [#children], and [#activeChildren] are instances of [EventSink].
+class EventSink {
   #priority;
   #poll;
 
   constructor(weakParents, poll, unsubscribe) {
-    super(weakParents, unsubscribe);
-    this.#priority = incrementPriorityAlt(weakParents);
+    this[priv] = new EventSinkActivation(this, weakParents, unsubscribe);
+    this.#priority = incrementPriority(weakParents);
     this.#poll = poll;
   }
+  
+  // TODO limit to lazyConstructor state "lazy"
+  *iterateActiveChildren() {
+    yield* this[priv].iterateActiveChildren();
+  }
 
+  // TODO can this be private?
+  // TODO limit to lazyConstructor state "lazy"
   getPriority() {
     return this.#priority;
   }
 
+  // TODO limit to lazyConstructor state "lazy"
   poll(readEvent) {
-    return this.#poll(...this.readParents(readEvent));
-  }
-
-  // TODO when can this be called?
-  switch(weakParent) {
-    const parent = weakParent.deref();
-    if (this.isFirstParent(parent)) {
-      return;
-    }
-    super.switch(weakParent);
-    parent?.[priv].#switchPriority(this.#priority);
-  }
-
-  // TODO custom error message for infinite recursion
-  #switchPriority(childPriority) {
-    if (childPriority <= this.#priority) {
-      this.#priority = childPriority - 1;
-      this.forEachParent((parent) => parent[priv].#switchPriority(this.#priority));
-    }
-  }
-}
-
-class EventSinkPublic {
-  constructor(...args) {
-    this[priv] = new EventSinkPrivate(...args);
+    return this.#poll(...this[priv].readParents(readEvent));
   }
   
   // TODO limit to lazyConstructor state "constructing"
@@ -233,27 +219,30 @@ class EventSinkPublic {
   deactivate() {
     this[priv].deactivate();
   }
-  
+
   // TODO limit to lazyConstructor state "constructing"
   switch(weakParent) {
+    const parent = weakParent.deref();
+    if (this[priv].isFirstParent(parent)) {
+      return;
+    }
     this[priv].switch(weakParent);
+    parent?.#switchPriority(this.#priority);
   }
-  
-  // TODO limit to lazyConstructor state "lazy"
-  *iterateActiveChildren() {
-    yield* this[priv].iterateActiveChildren();
-  }
-  
-  // TODO limit to lazyConstructor state "lazy"
-  poll(readEvent) {
-    this[priv].poll(readEvent);
+
+  // TODO custom error message for infinite recursion
+  #switchPriority(childPriority) {
+    if (childPriority <= this.#priority) {
+      this.#priority = childPriority - 1;
+      this[priv].forEachParent((parent) => parent.#switchPriority(this.#priority));
+    }
   }
 }
 
 // Some of the event's parents may not be passed into this function but added via [EventSource.addParent].
 // The only parents passed here are the ones that [EventSink.poll] immediately depends on.
 export const newEventPair = (parentSources, poll, unsubscribe = () => {}) => {
-  const sink = new EventSinkPublic(
+  const sink = new EventSink(
     parentSources.map((source) => source.getWeakSink()),
     poll,
     unsubscribe
@@ -264,178 +253,6 @@ export const newEventPair = (parentSources, poll, unsubscribe = () => {}) => {
   finalizers.register(source, new WeakRef(sink[priv]));
   return [sink, source];
 };
-
-class ReactiveSink {
-  #weakParents;
-  #weakParentLinks;
-  #children;
-  #unsubscribe;
-
-  constructor(weakParents, unsubscribe) {
-    this.#setWeakParents(weakParents);
-    this.#children = new ShrinkingList();
-    this.#unsubscribe = unsubscribe; // Only used for input events
-  }
-
-  // TODO can we use this both for behaviors and events?
-  readParents(readEvent) {
-    return this.#weakParents.map((weakParent) => readEvent(weakParent.deref()));
-  }
-
-  // First parent is [undefined] if not found.
-  // Used for early exits from [EventSink.switch]
-  isFirstParent(parent) {
-    return parent === this.#weakParents[0]?.deref();
-  }
-
-  switch(weakParent) {
-    assert(this.#weakParents.length <= 1);
-    this.#removeFromParents();
-    this.#setWeakParents(weakParent.deref() === undefined ? [] : [weakParent]);
-  }
-
-  forEachParent(f) {
-    derefMany(this.#weakParents).forEach(f);
-  }
-
-  // Guarantees the garbage collection of this sink because the only strong references
-  // to it are from the parents' [#children], unpullable modulators, and input callbacks.
-  destroy() {
-    this.#removeFromParents();
-    this.#unsubscribe(); // Contractually removes strong references from input callbacks.
-  }
-
-  #setWeakParents(weakParents) {
-    this.#weakParents = weakParents;
-    this.#weakParentLinks = derefMany(weakParents).map(
-      (parent) => new WeakRef(parent.#children.add(this))
-    );
-  }
-
-  #removeFromParents() {
-    for (const weakParentLink of this.#weakParentLinks) {
-      weakParentLink.deref()?.removeOnce();
-    }
-  }
-}
-
-// There's an efficiency tradeoff for long chains of events of size s that only rarely get pushed.
-//   In     the current   implementation,      pushing an event implies pushing its active children.
-//   There's an alternate implementation where pushing an event implies pushing its        children.
-//   Case a means (we push a parent of the first event) while (the first event is inactive).
-//   Case b means (we [activate]       the last  event) while (the first event is inactive).
-//   Case c means (we [deactivate]     the last  event) while
-//     (the first event's active nested children are all
-//       ((a nested parent of the last event) or (equal to the last event))).
-//   Computation costs of each case in each implementation:
-//            Current Alternate
-//     Case a    O(1)      O(s)
-//     Case b    O(s)      O(1)
-//     Case c    O(s)      O(1)
-//   I prefer the current implementation because:
-//     The costs of pushing may dwarf the costs of activation and deactivations, making case a more important.
-//     I can't think of any non-contrived examples where this tradeoff would matter.
-//     Long chains of events can typically be refactored into state machines anyways.
-class EventSinkActivation extends ReactiveSink {
-  #activeChildren;
-  #deactivators;
-
-  constructor(weakParents, unsubscribe) {
-    super(weakParents, unsubscribe);
-    this.#activeChildren = new ShrinkingList();
-    this.#deactivators = [];
-  }
-
-  // Iterate instead of returning the list itself because we don't
-  // want the function caller to add or remove any children.
-  *iterateActiveChildren() {
-    yield* this.#activeChildren;
-  }
-
-  activate() {
-    if (this.#deactivators.length !== 0) {
-      // Filters out all sinks that are already active, except for inputs.
-      return;
-    }
-    this.forEachParent((parent) => {
-      parent.activate();
-      this.#deactivators.push(new WeakRef(parent.#activeChildren.add(this)));
-    });
-  }
-
-  deactivate() {
-    for (const deactivator of this.#deactivators) {
-      deactivator.deref()?.removeOnce();
-    }
-    this.#deactivators = [];
-    this.forEachParent((parent) => {
-      if (parent.#activeChildren.isEmpty()) {
-        // From one to zero children.
-        parent.deactivate();
-      }
-    });
-  }
-
-  switch(weakParent) {
-    this.deactivate();
-    super.switch(weakParent);
-    const hasActiveChild = !this.#activeChildren.isEmpty();
-    if (hasActiveChild) {
-      this.activate();
-    }
-  }
-
-  // Guarantees the garbage collection of this sink because [#activeChildren]
-  // has the only strong references that [super] doesn't account for.
-  // It doesn't matter how long you wait to call this method
-  // because pushing an unpullable sink has no side effects.
-  destroy() {
-    this.deactivate(); // Modulators are an example of a sink that will only deactivate once it's unpullable.
-    super.destroy();
-  }
-}
-
-// We split this class up into an inheritance chain because the variable interactions cluster together,
-// and it's easier for me to keep it all in my head this way.
-// The reason we use inheritance instead of composition is because the elements of
-// [#weakParents], [#weakParentLinks], [#children], and [#activeChildren] are instances of [EventSink].
-class EventSink extends EventSinkActivation {
-  #priority;
-  #poll;
-
-  constructor(weakParents, poll, unsubscribe) {
-    super(weakParents, unsubscribe);
-    this.#priority = incrementPriority(weakParents);
-    this.#poll = poll;
-  }
-
-  // TODO can this be private?
-  getPriority() {
-    return this.#priority;
-  }
-
-  poll(readEvent) {
-    return this.#poll(...this.readParents(readEvent));
-  }
-
-  // TODO when can this be called?
-  switch(weakParent) {
-    const parent = weakParent.deref();
-    if (this.isFirstParent(parent)) {
-      return;
-    }
-    super.switch(weakParent);
-    parent?.#switchPriority(this.#priority);
-  }
-
-  // TODO custom error message for infinite recursion
-  #switchPriority(childPriority) {
-    if (childPriority <= this.#priority) {
-      this.#priority = childPriority - 1;
-      this.forEachParent((parent) => parent.#switchPriority(this.#priority));
-    }
-  }
-}
 
 class EventSource {
   #weakChildLinks;
