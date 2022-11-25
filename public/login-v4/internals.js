@@ -1,26 +1,11 @@
 import { assert, ShrinkingList, weakRefUndefined, derefMany } from "./util.js";
+import { assertLazy, assertNotEager, assertConstructing } from "./lazyConstructors.js";
 
 const k = (x) => () => x;
 
 // TODO can we make [getPriority] private?
-// TODO restrict surface area.
-// TODO assert times when public methods can be called.
 // TODO rename "poll" to "push" and update comments accordingly.
 // TODO update all comments.
-
-// TODO
-// Surface area:
-//   Constructing:
-//     EventSink.activate
-//     EventSink.deactivate
-//     EventSink.switch
-//     EventSource.switch
-//     EventSource.addParent
-//   Lazy:
-//     EventSink.iterateActiveChildren
-//     EventSink.getPriority
-//     EventSink.poll
-// Private EventSink methods: readParents, isFirstParent, forEachParent, destroy
 
 // Methods that are private to this module.
 const readParents = Symbol();
@@ -132,15 +117,15 @@ class EventSinkActivation extends ReactiveSink {
     this.#deactivators = [];
   }
 
-  // TODO limit to lazyConstructor state "lazy"
   // Iterate instead of returning the list itself because we don't
   // want the function caller to add or remove any children.
   *iterateActiveChildren() {
+    assertLazy(); // If you want to be stricter, repeat this assertion during every iteration.
     yield* this.#activeChildren;
   }
 
-  // TODO limit to lazyConstructor state "constructing"
   activate() {
+    assertConstructing();
     if (this.#deactivators.length !== 0) {
       // Filters out all sinks that are already active, except for inputs.
       return;
@@ -152,8 +137,8 @@ class EventSinkActivation extends ReactiveSink {
     });
   }
 
-  // TODO limit to lazyConstructor state "constructing"
   deactivate() {
+    assertConstructing();
     for (const deactivator of this.#deactivators) {
       deactivator.deref()?.removeOnce();
     }
@@ -174,14 +159,14 @@ class EventSinkActivation extends ReactiveSink {
       this.activate();
     }
   }
-  
+
   // Guarantees the garbage collection of this sink because [#activeChildren]
   // has the only strong references that [super] doesn't account for.
-  // The deativation should only be needed for modulators or their nested parents.
+  // Such deativation is only be needed for modulators or their nested parents.
   // It doesn't matter how long you wait to call this method
   // because pushing an unpullable sink has no side effects.
   [destroy]() {
-    this.deactivate(); // Modulators are an example of a sink that will only deactivate once it's unpullable.
+    this.deactivate(); // TODO fix assertion bug
     super[destroy]();
   }
 }
@@ -201,18 +186,18 @@ class EventSink extends EventSinkActivation {
   }
 
   // TODO can this be private?
-  // TODO limit to lazyConstructor state "lazy"
   getPriority() {
+    assertNotEager();
     return this.#priority;
   }
 
-  // TODO limit to lazyConstructor state "lazy"
   poll(read) {
+    assertLazy();
     return this.#poll(...this[readParents](read));
   }
 
-  // TODO limit to lazyConstructor state "constructing"
   switch(weakParent) {
+    assertConstructing();
     const parent = weakParent.deref();
     if (this[isFirstParent](parent)) {
       return;
@@ -317,7 +302,11 @@ class EventSource {
 
 // Some of the event's parents may not be passed into this function but added via [EventSource.addParent].
 // The only parents passed here are the ones that [EventSink.poll] immediately depends on.
-export const newEventPairOld = (parentSources, poll, unsubscribe = () => {}) => {
+export const newEventPairOld = (
+  parentSources,
+  poll,
+  unsubscribe = () => {}
+) => {
   const sink = new EventSink(
     parentSources.map((source) => source.getWeakSink()),
     poll,
