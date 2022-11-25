@@ -5,8 +5,11 @@ const construct = Symbol();
 let state = "eager";
 let constructors = [];
 
+export const assertLazy = () => assert(state === "lazy");
+export const assertNotEager = () => assert(state !== "eager");
+export const assertConstructing = () => assert(state === "constructing");
+
 // TODO remove return value when we have an html monad.
-// This is the only function that modifies [state].
 // Only called on startup and wrapping the [Push] monad.
 // It's important to keep [unnestable] on the outside instead of within a lambda
 //   so that [Pull.start] and [Push.push] are mutually unnestable.
@@ -35,7 +38,10 @@ export const lazyConstructor = (f, ...args) => {
   args.forEach((arg) => assert(arg[construct]));
   // We allow construction outside of [delayConstructionDuring] to improve garbage collection.
   if (state === "eager") {
-    return constConstructor(f(...args));
+    state = "constructing";
+    const value = f(...args);
+    state = "eager";
+    return constConstructor(value);
   }
   // The order of composition between [Util.memoize] and [Util.unnestable] doesn't matter,
   // but [Util.memoize(Util.unnestable(...))] heuristically seems like it'd be more efficient.
@@ -52,7 +58,7 @@ export const lazyConstructor = (f, ...args) => {
 // call the [loop] method before passing it to [lazyConstructor].
 export const lazyLoop = () => {
   // Violation of this assertion could mean it's time to implement recursion.
-  assert(state === "lazy");
+  assertLazy();
   const result = {
     [construct]: () => {
       throw new Error("Must call [lazyLoop.loop] on every [lazyLoop]!");
