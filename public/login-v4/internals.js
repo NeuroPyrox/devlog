@@ -17,12 +17,19 @@ const k = (x) => () => x;
 //     EventSource.addParent
 //   Lazy:
 //     EventSink.iterateActiveChildren
+//     EventSink.getPriority
 //     EventSink.poll
-// Private EventSink methods: readParents, isFirstParent, forEachParent, destroy, getPriority
+// Private EventSink methods: readParents, isFirstParent, forEachParent, destroy
 
 // Used to make methods private to this module.
 // I'd name the variable "private", but that keyword is reserved.
 const priv = Symbol("Private");
+
+// Methods that are private to this module.
+const readParents = Symbol();
+const isFirstParent = Symbol();
+const forEachParent = Symbol();
+const destroy = Symbol();
 
 const incrementPriority = (weakParents) =>
   Math.max(
@@ -37,7 +44,7 @@ const incrementPriorityAlt = (weakParents) =>
 
 // Neither of these will interrupt [Push.push]
 const finalizers = new FinalizationRegistry((weakRef) =>
-  weakRef.deref()?.destroy()
+  weakRef.deref()?.[destroy]()
 );
 const sourceLinkFinalizers = new FinalizationRegistry((weakChildLink) =>
   weakChildLink.deref()?.removeOnce()
@@ -57,13 +64,13 @@ class ReactiveSink {
   }
 
   // TODO can we use this both for behaviors and events?
-  readParents(readEvent) {
-    return this.#weakParents.map((weakParent) => readEvent(weakParent.deref()));
+  [readParents](read) {
+    return this.#weakParents.map((weakParent) => read(weakParent.deref()));
   }
 
   // First parent is [undefined] if not found.
   // Used for early exits from [EventSink.switch]
-  isFirstParent(parent) {
+  [isFirstParent](parent) {
     return parent === this.#weakParents[0]?.deref();
   }
 
@@ -74,13 +81,13 @@ class ReactiveSink {
     this.#setWeakParents(weakParent.deref() === undefined ? [] : [weakParent]);
   }
 
-  forEachParent(f) {
+  [forEachParent](f) {
     derefMany(this.#weakParents).forEach(f);
   }
 
   // Guarantees the garbage collection of this sink because the only strong references
   // to it are from the parents' [#children], unpullable modulators, and input callbacks.
-  destroy() {
+  [destroy]() {
     this.#removeFromParents();
     this.#unsubscribe(); // Contractually removes strong references from input callbacks.
   }
@@ -141,7 +148,7 @@ class EventSinkActivation extends ReactiveSink {
       return;
     }
     // We use [publicThis] because [activeChildren] is made public through [iterateActiveChildren].
-    this.forEachParent((parent) => {
+    this[forEachParent]((parent) => {
       parent.activate();
       this.#deactivators.push(new WeakRef(parent[priv].#activeChildren.add(this.#publicThis)));
     });
@@ -152,7 +159,7 @@ class EventSinkActivation extends ReactiveSink {
       deactivator.deref()?.removeOnce();
     }
     this.#deactivators = [];
-    this.forEachParent((parent) => {
+    this[forEachParent]((parent) => {
       if (parent[priv].#activeChildren.isEmpty()) {
         // From one to zero children.
         parent.deactivate();
@@ -174,9 +181,9 @@ class EventSinkActivation extends ReactiveSink {
   // The deativation should only be needed for modulators or their nested parents.
   // It doesn't matter how long you wait to call this method
   // because pushing an unpullable sink has no side effects.
-  destroy() {
+  [destroy]() {
     this.deactivate(); // Modulators are an example of a sink that will only deactivate once it's unpullable.
-    super.destroy();
+    super[destroy]();
   }
 }
 
@@ -206,8 +213,8 @@ class EventSink {
   }
 
   // TODO limit to lazyConstructor state "lazy"
-  poll(readEvent) {
-    return this.#poll(...this[priv].readParents(readEvent));
+  poll(read) {
+    return this.#poll(...this[priv][readParents](read));
   }
   
   // TODO limit to lazyConstructor state "constructing"
@@ -223,7 +230,7 @@ class EventSink {
   // TODO limit to lazyConstructor state "constructing"
   switch(weakParent) {
     const parent = weakParent.deref();
-    if (this[priv].isFirstParent(parent)) {
+    if (this[priv][isFirstParent](parent)) {
       return;
     }
     this[priv].switch(weakParent);
@@ -234,7 +241,7 @@ class EventSink {
   #switchPriority(childPriority) {
     if (childPriority <= this.#priority) {
       this.#priority = childPriority - 1;
-      this[priv].forEachParent((parent) => parent.#switchPriority(this.#priority));
+      this[priv][forEachParent]((parent) => parent.#switchPriority(this.#priority));
     }
   }
 }
@@ -307,7 +314,7 @@ class EventSource {
     this.addParent(parent);
   }
 
-  destroy() {
+  [destroy]() {
     // Ensures no more [_weakParentLinks] or [#parents] will be added to [this].
     assert(!this.#isPushable());
     // Remove elements from  childrens' [#parents].
