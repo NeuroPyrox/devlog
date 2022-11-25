@@ -2,6 +2,7 @@ import { assert, ShrinkingList, weakRefUndefined, derefMany } from "./util.js";
 
 const k = (x) => () => x;
 
+// TODO can we make [getPriority] private?
 // TODO restrict surface area.
 // TODO assert times when public methods can be called.
 // TODO rename "poll" to "push" and update comments accordingly.
@@ -21,10 +22,6 @@ const k = (x) => () => x;
 //     EventSink.poll
 // Private EventSink methods: readParents, isFirstParent, forEachParent, destroy
 
-// Used to make methods private to this module.
-// I'd name the variable "private", but that keyword is reserved.
-const priv = Symbol("Private");
-
 // Methods that are private to this module.
 const readParents = Symbol();
 const isFirstParent = Symbol();
@@ -39,7 +36,7 @@ const incrementPriority = (weakParents) =>
 const incrementPriorityAlt = (weakParents) =>
   Math.max(
     -1,
-    ...derefMany(weakParents).map((parent) => parent[priv].getPriority())
+    ...derefMany(weakParents).map((parent) => parent.getPriority())
   ) + 1;
 
 // Neither of these will interrupt [Push.push]
@@ -95,7 +92,7 @@ class ReactiveSink {
   #setWeakParents(weakParents) {
     this.#weakParents = weakParents;
     this.#weakParentLinks = derefMany(weakParents).map(
-      (parent) => new WeakRef(parent[priv].#children.add(this))
+      (parent) => new WeakRef(parent.#children.add(this))
     );
   }
 
@@ -129,19 +126,20 @@ class EventSinkActivation extends ReactiveSink {
   #activeChildren;
   #deactivators;
 
-  constructor(publicThis, weakParents, unsubscribe) {
+  constructor(weakParents, unsubscribe) {
     super(weakParents, unsubscribe);
-    this.#publicThis = publicThis;
     this.#activeChildren = new ShrinkingList();
     this.#deactivators = [];
   }
 
+  // TODO limit to lazyConstructor state "lazy"
   // Iterate instead of returning the list itself because we don't
   // want the function caller to add or remove any children.
   *iterateActiveChildren() {
     yield* this.#activeChildren;
   }
 
+  // TODO limit to lazyConstructor state "constructing"
   activate() {
     if (this.#deactivators.length !== 0) {
       // Filters out all sinks that are already active, except for inputs.
@@ -150,17 +148,18 @@ class EventSinkActivation extends ReactiveSink {
     // We use [publicThis] because [activeChildren] is made public through [iterateActiveChildren].
     this[forEachParent]((parent) => {
       parent.activate();
-      this.#deactivators.push(new WeakRef(parent[priv].#activeChildren.add(this.#publicThis)));
+      this.#deactivators.push(new WeakRef(parent.#activeChildren.add(this)));
     });
   }
 
+  // TODO limit to lazyConstructor state "constructing"
   deactivate() {
     for (const deactivator of this.#deactivators) {
       deactivator.deref()?.removeOnce();
     }
     this.#deactivators = [];
     this[forEachParent]((parent) => {
-      if (parent[priv].#activeChildren.isEmpty()) {
+      if (parent.#activeChildren.isEmpty()) {
         // From one to zero children.
         parent.deactivate();
       }
@@ -191,19 +190,14 @@ class EventSinkActivation extends ReactiveSink {
 // and it's easier for me to keep it all in my head this way.
 // The reason we use inheritance instead of composition is because the elements of
 // [#weakParents], [#weakParentLinks], [#children], and [#activeChildren] are instances of [EventSink].
-class EventSink {
+class EventSink extends EventSinkActivation {
   #priority;
   #poll;
 
   constructor(weakParents, poll, unsubscribe) {
-    this[priv] = new EventSinkActivation(this, weakParents, unsubscribe);
+    super(weakParents, unsubscribe);
     this.#priority = incrementPriority(weakParents);
     this.#poll = poll;
-  }
-  
-  // TODO limit to lazyConstructor state "lazy"
-  *iterateActiveChildren() {
-    yield* this[priv].iterateActiveChildren();
   }
 
   // TODO can this be private?
@@ -214,26 +208,16 @@ class EventSink {
 
   // TODO limit to lazyConstructor state "lazy"
   poll(read) {
-    return this.#poll(...this[priv][readParents](read));
-  }
-  
-  // TODO limit to lazyConstructor state "constructing"
-  activate() {
-    this[priv].activate();
-  }
-  
-  // TODO limit to lazyConstructor state "constructing"
-  deactivate() {
-    this[priv].deactivate();
+    return this.#poll(...this[readParents](read));
   }
 
   // TODO limit to lazyConstructor state "constructing"
   switch(weakParent) {
     const parent = weakParent.deref();
-    if (this[priv][isFirstParent](parent)) {
+    if (this[isFirstParent](parent)) {
       return;
     }
-    this[priv].switch(weakParent);
+    super.switch(weakParent);
     parent?.#switchPriority(this.#priority);
   }
 
@@ -241,7 +225,7 @@ class EventSink {
   #switchPriority(childPriority) {
     if (childPriority <= this.#priority) {
       this.#priority = childPriority - 1;
-      this[priv][forEachParent]((parent) => parent.#switchPriority(this.#priority));
+      this[forEachParent]((parent) => parent.#switchPriority(this.#priority));
     }
   }
 }
@@ -256,8 +240,7 @@ export const newEventPair = (parentSources, poll, unsubscribe = () => {}) => {
   );
   const source = new EventSource(parentSources, sink);
   finalizers.register(sink, new WeakRef(source));
-  // TODO remove the need for [priv] here
-  finalizers.register(source, new WeakRef(sink[priv]));
+  finalizers.register(source, source.getWeakSink());
   return [sink, source];
 };
 
@@ -275,6 +258,7 @@ class EventSource {
   }
 
   // TODO when can this be called?
+  // TODO can we make this private to the module?
   getWeakSink() {
     return this.#weakSink;
   }
