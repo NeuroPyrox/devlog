@@ -9,8 +9,6 @@ import * as Push from "./push.js";
 import { newEventPair, newBehaviorPair } from "./internals.js";
 
 // TODO use freeze and seal to make things more functional
-// TODO what are the atomic operations on the graph?
-// TODO make topology changes more explicit.
 
 // Approximate lifecycle:
 //   while(waitingForStart()) {

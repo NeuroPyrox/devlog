@@ -8,8 +8,7 @@ import {
 
 const k = (x) => () => x;
 
-// TODO can we make [getPriority] private?
-// TODO rename "poll" to "push" and update comments accordingly.
+// TODO why is switch memory-safe?
 // TODO update all comments.
 
 // Methods that are private to this module.
@@ -110,7 +109,6 @@ class ReactiveSink {
 //     The costs of pushing may dwarf the costs of activation and deactivations, making case a more important.
 //     I can't think of any non-contrived examples where this tradeoff would matter.
 //     Long chains of events can typically be refactored into state machines anyways.
-// TODO explain reasoning for inheritance over composition
 class EventSinkActivation extends ReactiveSink {
   #publicThis;
   #activeChildren;
@@ -135,7 +133,6 @@ class EventSinkActivation extends ReactiveSink {
       // Filters out all sinks that are already active, except for inputs.
       return;
     }
-    // We use [publicThis] because [activeChildren] is made public through [iterateActiveChildren].
     this[forEachParent]((parent) => {
       parent.activate();
       this.#deactivators.push(new WeakRef(parent.#activeChildren.add(this)));
@@ -182,12 +179,12 @@ class EventSinkActivation extends ReactiveSink {
 // [#weakParents], [#weakParentLinks], [#children], and [#activeChildren] are instances of [EventSink].
 class EventSink extends EventSinkActivation {
   #priority;
-  #poll;
+  #push;
 
-  constructor(weakParents, poll, unsubscribe) {
+  constructor(weakParents, push, unsubscribe) {
     super(weakParents, unsubscribe);
     this.#priority = incrementPriority(weakParents);
-    this.#poll = poll;
+    this.#push = push;
   }
 
   // TODO can this be private?
@@ -196,9 +193,11 @@ class EventSink extends EventSinkActivation {
     return this.#priority;
   }
 
-  poll(read) {
+  // This function is pure, but we name it "push" because
+  // it returns an imperative command that the caller executes.
+  push(read) {
     assertLazy();
-    return this.#poll(...this[readParents](read));
+    return this.#push(...this[readParents](read));
   }
 
   switch(weakParent) {
@@ -221,11 +220,11 @@ class EventSink extends EventSinkActivation {
 }
 
 // Some of the event's parents may not be passed into this function but added via [EventSource.addParent].
-// The only parents passed here are the ones that [EventSink.poll] immediately depends on.
-export const newEventPair = (parentSources, poll, unsubscribe = () => {}) => {
+// The only parents passed here are the ones that [EventSink.push] immediately depends on.
+export const newEventPair = (parentSources, push, unsubscribe = () => {}) => {
   const sink = new EventSink(
     parentSources.map((source) => source.getWeakSink()),
-    poll,
+    push,
     unsubscribe
   );
   const source = new EventSource(parentSources, sink);
@@ -306,15 +305,15 @@ class EventSource {
 }
 
 // Some of the event's parents may not be passed into this function but added via [EventSource.addParent].
-// The only parents passed here are the ones that [EventSink.poll] immediately depends on.
+// The only parents passed here are the ones that [EventSink.push] immediately depends on.
 export const newEventPairOld = (
   parentSources,
-  poll,
+  push,
   unsubscribe = () => {}
 ) => {
   const sink = new EventSink(
     parentSources.map((source) => source.getWeakSink()),
-    poll,
+    push,
     unsubscribe
   );
   const source = new EventSource(parentSources, sink);
@@ -326,10 +325,10 @@ export const newEventPairOld = (
 class BehaviorSink extends ReactiveSink {
   #priority;
 
-  constructor(weakParents, initialValue, poll) {
+  constructor(weakParents, initialValue, push) {
     super(weakParents, () => {});
     this.#priority = incrementPriority(weakParents);
-    this._poll = poll;
+    this._push = push;
     this._weakVariable = new WeakRef({ thunk: () => initialValue });
   }
 
@@ -355,11 +354,11 @@ class BehaviorSource extends EventSource {
 }
 
 // TODO factor out similarities with [newEventPair].
-export const newBehaviorPair = (parentSources, initialValue, poll) => {
+export const newBehaviorPair = (parentSources, initialValue, push) => {
   const sink = new BehaviorSink(
     parentSources.map((source) => source.getWeakSink()),
     initialValue,
-    poll
+    push
   );
   const source = new BehaviorSource(parentSources, sink);
   finalizers.register(sink, new WeakRef(source));
