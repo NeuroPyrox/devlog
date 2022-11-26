@@ -1,5 +1,10 @@
 import { assert, ShrinkingList, weakRefUndefined, derefMany } from "./util.js";
-import { assertLazy, assertNotEager, assertConstructing } from "./lazyConstructors.js";
+import {
+  assertLazy,
+  assertNotEager,
+  assertConstructing,
+  eagerConstructor,
+} from "./lazyConstructors.js";
 
 const k = (x) => () => x;
 
@@ -26,7 +31,7 @@ const incrementPriorityAlt = (weakParents) =>
 
 // Neither of these will interrupt [Push.push]
 const finalizers = new FinalizationRegistry((weakRef) =>
-  weakRef.deref()?.[destroy]()
+  eagerConstructor(() => weakRef.deref()?.[destroy]()) // Wrap in [eagerConstructor] to meet an assertion in [deactivate].
 );
 const sourceLinkFinalizers = new FinalizationRegistry((weakChildLink) =>
   weakChildLink.deref()?.removeOnce()
@@ -166,7 +171,7 @@ class EventSinkActivation extends ReactiveSink {
   // It doesn't matter how long you wait to call this method
   // because pushing an unpullable sink has no side effects.
   [destroy]() {
-    this.deactivate(); // TODO fix assertion bug
+    this.deactivate();
     super[destroy]();
   }
 }

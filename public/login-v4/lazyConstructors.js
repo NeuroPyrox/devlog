@@ -30,6 +30,14 @@ export const constConstructor = (x) => ({
   [construct]: () => x,
 });
 
+export const eagerConstructor = (f, ...args) => {
+  assert(state === "eager");
+  state = "constructing";
+  const value = f(...args);
+  state = "eager";
+  return constConstructor(value);
+};
+
 // Like an applicative [queueMicrotask],
 // but the tasks only get delayed during [delayConstructionDuring].
 export const lazyConstructor = (f, ...args) => {
@@ -38,10 +46,7 @@ export const lazyConstructor = (f, ...args) => {
   args.forEach((arg) => assert(arg[construct]));
   // We allow construction outside of [delayConstructionDuring] to improve garbage collection.
   if (state === "eager") {
-    state = "constructing";
-    const value = f(...args);
-    state = "eager";
-    return constConstructor(value);
+    return eagerConstructor(f, ...args);
   }
   // The order of composition between [Util.memoize] and [Util.unnestable] doesn't matter,
   // but [Util.memoize(Util.unnestable(...))] heuristically seems like it'd be more efficient.
