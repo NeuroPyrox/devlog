@@ -66,7 +66,7 @@ export const push = (sink, value) =>
       heap.push(childSink);
     }
     for (const sink of heap) {
-      const value = sink.poll(readEvent)[key](context);
+      const value = sink.push(readEvent)[key](context);
       if (value !== nothing) {
         context.writeEvent(sink, value);
         for (const child of sink.iterateActiveChildren()) {
