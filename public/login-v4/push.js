@@ -61,11 +61,11 @@ export const push = (sink, value) =>
     const context = new Context();
     const readEvent = (sink) => context.readEvent(sink);
     context.writeEvent(sink, value);
-    const heap = new Heap((a, b) => a.getPriority() < b.getPriority());
-    for (const childSink of sink.iterateActiveChildren()) {
-      heap.push(childSink);
+    const heap = new Heap((a, b) => a.priority < b.priority);
+    for (const child of sink.iterateActiveChildren()) {
+      heap.push(child);
     }
-    for (const sink of heap) {
+    for (const { sink } of heap) {
       const value = sink.push(readEvent)[key](context);
       if (value !== nothing) {
         context.writeEvent(sink, value);
