@@ -1,7 +1,6 @@
 import { assert, ShrinkingList, weakRefUndefined, derefMany } from "./util.js";
 import {
   assertLazy,
-  assertNotEager,
   assertConstructing,
   eagerConstructor,
 } from "./lazyConstructors.js";
@@ -214,20 +213,6 @@ class EventSink extends EventSinkActivation {
   }
 }
 
-// Some of the event's parents may not be passed into this function but added via [EventSource.addParent].
-// The only parents passed here are the ones that [EventSink.push] immediately depends on.
-export const newEventPair = (parentSources, push, unsubscribe = () => {}) => {
-  const sink = new EventSink(
-    parentSources.map((source) => source.getWeakSink()),
-    push,
-    unsubscribe
-  );
-  const source = new EventSource(parentSources, sink);
-  finalizers.register(sink, new WeakRef(source));
-  finalizers.register(source, source.getWeakSink());
-  return [sink, source];
-};
-
 class EventSource {
   #weakChildLinks;
   #parents;
@@ -247,8 +232,8 @@ class EventSource {
     return this.#weakSink;
   }
 
-  // TODO when can this be called?
   addParent(parent) {
+    assertConstructing();
     // By definition, an unpushable source won't be assigned new parents.
     // If we do assign an unpushable source new parents,
     // either [this] will keep [parent] alive even when [parent] won't push to [this],
@@ -264,10 +249,10 @@ class EventSource {
     sourceLinkFinalizers.register(parentLink, new WeakRef(childLink));
   }
 
-  // TODO when can this be called?
   // Sets or removes the 2nd parent of an [EventSource] that has 1 or 2 parents,
   // [this.#isPushable()] must be guaranteed by the caller.
   switch(parent) {
+    assertConstructing();
     // There's a lot of coupling here, but basically [switchE]s can either have 1 or 2 parents.
     // The first parent is the modulator and the second parent
     // if it exists is the parent that pushes [this.#weakSink].
@@ -299,6 +284,20 @@ class EventSource {
   }
 }
 
+// Some of the event's parents may not be passed into this function but added via [EventSource.addParent].
+// The only parents passed here are the ones that [EventSink.push] immediately depends on.
+export const newEventPair = (parentSources, push, unsubscribe = () => {}) => {
+  const sink = new EventSink(
+    parentSources.map((source) => source.getWeakSink()),
+    push,
+    unsubscribe
+  );
+  const source = new EventSource(parentSources, sink);
+  finalizers.register(sink, new WeakRef(source));
+  finalizers.register(source, source.getWeakSink());
+  return [sink, source];
+};
+
 class BehaviorSink extends ReactiveSink {
   #priority;
 
@@ -311,6 +310,7 @@ class BehaviorSink extends ReactiveSink {
   }
 
   setValue(value) {
+    assertLazy();
     // The change gets propagated to the source because the source has a reference to [this._weakVariable.deref()].
     this._weakVariable.deref().thunk = () => value;
   }
@@ -328,6 +328,7 @@ class BehaviorSource extends EventSource {
   }
 
   getCurrentValue() {
+    assertLazy();
     return this._variable.thunk();
   }
 }
