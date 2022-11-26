@@ -16,16 +16,12 @@ const readParents = Symbol();
 const isFirstParent = Symbol();
 const forEachParent = Symbol();
 const destroy = Symbol();
+const getPriority = Symbol();
 
 const incrementPriority = (weakParents) =>
   Math.max(
     -1,
-    ...derefMany(weakParents).map((parent) => parent.getPriority())
-  ) + 1;
-const incrementPriorityAlt = (weakParents) =>
-  Math.max(
-    -1,
-    ...derefMany(weakParents).map((parent) => parent.getPriority())
+    ...derefMany(weakParents).map((parent) => parent[getPriority]())
   ) + 1;
 
 // Neither of these will interrupt [Push.push]
@@ -120,11 +116,12 @@ class EventSinkActivation extends ReactiveSink {
     this.#deactivators = [];
   }
 
-  // Iterate instead of returning the list itself because we don't
-  // want the function caller to add or remove any children.
+  // Iterate instead of returning the list itself for the sake of encapsulation.
   *iterateActiveChildren() {
-    assertLazy(); // If you want to be stricter, repeat this assertion during every iteration.
-    yield* this.#activeChildren;
+    for (const sink of this.#activeChildren) {
+      assertLazy();
+      yield {priority: sink[getPriority](), sink};
+    }
   }
 
   activate() {
@@ -187,12 +184,6 @@ class EventSink extends EventSinkActivation {
     this.#push = push;
   }
 
-  // TODO can this be private?
-  getPriority() {
-    assertNotEager();
-    return this.#priority;
-  }
-
   // This function is pure, but we name it "push" because
   // it returns an imperative command that the caller executes.
   push(read) {
@@ -208,6 +199,10 @@ class EventSink extends EventSinkActivation {
     }
     super.switch(weakParent);
     parent?.#switchPriority(this.#priority);
+  }
+
+  [getPriority]() {
+    return this.#priority;
   }
 
   // TODO custom error message for infinite recursion
@@ -304,47 +299,31 @@ class EventSource {
   }
 }
 
-// Some of the event's parents may not be passed into this function but added via [EventSource.addParent].
-// The only parents passed here are the ones that [EventSink.push] immediately depends on.
-export const newEventPairOld = (
-  parentSources,
-  push,
-  unsubscribe = () => {}
-) => {
-  const sink = new EventSink(
-    parentSources.map((source) => source.getWeakSink()),
-    push,
-    unsubscribe
-  );
-  const source = new EventSource(parentSources, sink);
-  finalizers.register(sink, new WeakRef(source));
-  finalizers.register(source, source.getWeakSink());
-  return [sink, source];
-};
-
 class BehaviorSink extends ReactiveSink {
   #priority;
 
   constructor(weakParents, initialValue, push) {
     super(weakParents, () => {});
     this.#priority = incrementPriority(weakParents);
+    // TODO make truly private.
     this._push = push;
     this._weakVariable = new WeakRef({ thunk: () => initialValue });
-  }
-
-  getPriority() {
-    return this.#priority;
   }
 
   setValue(value) {
     // The change gets propagated to the source because the source has a reference to [this._weakVariable.deref()].
     this._weakVariable.deref().thunk = () => value;
   }
+
+  [getPriority]() {
+    return this.#priority;
+  }
 }
 
 class BehaviorSource extends EventSource {
   constructor(parents, sink) {
     super(parents, sink);
+    // TODO make truly private.
     this._variable = sink._weakVariable.deref();
   }
 
