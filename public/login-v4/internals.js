@@ -7,6 +7,7 @@ import {
 
 const k = (x) => () => x;
 
+// TODO change coding style to delay the [deref]s.
 // TODO why is switch memory-safe?
 // TODO update all comments.
 
@@ -59,8 +60,7 @@ class ReactiveSink {
   switch(weakParent) {
     assert(this.#weakParents.length <= 1);
     this.#removeFromParents();
-    // TODO why do we need this branching?
-    this.#setWeakParents(weakParent.deref() === undefined ? [] : [weakParent]);
+    this.#setWeakParents([weakParent]);
   }
 
   [forEachParent](f) {
@@ -195,6 +195,7 @@ class EventSink extends EventSinkActivation {
     assertConstructing();
     const weakParent = parentSource[getWeakSink]();
     const parent = weakParent.deref();
+    // This early exit is an optimization.
     if (this[isFirstParent](parent)) {
       return;
     }
