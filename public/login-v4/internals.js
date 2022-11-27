@@ -16,6 +16,7 @@ const isFirstParent = Symbol();
 const forEachParent = Symbol();
 const destroy = Symbol();
 const getPriority = Symbol();
+const getWeakSink = Symbol();
 
 const incrementPriority = (weakParents) =>
   Math.max(
@@ -190,8 +191,9 @@ class EventSink extends EventSinkActivation {
     return this.#push(...this[readParents](read));
   }
 
-  switch(weakParent) {
+  switch(parentSource) {
     assertConstructing();
+    const weakParent = parentSource[getWeakSink]();
     const parent = weakParent.deref();
     if (this[isFirstParent](parent)) {
       return;
@@ -224,12 +226,6 @@ class EventSource {
     this.#parents = new ShrinkingList();
     // [this.#isPushable()] because we have a strong reference to [sink], even if temporary.
     parents.forEach((parent) => this.addParent(parent));
-  }
-
-  // TODO when can this be called?
-  // TODO can we make this private to the module?
-  getWeakSink() {
-    return this.#weakSink;
   }
 
   addParent(parent) {
@@ -267,6 +263,10 @@ class EventSource {
     this.addParent(parent);
   }
 
+  [getWeakSink]() {
+    return this.#weakSink;
+  }
+
   [destroy]() {
     // Ensures no more [_weakParentLinks] or [#parents] will be added to [this].
     assert(!this.#isPushable());
@@ -278,7 +278,6 @@ class EventSource {
     // [#parents] will be cleaned up when [destroy] gets called on each element of [#parents].
   }
 
-  // In theory this isn't private because of [this.getWeakSink], but I don't want to pollute the interface.
   #isPushable() {
     return this.#weakSink.deref() !== undefined;
   }
@@ -288,13 +287,13 @@ class EventSource {
 // The only parents passed here are the ones that [EventSink.push] immediately depends on.
 export const newEventPair = (parentSources, push, unsubscribe = () => {}) => {
   const sink = new EventSink(
-    parentSources.map((source) => source.getWeakSink()),
+    parentSources.map((source) => source[getWeakSink]()),
     push,
     unsubscribe
   );
   const source = new EventSource(parentSources, sink);
   finalizers.register(sink, new WeakRef(source));
-  finalizers.register(source, source.getWeakSink());
+  finalizers.register(source, source[getWeakSink]());
   return [sink, source];
 };
 
@@ -336,12 +335,12 @@ class BehaviorSource extends EventSource {
 // TODO factor out similarities with [newEventPair].
 export const newBehaviorPair = (parentSources, initialValue, push) => {
   const sink = new BehaviorSink(
-    parentSources.map((source) => source.getWeakSink()),
+    parentSources.map((source) => source[getWeakSink]()),
     initialValue,
     push
   );
   const source = new BehaviorSource(parentSources, sink);
   finalizers.register(sink, new WeakRef(source));
-  finalizers.register(source, source.getWeakSink());
+  finalizers.register(source, source[getWeakSink]());
   return [sink, source];
 };

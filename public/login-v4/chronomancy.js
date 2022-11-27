@@ -212,7 +212,7 @@ export function* switchE(newParents) {
         source.switch(newParentSource);
         // If we switch to an unpushable sink that's not GC'd yet,
         // then it will still get GC'd properly.
-        sink.switch(newParentSource.getWeakSink());
+        sink.switch(newParentSource);
       }, newParent);
     }
     return Push.pure(Util.nothing);
