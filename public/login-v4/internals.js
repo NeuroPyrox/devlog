@@ -7,7 +7,6 @@ import {
 
 const k = (x) => () => x;
 
-// TODO change coding style to delay the [deref]s.
 // TODO why is switch memory-safe?
 // TODO update all comments.
 
@@ -26,8 +25,8 @@ const incrementPriority = (weakParents) =>
   ) + 1;
 
 // Neither of these will interrupt [Push.push]
-const finalizers = new FinalizationRegistry((weakRef) =>
-  eagerConstructor(() => weakRef.deref()?.[destroy]()) // Wrap in [eagerConstructor] to meet an assertion in [deactivate].
+const finalizers = new FinalizationRegistry(
+  (weakRef) => eagerConstructor(() => weakRef.deref()?.[destroy]()) // Wrap in [eagerConstructor] to meet an assertion in [deactivate].
 );
 const sourceLinkFinalizers = new FinalizationRegistry((weakChildLink) =>
   weakChildLink.deref()?.removeOnce()
@@ -48,13 +47,12 @@ class ReactiveSink {
 
   // TODO can we use this both for behaviors and events?
   [readParents](read) {
-    return this.#weakParents.map((weakParent) => read(weakParent.deref()));
+    return this.#weakParents.map((weakParent) => read(weakParent));
   }
 
-  // First parent is [undefined] if not found.
   // Used for early exits from [EventSink.switch]
-  [isFirstParent](parent) {
-    return parent === this.#weakParents[0]?.deref();
+  [isFirstParent](weakParent) {
+    return weakParent.deref() === this.#weakParents[0]?.deref();
   }
 
   switch(weakParent) {
@@ -120,7 +118,7 @@ class EventSinkActivation extends ReactiveSink {
   *iterateActiveChildren() {
     for (const sink of this.#activeChildren) {
       assertLazy();
-      yield {priority: sink[getPriority](), sink};
+      yield { priority: sink[getPriority](), sink };
     }
   }
 
@@ -194,13 +192,12 @@ class EventSink extends EventSinkActivation {
   switch(parentSource) {
     assertConstructing();
     const weakParent = parentSource[getWeakSink]();
-    const parent = weakParent.deref();
-    // This early exit is an optimization.
-    if (this[isFirstParent](parent)) {
+    // This early exit is an O(# of nested parents) optimization.
+    if (this[isFirstParent](weakParent)) {
       return;
     }
     super.switch(weakParent);
-    parent?.#switchPriority(this.#priority);
+    weakParent.deref()?.#switchPriority(this.#priority);
   }
 
   [getPriority]() {
