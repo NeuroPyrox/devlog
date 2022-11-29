@@ -19,8 +19,8 @@ class Context {
     this.#eventValues.set(sink, { value });
   }
 
-  readEvent(sink) {
-    const value = this.#eventValues.get(sink);
+  readEvent(weakSink) {
+    const value = this.#eventValues.get(weakSink.deref());
     if (value === undefined) {
       return nothing;
     }
@@ -59,7 +59,7 @@ export const enqueueBehavior = (sink, value) => ({
 export const push = (sink, value) =>
   delayConstructionDuring(() => {
     const context = new Context();
-    const readEvent = (sink) => context.readEvent(sink);
+    const readEvent = (weakSink) => context.readEvent(weakSink);
     context.writeEvent(sink, value);
     const heap = new Heap((a, b) => a.priority < b.priority);
     for (const child of sink.iterateActiveChildren()) {
