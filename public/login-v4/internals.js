@@ -7,6 +7,7 @@ import {
 
 const k = (x) => () => x;
 
+// TODO clarify "sink" vs [ReactiveSink] and "source" vs [EventSource].
 // TODO update all comments.
 
 // Don't mentally overcomplicate garbage collection. We only need these guarantees:
@@ -232,18 +233,16 @@ class EventSource {
     this.#weakSink = new WeakRef(sink);
     this.#weakChildLinks = new ShrinkingList();
     this.#parents = new ShrinkingList();
-    // [this.#isPushable()] because we have a strong reference to [sink], even if temporary.
+    // [this.#isPushable()] is true because we have a strong reference to [sink], even if temporarily.
     parents.forEach((parent) => this.addParent(parent));
   }
 
   addParent(parent) {
     assertConstructing();
-    // By definition, an unpushable source won't be assigned new parents.
-    // If we do assign an unpushable source new parents,
-    // either [this] will keep [parent] alive even when [parent] won't push to [this],
-    // or [parent] will push to [this], contradicting [this] being unpushable.
+    // An unpushable source won't get new parents because then the sink would have to get new parents too,
+    // which is impossible because the sink was supposed to be garbage collected.
     assert(this.#isPushable());
-    // Ensures [destroy] cleans up all [#parents] and [#weakChildLinks].
+    // Ensures [parent] doesn't recieve new strong references after it's [destroy]ed.
     if (!parent.#isPushable()) {
       return;
     }
@@ -276,7 +275,7 @@ class EventSource {
   }
 
   [destroy]() {
-    // Ensures no more [_weakParentLinks] or [#parents] will be added to [this].
+    // Ensures no more [#parents] will be added to [this].
     assert(!this.#isPushable());
     // Remove elements from  childrens' [#parents].
     for (const weakChildLink of this.#weakChildLinks) {
