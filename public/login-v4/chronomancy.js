@@ -185,7 +185,9 @@ export function* output(parent, handle) {
 // [handle] must strongly reference the target's sink to enforce pushability.
 // [handle] must not strong reference to [targetSource] because pushability doesn't imply pullability.
 // [modulator] doesn't store the target as a child because it doesn't directly push to the target,
-// only adds new parents to it or modifies it in other ways through [handle].
+//   only adds new parents to it or modifies it in other ways through [handle].
+// Garbage collection is guaranteed by pairing each modulator with exactly one modulatee,
+//   because then the job of the modulatee sink's [destroy] method is done by the modulator sink's [destroy] method.
 function* modulate(targetSource, parent, handle) {
   const modulator = yield* eagerOutput(parent, handle);
   // [targetSource]'s pullability implies [modulatorSource]'s pullability.
