@@ -7,8 +7,18 @@ import {
 
 const k = (x) => () => x;
 
-// TODO why is switch memory-safe?
 // TODO update all comments.
+
+// Don't mentally overcomplicate garbage collection. We only need these guarantees:
+//   Strong references to a [ReactiveSink]s can only be held by parents, a modulator, or an input callback.
+//   Strong references to a [ReactiveSink] can't exist after [destroy] is called.
+//   When a [ReactiveSink] gets finalized, it calls [destroy] on its [EventSource].
+//   Strong references to an [EventSource]s can only be held by children, a modulatee, or the library caller.
+//   Strong references to an [EventSource] can't exist after [destroy] is called, except those from the library user.
+//   When an [EventSource] gets finalized, it calls [destroy] on its [ReactiveSink].
+
+// "Pushable" means the [ReactiveSink] is strongly referenced.
+// "Pullable" means the [EventSource] is strongly referenced.
 
 // Methods that are private to this module.
 const readParents = Symbol();
