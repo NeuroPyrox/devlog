@@ -7,18 +7,18 @@ import {
 
 const k = (x) => () => x;
 
-// TODO clarify "sink" vs [ReactiveSink] and "source" vs [EventSource].
+// TODO clarify "sink" vs [Sink] and "source" vs [EventSource].
 // TODO update all comments.
 
 // Don't mentally overcomplicate garbage collection. We only need these guarantees:
-//   Strong references to a [ReactiveSink]s can only be held by parents, a modulator, or an input callback.
-//   Strong references to a [ReactiveSink] can't exist after [destroy] is called.
-//   When a [ReactiveSink] gets finalized, it calls [destroy] on its [EventSource].
+//   Strong references to a [Sink]s can only be held by parents, a modulator, or an input callback.
+//   Strong references to a [Sink] can't exist after [destroy] is called.
+//   When a [Sink] gets finalized, it calls [destroy] on its [EventSource].
 //   Strong references to an [EventSource]s can only be held by children, a modulatee, or the library caller.
 //   Strong references to an [EventSource] can't exist after [destroy] is called, except those from the library user.
-//   When an [EventSource] gets finalized, it calls [destroy] on its [ReactiveSink].
+//   When an [EventSource] gets finalized, it calls [destroy] on its [Sink].
 
-// "Pushable" means the [ReactiveSink] is strongly referenced.
+// "Pushable" means the [Sink] is strongly referenced.
 // "Pullable" means the [EventSource] is strongly referenced.
 
 // Methods that are private to this module.
@@ -44,7 +44,7 @@ const sourceLinkFinalizers = new FinalizationRegistry((weakChildLink) =>
 );
 
 // TODO implied variable name prefixes
-class ReactiveSink {
+class Sink {
   #weakParents;
   #weakParentLinks;
   #children;
@@ -114,7 +114,7 @@ class ReactiveSink {
 //     The costs of pushing may dwarf the costs of activation and deactivations, making case a more important.
 //     I can't think of any non-contrived examples where this tradeoff would matter.
 //     Long chains of events can typically be refactored into state machines anyways.
-class EventSinkActivation extends ReactiveSink {
+class EventSinkActivation extends Sink {
   #activeChildren;
   #deactivators;
   #enforceManualDeactivation;
@@ -312,7 +312,7 @@ export const newEventPair = (parentSources, push, options = {}) => {
   return [sink, source];
 };
 
-class BehaviorSink extends ReactiveSink {
+class BehaviorSink extends Sink {
   #priority;
 
   constructor(weakParents, initialValue, push) {
