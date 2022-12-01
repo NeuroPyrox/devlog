@@ -91,7 +91,7 @@ export const input = (subscribe) =>
     //   and I don't care to optimize it because why in the world would you use the library that way?
     const push = (x) => Push.push(sink, x);
     const unsubscribe = subscribe(push);
-    [sink, source] = newEventPair([], null, unsubscribe);
+    [sink, source] = newEventPair([], null, { unsubscribe });
     return source;
   });
 
@@ -163,10 +163,12 @@ const outputs = [];
 // Don't make this a monadic method because we'd still to call [assertPullMonad] anyways.
 // To deactivate it, call [source.getWeakSink().deref()?.deactivate()].
 // TODO does the deactivation need to be in a [lazyConstructor]?
-function* eagerOutput(parent, handle) {
+function* eagerOutput(parent, handle, enforceManualDeactivation) {
   yield* assertPullMonad();
   return lazyConstructor((parentSource) => {
-    const [sink, source] = newEventPair([parentSource], handle);
+    const [sink, source] = newEventPair([parentSource], handle, {
+      enforceManualDeactivation,
+    });
     sink.activate();
     outputs.push(source); // TODO remove.
     return source;
@@ -174,12 +176,15 @@ function* eagerOutput(parent, handle) {
 }
 
 // TODO deactivateability.
-// TODO assert deactivation before garbage collection.
 export function* output(parent, handle) {
-  yield* eagerOutput(parent, (value) => {
-    lazyConstructor(() => handle(value));
-    return Push.pure(Util.nothing);
-  });
+  yield* eagerOutput(
+    parent,
+    (value) => {
+      lazyConstructor(() => handle(value));
+      return Push.pure(Util.nothing);
+    },
+    true
+  );
 }
 
 // [handle] must strongly reference the target's sink to enforce pushability.
@@ -189,7 +194,7 @@ export function* output(parent, handle) {
 // Garbage collection is guaranteed by pairing each modulator with exactly one modulatee,
 //   because then the job of the modulatee sink's [destroy] method is done by the modulator sink's [destroy] method.
 function* modulate(targetSource, parent, handle) {
-  const modulator = yield* eagerOutput(parent, handle);
+  const modulator = yield* eagerOutput(parent, handle, false);
   // [targetSource]'s pullability implies [modulatorSource]'s pullability.
   lazyConstructor(
     (modulatorSource) => targetSource.addParent(modulatorSource),
