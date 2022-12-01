@@ -115,14 +115,18 @@ class ReactiveSink {
 //     I can't think of any non-contrived examples where this tradeoff would matter.
 //     Long chains of events can typically be refactored into state machines anyways.
 class EventSinkActivation extends ReactiveSink {
-  #publicThis;
   #activeChildren;
   #deactivators;
+  #enforceManualDeactivation;
 
-  constructor(weakParents, unsubscribe) {
+  constructor(
+    weakParents,
+    { unsubscribe = () => {}, enforceManualDeactivation = false }
+  ) {
     super(weakParents, unsubscribe);
     this.#activeChildren = new ShrinkingList();
     this.#deactivators = [];
+    this.#enforceManualDeactivation = enforceManualDeactivation; // Only used for output events.
   }
 
   // Iterate instead of returning the list itself for the sake of encapsulation.
@@ -174,7 +178,11 @@ class EventSinkActivation extends ReactiveSink {
   // It doesn't matter how long you wait to call this method
   // because pushing an unpullable sink has no side effects.
   [destroy]() {
-    this.deactivate();
+    if (this.#enforceManualDeactivation) {
+      assert(this.#deactivators.length === 0);
+    } else {
+      this.deactivate();
+    }
     super[destroy]();
   }
 }
@@ -187,8 +195,8 @@ class EventSink extends EventSinkActivation {
   #priority;
   #push;
 
-  constructor(weakParents, push, unsubscribe) {
-    super(weakParents, unsubscribe);
+  constructor(weakParents, push, options) {
+    super(weakParents, options);
     this.#priority = incrementPriority(weakParents);
     this.#push = push;
   }
@@ -292,11 +300,11 @@ class EventSource {
 
 // Some of the event's parents may not be passed into this function but added via [EventSource.addParent].
 // The only parents passed here are the ones that [EventSink.push] immediately depends on.
-export const newEventPair = (parentSources, push, unsubscribe = () => {}) => {
+export const newEventPair = (parentSources, push, options = {}) => {
   const sink = new EventSink(
     parentSources.map((source) => source[getWeakSink]()),
     push,
-    unsubscribe
+    options
   );
   const source = new EventSource(parentSources, sink);
   finalizers.register(sink, new WeakRef(source));
