@@ -45,11 +45,16 @@ const sourceLinkFinalizers = new FinalizationRegistry((weakChildLink) =>
 
 // TODO implied variable name prefixes
 class Sink {
+  // These 3 variables interact with each other a lot.
   #weakParents;
   #weakParentLinks;
   #children;
+  // These 2 variables are largely independent of the other ones.
+  // I'd refactor them into their own classes, but
+  //   if I factored out [priority] it'd expose more class methods,
+  //   and [unsubscribe] is just to small to factor out.
   #priority;
-  #unsubscribe;
+  #unsubscribe; // TODO is this needed for behaviors?
 
   constructor(weakParents, unsubscribe) {
     this.#setWeakParents(weakParents);
@@ -129,19 +134,26 @@ class Sink {
 //     The costs of pushing may dwarf the costs of activation and deactivations, making case a more important.
 //     I can't think of any non-contrived examples where this tradeoff would matter.
 //     Long chains of events can typically be refactored into state machines anyways.
-class EventSinkActivation extends Sink {
+// The reason we use inheritance instead of composition is so that the elements of
+// [#weakParents], [#weakParentLinks], [#children], and [#activeChildren] are instances of [EventSink].
+class EventSink extends Sink {
   #activeChildren;
   #deactivators;
   #enforceManualDeactivation;
+  // This variable is independent of the other ones,
+  // but it's too small to factor into its own class.
+  #push;
 
   constructor(
     weakParents,
+     push,
     { unsubscribe = () => {}, enforceManualDeactivation = false }
   ) {
-    super(weakParents, unsubscribe);
+    super(weakParents, push, unsubscribe);
     this.#activeChildren = new ShrinkingList();
     this.#deactivators = [];
     this.#enforceManualDeactivation = enforceManualDeactivation; // Only used for output events.
+    this.#push = push;
   }
 
   // Iterate instead of returning the list itself for the sake of encapsulation.
@@ -178,13 +190,26 @@ class EventSinkActivation extends Sink {
     });
   }
 
-  switch(weakParent) {
+  switch(parentSource) {
+    assertConstructing();
+    const weakParent = parentSource[getWeakSink]();
+    // This early exit is an O(# of nested parents) optimization.
+    if (this[isFirstParent](weakParent)) {
+      return;
+    }
     this.deactivate();
     super.switch(weakParent);
     const hasActiveChild = !this.#activeChildren.isEmpty();
     if (hasActiveChild) {
       this.activate();
     }
+  }
+
+  // This function is pure, but we name it "push" because
+  // it returns an imperative command that the caller executes.
+  push(read) {
+    assertLazy();
+    return this.#push(...this[readParents](read));
   }
 
   // Guarantees the garbage collection of this sink because [#activeChildren]
@@ -199,36 +224,6 @@ class EventSinkActivation extends Sink {
       this.deactivate();
     }
     super[destroy]();
-  }
-}
-
-// We split this class up into multiple classes because the variable interactions cluster together,
-// and it's easier for me to keep it all in my head this way.
-// The reason we use inheritance instead of composition is because the elements of
-// [#weakParents], [#weakParentLinks], [#children], and [#activeChildren] are instances of [EventSink].
-class EventSink extends EventSinkActivation {
-  #push;
-
-  constructor(weakParents, push, options) {
-    super(weakParents, options);
-    this.#push = push;
-  }
-
-  // This function is pure, but we name it "push" because
-  // it returns an imperative command that the caller executes.
-  push(read) {
-    assertLazy();
-    return this.#push(...this[readParents](read));
-  }
-
-  switch(parentSource) {
-    assertConstructing();
-    const weakParent = parentSource[getWeakSink]();
-    // This early exit is an O(# of nested parents) optimization.
-    if (this[isFirstParent](weakParent)) {
-      return;
-    }
-    super.switch(weakParent);
   }
 }
 
