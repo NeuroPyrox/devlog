@@ -48,12 +48,21 @@ class Sink {
   #weakParents;
   #weakParentLinks;
   #children;
+  #priority;
   #unsubscribe;
 
   constructor(weakParents, unsubscribe) {
     this.#setWeakParents(weakParents);
     this.#children = new ShrinkingList();
+    this.#priority = incrementPriority(weakParents);
     this.#unsubscribe = unsubscribe; // Only used for input events
+  }
+
+  switch(weakParent) {
+    assert(this.#weakParents.length <= 1);
+    this.#removeFromParents();
+    this.#setWeakParents([weakParent]);
+    weakParent.deref()?.#switchPriority(this.#priority);
   }
 
   // TODO can we use this both for behaviors and events?
@@ -66,14 +75,12 @@ class Sink {
     return weakParent.deref() === this.#weakParents[0]?.deref();
   }
 
-  switch(weakParent) {
-    assert(this.#weakParents.length <= 1);
-    this.#removeFromParents();
-    this.#setWeakParents([weakParent]);
-  }
-
   [forEachParent](f) {
     derefMany(this.#weakParents).forEach(f);
+  }
+
+  [getPriority]() {
+    return this.#priority;
   }
 
   // Guarantees the garbage collection of this sink because the only strong references
@@ -93,6 +100,14 @@ class Sink {
   #removeFromParents() {
     for (const weakParentLink of this.#weakParentLinks) {
       weakParentLink.deref()?.removeOnce();
+    }
+  }
+
+  // TODO custom error message for infinite recursion
+  #switchPriority(childPriority) {
+    if (childPriority <= this.#priority) {
+      this.#priority = childPriority - 1;
+      this[forEachParent]((parent) => parent.#switchPriority(this.#priority));
     }
   }
 }
@@ -192,12 +207,10 @@ class EventSinkActivation extends Sink {
 // The reason we use inheritance instead of composition is because the elements of
 // [#weakParents], [#weakParentLinks], [#children], and [#activeChildren] are instances of [EventSink].
 class EventSink extends EventSinkActivation {
-  #priority;
   #push;
 
   constructor(weakParents, push, options) {
     super(weakParents, options);
-    this.#priority = incrementPriority(weakParents);
     this.#push = push;
   }
 
@@ -216,19 +229,6 @@ class EventSink extends EventSinkActivation {
       return;
     }
     super.switch(weakParent);
-    weakParent.deref()?.#switchPriority(this.#priority);
-  }
-
-  [getPriority]() {
-    return this.#priority;
-  }
-
-  // TODO custom error message for infinite recursion
-  #switchPriority(childPriority) {
-    if (childPriority <= this.#priority) {
-      this.#priority = childPriority - 1;
-      this[forEachParent]((parent) => parent.#switchPriority(this.#priority));
-    }
   }
 }
 
@@ -313,11 +313,8 @@ export const newEventPair = (parentSources, push, options = {}) => {
 };
 
 class BehaviorSink extends Sink {
-  #priority;
-
   constructor(weakParents, initialValue, push) {
     super(weakParents, () => {});
-    this.#priority = incrementPriority(weakParents);
     // TODO make truly private.
     this._push = push;
     this._weakVariable = new WeakRef({ thunk: () => initialValue });
@@ -327,10 +324,6 @@ class BehaviorSink extends Sink {
     assertLazy();
     // The change gets propagated to the source because the source has a reference to [this._weakVariable.deref()].
     this._weakVariable.deref().thunk = () => value;
-  }
-
-  [getPriority]() {
-    return this.#priority;
   }
 }
 
