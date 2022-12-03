@@ -494,7 +494,10 @@
       }
 
       let publishStartPage;
-      const startPage = input((p) => (publishStartPage = p));
+      const startPage = input((p) => {
+        publishStartPage = p;
+        return () => {};
+      });
       const publishLoginDiv = (_) => publishStartPage(createLoginDiv);
 
       const authPages = yield loop;
