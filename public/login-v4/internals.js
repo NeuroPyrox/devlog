@@ -25,8 +25,9 @@ const k = (x) => () => x;
 const readParents = Symbol();
 const isFirstParent = Symbol();
 const forEachParent = Symbol();
-const destroy = Symbol();
 const getPriority = Symbol();
+const removeFromParents = Symbol();
+const destroy = Symbol();
 const getWeakSink = Symbol();
 
 const incrementPriority = (weakParents) =>
@@ -49,26 +50,25 @@ class Sink {
   #weakParents;
   #weakParentLinks;
   #children;
-  // These 2 variables are largely independent of the other ones.
-  // I'd refactor them into their own classes, but
-  //   if I factored out [priority] it'd expose more class methods,
-  //   and [unsubscribe] is just to small to factor out.
+  // This variable is largely independent of the other ones,
+  // but refactoring it into its own class would expose more methods.
   #priority;
-  #unsubscribe; // TODO is this needed for behaviors?
 
-  constructor(weakParents, unsubscribe) {
+  constructor(weakParents) {
     this.#setWeakParents(weakParents);
     this.#children = new ShrinkingList();
     this.#priority = incrementPriority(weakParents);
-    this.#unsubscribe = unsubscribe; // Only used for input events
   }
 
   switch(weakParent) {
     assert(this.#weakParents.length <= 1);
-    this.#removeFromParents();
+    this[removeFromParents]();
     this.#setWeakParents([weakParent]);
     weakParent.deref()?.#switchPriority(this.#priority);
   }
+  
+  // These symbol methods are only used by derived classes,
+  // but making protected methods is too confusing in JavaScript.
 
   // TODO can we use this both for behaviors and events?
   [readParents](read) {
@@ -88,11 +88,11 @@ class Sink {
     return this.#priority;
   }
 
-  // Guarantees the garbage collection of this sink because the only strong references
-  // to it are from the parents' [#children], unpullable modulators, and input callbacks.
-  [destroy]() {
-    this.#removeFromParents();
-    this.#unsubscribe(); // Contractually removes strong references from input callbacks.
+  // Removes all strong references from the [#children] of [#weakParents].
+  [removeFromParents]() {
+    for (const weakParentLink of this.#weakParentLinks) {
+      weakParentLink.deref()?.removeOnce();
+    }
   }
 
   #setWeakParents(weakParents) {
@@ -100,12 +100,6 @@ class Sink {
     this.#weakParentLinks = derefMany(weakParents).map(
       (parent) => new WeakRef(parent.#children.add(this))
     );
-  }
-
-  #removeFromParents() {
-    for (const weakParentLink of this.#weakParentLinks) {
-      weakParentLink.deref()?.removeOnce();
-    }
   }
 
   // TODO custom error message for infinite recursion
@@ -140,20 +134,22 @@ class EventSink extends Sink {
   #activeChildren;
   #deactivators;
   #enforceManualDeactivation;
-  // This variable is independent of the other ones,
-  // but it's too small to factor into its own class.
+  // These variables are independent of the other ones,
+  // but they're too small to refactor into their own classes.
   #push;
+  #unsubscribe;
 
   constructor(
     weakParents,
     push,
     { unsubscribe = () => {}, enforceManualDeactivation = false }
   ) {
-    super(weakParents, unsubscribe);
+    super(weakParents);
     this.#activeChildren = new ShrinkingList();
     this.#deactivators = [];
     this.#enforceManualDeactivation = enforceManualDeactivation; // Only used for output events.
     this.#push = push;
+    this.#unsubscribe = unsubscribe; // Only used for input events.
   }
 
   // Iterate instead of returning the list itself for the sake of encapsulation.
@@ -212,9 +208,11 @@ class EventSink extends Sink {
     return this.#push(...this[readParents](read));
   }
 
-  // Guarantees the garbage collection of this sink because [#activeChildren]
-  // has the only strong references that [super] doesn't account for.
-  // Such deativation is only be needed for modulators or their nested parents.
+  // Removes all strong references to [this].
+  // [removeFromParents] and [deactivate] take care of the strong references from parents.
+  // [unsubscribe] contractually takes care of the strong references from input callbacks.
+  // We don't need to worry about the strong references from modulators because
+  // the unpullability of [this] implies the unpullability of any modulators.
   // It doesn't matter how long you wait to call this method
   // because pushing an unpullable sink has no side effects.
   [destroy]() {
@@ -223,7 +221,8 @@ class EventSink extends Sink {
     } else {
       this.deactivate();
     }
-    super[destroy]();
+    this.#unsubscribe();
+    super[removeFromParents]();
   }
 }
 
@@ -296,7 +295,6 @@ class EventSource {
 // Some of the event's parents may not be passed into this function but added via [EventSource.addParent].
 // The only parents passed here are the ones that [EventSink.push] immediately depends on.
 export const newEventPair = (parentSources, push, options = {}) => {
-  assert((options.unsubscribe?.length ?? 0) === 0);
   const sink = new EventSink(
     parentSources.map((source) => source[getWeakSink]()),
     push,
@@ -310,7 +308,7 @@ export const newEventPair = (parentSources, push, options = {}) => {
 
 class BehaviorSink extends Sink {
   constructor(weakParents, initialValue, push) {
-    super(weakParents, () => {});
+    super(weakParents);
     // TODO make truly private.
     this._push = push;
     this._weakVariable = new WeakRef({ thunk: () => initialValue });

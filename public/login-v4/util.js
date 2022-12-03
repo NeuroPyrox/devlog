@@ -4,7 +4,7 @@ export const assert = (condition) => {
   }
 };
 
-// Used when we want nullable values, but don't want the library user to create a null value.
+// Used when we want nullable values, but don't want the library user to create such a null value.
 export const nothing = Symbol("Nothing");
 
 // Use symbols instead of plain private fields because
@@ -86,6 +86,9 @@ class ShrinkingListNode {
 
 export const weakRefUndefined = { deref: () => undefined };
 
+// This function used to have 2 callsites instead of 1,
+// but I decided not to inline it because
+// I'm probably going to copy/paste it into future projects.
 export const createGeneratorMonad = () => {
   const key = Symbol();
   const runMonad = (context, generator) => {
@@ -149,7 +152,7 @@ const testGarbageCollectionInMemoize = () => {
     return [memoized, garbageWasCollected];
   })();
   // [memoized] should no longer strongly refernce [garbage].
-  // Another test you can do is commenting out this code and making sure "false" is always logged.
+  // Another test you can do is commenting out the following line and making sure "false" is always logged.
   memoized();
   const weakMemoized = new WeakRef(memoized);
   setInterval(() => {

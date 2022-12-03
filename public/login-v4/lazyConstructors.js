@@ -45,7 +45,6 @@ export const lazyConstructor = (f, ...args) => {
   if (state === "eager") {
     return eagerConstructor(f, ...args);
   }
-  // Violation of this assertion could mean it's time to implement recursion.
   assertLazy();
   // The order of composition between [Util.memoize] and [Util.unnestable] doesn't matter,
   // but [Util.memoize(Util.unnestable(...))] heuristically seems like it'd be more efficient.
@@ -61,7 +60,6 @@ export const lazyConstructor = (f, ...args) => {
 // Unusable outside of [delayConstructionDuring] because you'd need to
 // call the [loop] method before passing it to [lazyConstructor].
 export const lazyLoop = () => {
-  // Violation of this assertion could mean it's time to implement recursion.
   assertLazy();
   const result = {
     [construct]: () => {
