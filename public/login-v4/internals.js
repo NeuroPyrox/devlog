@@ -29,7 +29,7 @@ const getPriority = Symbol();
 const removeFromParents = Symbol();
 const destroy = Symbol();
 const getWeakSink = Symbol();
-const weakVariable = Symbol();
+const getWeakVariable = Symbol();
 
 const incrementPriority = (weakParents) =>
   Math.max(
@@ -240,6 +240,7 @@ class EventSource {
     parents.forEach((parent) => this.addParent(parent));
   }
 
+  // Not used in derived class [BehaviorSource], but enforcing this boundary would just complicate things.
   addParent(parent) {
     assertConstructing();
     // An unpushable source won't get new parents because then the sink would have to get new parents too,
@@ -257,6 +258,7 @@ class EventSource {
 
   // Sets or removes the 2nd parent of an [EventSource] that has 1 or 2 parents,
   // [this.#isPushable()] must be guaranteed by the caller.
+  // Not used in derived class [BehaviorSource], but enforcing this boundary would just complicate things.
   switch(parent) {
     assertConstructing();
     // There's a lot of coupling here, but basically [switchE]s can either have 1 or 2 parents.
@@ -309,17 +311,24 @@ export const newEventPair = (parentSources, push, options = {}) => {
 
 class BehaviorSink extends Sink {
   #push;
+  #weakVariable;
   
   constructor(weakParents, initialValue, push) {
     super(weakParents);
     this.#push = push;
-    this[weakVariable] = new WeakRef({ thunk: () => initialValue });
+    // The strong references are from [BehaviorSource], uncomputed children, and chilren with more than one parent,
+    // which will need to access the value in the future.
+    this.#weakVariable = new WeakRef({ thunk: () => initialValue, computed: true });
   }
 
   setValue(value) {
     assertLazy();
-    // The change gets propagated to the source because the source has a reference to [this[weakVariable].deref()].
-    this[weakVariable].deref().thunk = () => value;
+    // The change gets propagated to the source because the source has a reference to [this.#weakVariable.deref()].
+    this.#weakVariable.deref().thunk = () => value;
+  }
+  
+  [getWeakVariable]() {
+    return this.#weakVariable;
   }
 }
 
@@ -328,7 +337,7 @@ class BehaviorSource extends EventSource {
   
   constructor(parents, sink) {
     super(parents, sink);
-    this.#variable = sink[weakVariable].deref();
+    this.#variable = sink[getWeakVariable]().deref();
   }
 
   getCurrentValue() {
@@ -337,7 +346,6 @@ class BehaviorSource extends EventSource {
   }
 }
 
-// TODO factor out similarities with [newEventPair].
 export const newBehaviorPair = (parentSources, initialValue, push) => {
   const sink = new BehaviorSink(
     parentSources.map((source) => source[getWeakSink]()),
