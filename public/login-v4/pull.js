@@ -21,7 +21,6 @@ export function* assertPullMonad() {
   assert((yield getKey) === key);
 }
 
-// Only used by [start] and [Combinators.observeE].
 export const pull = (monadicValue) => runPullMonad(context, monadicValue());
 export const start = once((monadicValue) =>
   delayConstructionDuring(() => pull(monadicValue))
