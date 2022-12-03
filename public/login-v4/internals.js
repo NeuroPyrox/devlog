@@ -29,6 +29,7 @@ const getPriority = Symbol();
 const removeFromParents = Symbol();
 const destroy = Symbol();
 const getWeakSink = Symbol();
+const weakVariable = Symbol();
 
 const incrementPriority = (weakParents) =>
   Math.max(
@@ -307,30 +308,32 @@ export const newEventPair = (parentSources, push, options = {}) => {
 };
 
 class BehaviorSink extends Sink {
+  #push;
+  
   constructor(weakParents, initialValue, push) {
     super(weakParents);
-    // TODO make truly private.
-    this._push = push;
-    this._weakVariable = new WeakRef({ thunk: () => initialValue });
+    this.#push = push;
+    this[weakVariable] = new WeakRef({ thunk: () => initialValue });
   }
 
   setValue(value) {
     assertLazy();
-    // The change gets propagated to the source because the source has a reference to [this._weakVariable.deref()].
-    this._weakVariable.deref().thunk = () => value;
+    // The change gets propagated to the source because the source has a reference to [this[weakVariable].deref()].
+    this[weakVariable].deref().thunk = () => value;
   }
 }
 
 class BehaviorSource extends EventSource {
+  #variable;
+  
   constructor(parents, sink) {
     super(parents, sink);
-    // TODO make truly private.
-    this._variable = sink._weakVariable.deref();
+    this.#variable = sink[weakVariable].deref();
   }
 
   getCurrentValue() {
     assertLazy();
-    return this._variable.thunk();
+    return this.#variable.thunk();
   }
 }
 
