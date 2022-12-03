@@ -146,10 +146,10 @@ class EventSink extends Sink {
 
   constructor(
     weakParents,
-     push,
+    push,
     { unsubscribe = () => {}, enforceManualDeactivation = false }
   ) {
-    super(weakParents, push, unsubscribe);
+    super(weakParents, unsubscribe);
     this.#activeChildren = new ShrinkingList();
     this.#deactivators = [];
     this.#enforceManualDeactivation = enforceManualDeactivation; // Only used for output events.
@@ -296,6 +296,7 @@ class EventSource {
 // Some of the event's parents may not be passed into this function but added via [EventSource.addParent].
 // The only parents passed here are the ones that [EventSink.push] immediately depends on.
 export const newEventPair = (parentSources, push, options = {}) => {
+  assert((options.unsubscribe?.length ?? 0) === 0);
   const sink = new EventSink(
     parentSources.map((source) => source[getWeakSink]()),
     push,

@@ -86,6 +86,7 @@ export const input = (subscribe) =>
     // Error if [push] is called before [subscribe] ends.
     // Error if [push] is called during another [push], even from a different [input].
     // Error if [push] is called during [start].
+    // Error if reactives are created during [unsubscribe].
     // [push] does nothing if called before [start].
     // [push] does nothing if called during [unsubscribe], but it may be computationally expensive,
     //   and I don't care to optimize it because why in the world would you use the library that way?
