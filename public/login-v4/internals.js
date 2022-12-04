@@ -310,27 +310,32 @@ export const newEventPair = (parentSources, push, options = {}) => {
 };
 
 // Yes, there's a lot of coupling in this function, but idk how best to refactor it.
-const createBehaviorEvaluator = (parentSources, evaluate) {
+const createBehaviorThunk = (parentSources, evaluate) {
   if (1 < parentSources.length) {
+    // TODO how to turn an apply into a map after a parent becomes unpushable?
     const variables = parentSources.map(source => source[getVariable]());
-    return () => evaluate(...variables.map(variable => variable.thunk()));
+    return () => () => evaluate(...variables.map(variable => variable.thunk()));
   } else if (parentSources.length === 1) {
     const weakParentSink = parentSources[0][getWeakSink]();
+    // The weakness is important so that we can GC [parentVariable] after it's computed.
     // We can be sure that the [deref]s work because this function
     // is only called after [weakParentSink.push] is called.
-    return () => evaluate(weakParentSink.deref()[getWeakVariable]().deref().thunk());
+    return () => {
+      const parentVariable = weakParentSink.deref()[getWeakVariable]().deref();
+      return () => evaluate(parentVariable.thunk());
+    }
   } else {
-    return () => assert(false);
+    return null;
   }
 }
 
 class BehaviorSink extends Sink {
-  #evaluate;
+  #createThunk;
   #weakVariable;
   
   constructor(parentSources, initialValue, evaluate) {
     super(parentSources.map((source) => source[getWeakSink]()));
-    this.#evaluate = createBehaviorEvaluator(parentSources, evaluate);
+    this.#createThunk = createBehaviorThunk(parentSources, evaluate);
     // The strong references are from [BehaviorSource], uncomputed children, and chilren with more than one parent,
     // which will need to access the value in the future.
     this.#weakVariable = new WeakRef({ thunk: () => initialValue, computed: true });
