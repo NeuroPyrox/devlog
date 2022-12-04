@@ -309,13 +309,28 @@ export const newEventPair = (parentSources, push, options = {}) => {
   return [sink, source];
 };
 
+// Yes, there's a lot of coupling in this function, but idk how best to refactor it.
+const createBehaviorEvaluator = (parentSources, evaluate) {
+  if (1 < parentSources.length) {
+    const variables = parentSources.map(source => source[getVariable]());
+    return () => evaluate(...variables.map(variable => variable.thunk()));
+  } else if (parentSources.length === 1) {
+    const weakParentSink = parentSources[0][getWeakSink]();
+    // We can be sure that the [deref]s work because this function
+    // is only called after [weakParentSink.push] is called.
+    return () => evaluate(weakParentSink.deref()[getWeakVariable]().deref().thunk());
+  } else {
+    return () => assert(false);
+  }
+}
+
 class BehaviorSink extends Sink {
-  #push;
+  #evaluate;
   #weakVariable;
   
-  constructor(weakParents, initialValue, push) {
-    super(weakParents);
-    this.#push = push;
+  constructor(parentSources, initialValue, evaluate) {
+    super(parentSources.map((source) => source[getWeakSink]()));
+    this.#evaluate = createBehaviorEvaluator(parentSources, evaluate);
     // The strong references are from [BehaviorSource], uncomputed children, and chilren with more than one parent,
     // which will need to access the value in the future.
     this.#weakVariable = new WeakRef({ thunk: () => initialValue, computed: true });
@@ -343,6 +358,10 @@ class BehaviorSource extends EventSource {
   getCurrentValue() {
     assertLazy();
     return this.#variable.thunk();
+  }
+  
+  [getVariable]() {
+    return this.#variable;
   }
 }
 
