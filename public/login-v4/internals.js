@@ -22,7 +22,7 @@ const k = (x) => () => x;
 // "Pullable" means the [EventSource] is strongly referenced.
 
 // Methods that are private to this module.
-const readParents = Symbol();
+const mapWeakParents = Symbol();
 const isFirstParent = Symbol();
 const forEachParent = Symbol();
 const getPriority = Symbol();
@@ -67,13 +67,12 @@ class Sink {
     this.#setWeakParents([weakParent]);
     weakParent.deref()?.#switchPriority(this.#priority);
   }
-  
+
   // These symbol methods are only used by derived classes,
   // but making protected methods is too confusing in JavaScript.
 
-  // TODO can we use this both for behaviors and events?
-  [readParents](read) {
-    return this.#weakParents.map((weakParent) => read(weakParent));
+  [mapWeakParents](f) {
+    return this.#weakParents.map(f);
   }
 
   // Used for early exits from [EventSink.switch]
@@ -206,7 +205,7 @@ class EventSink extends Sink {
   // it returns an imperative command that the caller executes.
   push(read) {
     assertLazy();
-    return this.#push(...this[readParents](read));
+    return this.#push(...this[mapWeakParents](read));
   }
 
   // Removes all strong references to [this].
@@ -309,36 +308,24 @@ export const newEventPair = (parentSources, push, options = {}) => {
   return [sink, source];
 };
 
-// Yes, there's a lot of coupling in this function, but idk how best to refactor it.
-const createBehaviorThunk = (parentSources, evaluate) {
-  if (1 < parentSources.length) {
-    // TODO how to turn an apply into a map after a parent becomes unpushable?
-    const variables = parentSources.map(source => source[getVariable]());
-    return () => () => evaluate(...variables.map(variable => variable.thunk()));
-  } else if (parentSources.length === 1) {
-    const weakParentSink = parentSources[0][getWeakSink]();
-    // The weakness is important so that we can GC [parentVariable] after it's computed.
-    // We can be sure that the [deref]s work because this function
-    // is only called after [weakParentSink.push] is called.
-    return () => {
-      const parentVariable = weakParentSink.deref()[getWeakVariable]().deref();
-      return () => evaluate(parentVariable.thunk());
-    }
-  } else {
-    return null;
-  }
-}
-
 class BehaviorSink extends Sink {
-  #createThunk;
+  #rememberedParentVariables;
+  #evaluate;
   #weakVariable;
-  
+
   constructor(parentSources, initialValue, evaluate) {
-    super(parentSources.map((source) => source[getWeakSink]()));
-    this.#createThunk = createBehaviorThunk(parentSources, evaluate);
-    // The strong references are from [BehaviorSource], uncomputed children, and chilren with more than one parent,
+    super(parentSources.map((parentSource) => parentSource[getWeakSink]()));
+    this.#rememberedParentVariables =
+      1 < parentSources.length
+        ? parentSources.map((parentSource) => parentSource[getVariable]())
+        : Array(parentSources.length);
+    this.#evaluate = evaluate;
+    // The strong references are from [BehaviorSource], uncomputed children, and children with more than one pushable parent,
     // which will need to access the value in the future.
-    this.#weakVariable = new WeakRef({ thunk: () => initialValue, computed: true });
+    this.#weakVariable = new WeakRef({
+      thunk: () => initialValue,
+      computed: true,
+    });
   }
 
   setValue(value) {
@@ -346,15 +333,36 @@ class BehaviorSink extends Sink {
     // The change gets propagated to the source because the source has a reference to [this.#weakVariable.deref()].
     this.#weakVariable.deref().thunk = () => value;
   }
-  
+
   [getWeakVariable]() {
     return this.#weakVariable;
+  }
+
+  #createThunk() {
+    const parentVariables = this.#getParentVariables();
+    // The point of this line is to avoid capturing [this] in the returned closure.
+    // I haven't tested if it's a real issue because I don't have the time, so I'm just being cautious.
+    const evaluate = this.#evaluate;
+    return () =>
+      evaluate(
+        ...parentVariables.map((parentVariable) => parentVariable.thunk())
+      );
+  }
+
+  // We can be sure that the [deref]s work because the non-remembered [weakParent]s were just pushed.
+  // This is a separate method because we need to avoid accidentally capturing [this] in neighboring closures. Ugh, JavaScript.
+  #getParentVariables() {
+    return this[mapWeakParents](
+      (weakParent, i) =>
+        this.#rememberedParentVariables[i] ??
+        weakParent.deref().#weakVariable.deref()
+    );
   }
 }
 
 class BehaviorSource extends EventSource {
   #variable;
-  
+
   constructor(parents, sink) {
     super(parents, sink);
     this.#variable = sink[getWeakVariable]().deref();
@@ -364,7 +372,7 @@ class BehaviorSource extends EventSource {
     assertLazy();
     return this.#variable.thunk();
   }
-  
+
   [getVariable]() {
     return this.#variable;
   }
