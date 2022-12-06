@@ -330,27 +330,35 @@ class BehaviorSink extends Sink {
 
   setValue(value) {
     assertLazy();
-    // The change gets propagated to the source because the source has a reference to [this.#weakVariable.deref()].
+    assert(this.#isComputed());
+    assert(this.#rememberedParentVariables.length === 0);
+    if (this.#weakVariable.deref() === undefined) {
+      this.#weakVariable = new WeakRef({});
+    }
+    // Assign to instead of replacing [variable] because we want to
+    // propagate the changes to any uncomputed children and to the source.
     this.#weakVariable.deref().thunk = () => value;
   }
 
-  [getWeakVariable]() {
-    return this.#weakVariable;
-  }
-
-  #push() {
+  push() {
+    assertLazy();
     assert(this.#isComputed());
     if (this.#weakVariable.deref() === undefined) {
       this.#weakVariable = new WeakRef({});
     }
     const variable = this.#weakVariable.deref();
     const thunk = this.#createThunk();
-    // Assign to instead of replacing [variable] because we want to propagate the changes to any uncomputed children.
-    variable.computed = false;
+    // Assign to instead of replacing [variable] because we want to
+    // propagate the changes to any uncomputed children and to the source.
     variable.thunk = memoize(() => {
       variable.computed = true;
       return thunk();
     });
+    variable.computed = false;
+  }
+
+  [getWeakVariable]() {
+    return this.#weakVariable;
   }
 
   #createThunk() {
