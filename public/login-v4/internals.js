@@ -1,4 +1,4 @@
-import { assert, ShrinkingList, weakRefUndefined, derefMany } from "./util.js";
+import { assert, ShrinkingList, weakRefUndefined, derefMany, memoize } from "./util.js";
 import {
   assertLazy,
   assertConstructing,
@@ -338,6 +338,21 @@ class BehaviorSink extends Sink {
     return this.#weakVariable;
   }
 
+  #push() {
+    assert(this.#isComputed());
+    if (this.#weakVariable.deref() === undefined) {
+      this.#weakVariable = new WeakRef({});
+    }
+    const variable = this.#weakVariable.deref();
+    const thunk = this.#createThunk();
+    // Assign to instead of replacing [variable] because we want to propagate the changes to any uncomputed children.
+    variable.computed = false;
+    variable.thunk = memoize(() => {
+      variable.computed = true;
+      return thunk();
+    });
+  }
+
   #createThunk() {
     const parentVariables = this.#getParentVariables();
     // The point of this line is to avoid capturing [this] in the returned closure.
@@ -357,6 +372,11 @@ class BehaviorSink extends Sink {
         this.#rememberedParentVariables[i] ??
         weakParent.deref().#weakVariable.deref()
     );
+  }
+
+  #isComputed() {
+    // Use a strict comparison because we want [undefined] to result as [true];
+    return this.#weakVariable.deref()?.computed !== false;
   }
 }
 
