@@ -359,13 +359,17 @@ class BehaviorSink extends Sink {
     if (this.#weakVariable.deref() === undefined) {
       this.#weakVariable = new WeakRef({});
     }
-    const thunk = this.#createThunk();
+    const parentVariables = this.#getParentVariables();
+    // The point of these 2 lines is to avoid capturing [this] in the closure.
+    const evaluate = this.#evaluate;
     const weakThis = new WeakRef(this);
     // Assign to instead of replacing [weakVariable] because we want to
     // propagate the changes to any uncomputed children and to the source.
     this.#weakVariable.deref().thunk = memoize(() => {
       weakThis.deref()?.#addToComputedChildren();
-      return thunk();
+      return evaluate(
+        ...parentVariables.map((parentVariable) => parentVariable.thunk())
+      );
     });
   }
 
@@ -373,19 +377,8 @@ class BehaviorSink extends Sink {
     return this.#weakVariable;
   }
 
-  #createThunk() {
-    const parentVariables = this.#getParentVariables();
-    // The point of this line is to avoid capturing [this] in the returned closure.
-    // I haven't tested if it's a real issue because I don't have the time, so I'm just being cautious.
-    const evaluate = this.#evaluate;
-    return () =>
-      evaluate(
-        ...parentVariables.map((parentVariable) => parentVariable.thunk())
-      );
-  }
-
   // We can be sure that the [deref]s work because the non-remembered [weakParent]s were just pushed.
-  // This is a separate method because we need to avoid accidentally capturing [this] in neighboring closures. Ugh, JavaScript.
+  // This is a separate method because we need to avoid accidentally capturing [this] in neighboring closures.
   #getParentVariables() {
     return this[mapWeakParents](
       (weakParent, i) =>
