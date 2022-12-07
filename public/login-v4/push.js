@@ -55,6 +55,7 @@ export const enqueueBehavior = (sink, value) => ({
   [key]: (context) => context.enqueueBehavior(sink, value),
 });
 
+// TODO don't visit the same node twice
 // Delay construction because we don't want to visit newly created reactives.
 export const push = (sink, value) =>
   delayConstructionDuring(() => {

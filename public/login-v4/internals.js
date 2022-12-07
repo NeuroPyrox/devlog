@@ -1,4 +1,10 @@
-import { assert, ShrinkingList, weakRefUndefined, derefMany, memoize } from "./util.js";
+import {
+  assert,
+  ShrinkingList,
+  weakRefUndefined,
+  derefMany,
+  memoize,
+} from "./util.js";
 import {
   assertLazy,
   assertConstructing,
@@ -132,7 +138,7 @@ class Sink {
 // [#weakParents], [#weakParentLinks], [#children], and [#activeChildren] are instances of [EventSink].
 class EventSink extends Sink {
   #activeChildren;
-  #deactivators;
+  #activeChildRemovers;
   #enforceManualDeactivation;
   // These variables are independent of the other ones,
   // but they're too small to refactor into their own classes.
@@ -146,7 +152,7 @@ class EventSink extends Sink {
   ) {
     super(weakParents);
     this.#activeChildren = new ShrinkingList();
-    this.#deactivators = [];
+    this.#activeChildRemovers = [];
     this.#enforceManualDeactivation = enforceManualDeactivation; // Only used for output events.
     this.#push = push;
     this.#unsubscribe = unsubscribe; // Only used for input events.
@@ -162,22 +168,24 @@ class EventSink extends Sink {
 
   activate() {
     assertConstructing();
-    if (this.#deactivators.length !== 0) {
+    if (this.#activeChildRemovers.length !== 0) {
       // Filters out all sinks that are already active, except for inputs.
       return;
     }
     this[forEachParent]((parent) => {
       parent.activate();
-      this.#deactivators.push(new WeakRef(parent.#activeChildren.add(this)));
+      this.#activeChildRemovers.push(
+        new WeakRef(parent.#activeChildren.add(this))
+      );
     });
   }
 
   deactivate() {
     assertConstructing();
-    for (const deactivator of this.#deactivators) {
+    for (const deactivator of this.#activeChildRemovers) {
       deactivator.deref()?.removeOnce();
     }
-    this.#deactivators = [];
+    this.#activeChildRemovers = [];
     this[forEachParent]((parent) => {
       if (parent.#activeChildren.isEmpty()) {
         // From one to zero children.
@@ -217,7 +225,7 @@ class EventSink extends Sink {
   // because pushing an unpullable sink has no side effects.
   [destroy]() {
     if (this.#enforceManualDeactivation) {
-      assert(this.#deactivators.length === 0);
+      assert(this.#activeChildRemovers.length === 0);
     } else {
       this.deactivate();
     }
@@ -315,19 +323,22 @@ class BehaviorSink extends Sink {
 
   constructor(parentSources, initialValue, evaluate) {
     super(parentSources.map((parentSource) => parentSource[getWeakSink]()));
+    this.#computedChildren = new ShrinkingList();
+    this.#computedChildRemovers = [];
+    // The strong references are from [BehaviorSource], uncomputed children, and children with more than one pushable parent,
+    // which will need to access the value in the future.
+    this.#weakVariable = new WeakRef({
+      thunk: () => initialValue
+    });
     this.#rememberedParentVariables =
       1 < parentSources.length
         ? parentSources.map((parentSource) => parentSource[getVariable]())
         : Array(parentSources.length);
+    // Not used for [stepper]s.
     this.#evaluate = evaluate;
-    // The strong references are from [BehaviorSource], uncomputed children, and children with more than one pushable parent,
-    // which will need to access the value in the future.
-    this.#weakVariable = new WeakRef({
-      thunk: () => initialValue,
-      computed: true,
-    });
   }
 
+  // Only used for [stepper]s.
   setValue(value) {
     assertLazy();
     assert(this.#isComputed());
@@ -335,26 +346,36 @@ class BehaviorSink extends Sink {
     if (this.#weakVariable.deref() === undefined) {
       this.#weakVariable = new WeakRef({});
     }
-    // Assign to instead of replacing [variable] because we want to
+    // Assign to instead of replacing [weakVariable] because we want to
     // propagate the changes to any uncomputed children and to the source.
     this.#weakVariable.deref().thunk = () => value;
   }
 
+  // Not used for [stepper]s.
   push() {
     assertLazy();
     assert(this.#isComputed());
     if (this.#weakVariable.deref() === undefined) {
       this.#weakVariable = new WeakRef({});
     }
-    const variable = this.#weakVariable.deref();
     const thunk = this.#createThunk();
-    // Assign to instead of replacing [variable] because we want to
+    const weakThis = new WeakRef(this);
+    const addToComputedChildren = () => {
+      const that = weakThis.deref();
+      if (that !== undefined) {
+        that[forEachParent]((parent) => {
+          that.#computedChildRemovers.push(
+            new WeakRef(parent.#computedChildren.add(that))
+          );
+        });
+      }
+    }
+    // Assign to instead of replacing [weakVariable] because we want to
     // propagate the changes to any uncomputed children and to the source.
-    variable.thunk = memoize(() => {
-      variable.computed = true;
+    this.#weakVariable.deref().thunk = memoize(() => {
+      addToComputedChildren();
       return thunk();
     });
-    variable.computed = false;
   }
 
   [getWeakVariable]() {
@@ -382,6 +403,7 @@ class BehaviorSink extends Sink {
     );
   }
 
+  // TODO update
   #isComputed() {
     // Use a strict comparison because we want [undefined] to result as [true];
     return this.#weakVariable.deref()?.computed !== false;
