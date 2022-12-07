@@ -405,10 +405,9 @@ class BehaviorSink extends Sink {
     );
   }
 
-  // TODO update
+  // There's some false negatives, but they don't matter at the current callsites.
   #isComputed() {
-    // Use a strict comparison because we want [undefined] to result as [true];
-    return this.#weakVariable.deref()?.computed !== false;
+    return 0 < this.#computedChildRemovers.length;
   }
 }
 
