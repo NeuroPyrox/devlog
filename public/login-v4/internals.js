@@ -213,7 +213,9 @@ class EventSink extends Sink {
   // it returns an imperative command that the caller executes.
   push(read) {
     assertLazy();
-    return this.#push(...this[mapWeakParents](read));
+    return this.#push(
+      ...this[mapWeakParents]((weakParent) => read(weakParent.deref()))
+    );
   }
 
   // Removes all strong references to [this].
@@ -328,7 +330,7 @@ class BehaviorSink extends Sink {
     // The strong references are from [BehaviorSource], uncomputed children, and children with more than one pushable parent,
     // which will need to access the value in the future.
     this.#weakVariable = new WeakRef({
-      thunk: () => initialValue
+      thunk: () => initialValue,
     });
     this.#rememberedParentVariables =
       1 < parentSources.length
@@ -369,7 +371,7 @@ class BehaviorSink extends Sink {
           );
         });
       }
-    }
+    };
     // Assign to instead of replacing [weakVariable] because we want to
     // propagate the changes to any uncomputed children and to the source.
     this.#weakVariable.deref().thunk = memoize(() => {

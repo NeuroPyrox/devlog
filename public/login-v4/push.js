@@ -19,8 +19,9 @@ class Context {
     this.#eventValues.set(sink, { value });
   }
 
-  readEvent(weakSink) {
-    const value = this.#eventValues.get(weakSink.deref());
+  // Takes [undefined] to mean an unpushable sink.
+  readEvent(sink) {
+    const value = this.#eventValues.get(sink);
     if (value === undefined) {
       return nothing;
     }
@@ -55,25 +56,29 @@ export const enqueueBehavior = (sink, value) => ({
   [key]: (context) => context.enqueueBehavior(sink, value),
 });
 
-// TODO don't visit the same node twice
 // Delay construction because we don't want to visit newly created reactives.
 export const push = (sink, value) =>
   delayConstructionDuring(() => {
     const context = new Context();
-    const readEvent = (weakSink) => context.readEvent(weakSink);
+    const readEvent = (sink) => context.readEvent(sink);
     context.writeEvent(sink, value);
     const heap = new Heap((a, b) => a.priority < b.priority);
     for (const child of sink.iterateActiveChildren()) {
       heap.push(child);
     }
     for (const { sink } of heap) {
+      // Some nodes may be visited twice in the case of a [merge], but we only need to [push] them once.
+      if (readEvent(sink) !== nothing) {
+        continue;
+      }
       const value = sink.push(readEvent)[key](context);
-      if (value !== nothing) {
-        context.writeEvent(sink, value);
-        for (const child of sink.iterateActiveChildren()) {
-          // Mutating the heap while iterating over it.
-          heap.push(child);
-        }
+      if (value === nothing) {
+        continue;
+      }
+      context.writeEvent(sink, value);
+      for (const child of sink.iterateActiveChildren()) {
+        // Mutating the heap while iterating over it.
+        heap.push(child);
       }
     }
     context.dequeueBehaviorValues();
