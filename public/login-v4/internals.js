@@ -343,7 +343,6 @@ class BehaviorSink extends Sink {
   // Only used for [stepper]s.
   setValue(value) {
     assertLazy();
-    assert(this.#isComputed());
     assert(this.#rememberedParentVariables.length === 0);
     if (this.#weakVariable.deref() === undefined) {
       this.#weakVariable = new WeakRef({});
@@ -356,26 +355,16 @@ class BehaviorSink extends Sink {
   // Not used for [stepper]s.
   push() {
     assertLazy();
-    assert(this.#isComputed());
+    this.#removeFromComputedChildren();
     if (this.#weakVariable.deref() === undefined) {
       this.#weakVariable = new WeakRef({});
     }
     const thunk = this.#createThunk();
     const weakThis = new WeakRef(this);
-    const addToComputedChildren = () => {
-      const that = weakThis.deref();
-      if (that !== undefined) {
-        that[forEachParent]((parent) => {
-          that.#computedChildRemovers.push(
-            new WeakRef(parent.#computedChildren.add(that))
-          );
-        });
-      }
-    };
     // Assign to instead of replacing [weakVariable] because we want to
     // propagate the changes to any uncomputed children and to the source.
     this.#weakVariable.deref().thunk = memoize(() => {
-      addToComputedChildren();
+      weakThis.deref()?.#addToComputedChildren();
       return thunk();
     });
   }
@@ -408,6 +397,22 @@ class BehaviorSink extends Sink {
   // There's some false negatives, but they don't matter at the current callsites.
   #isComputed() {
     return 0 < this.#computedChildRemovers.length;
+  }
+  
+  #addToComputedChildren() {
+    this[forEachParent]((parent) => {
+      this.#computedChildRemovers.push(
+        new WeakRef(parent.#computedChildren.add(this))
+      );
+    });
+  }
+  
+  #removeFromComputedChildren() {
+    assert(0 < this.#computedChildRemovers.length);
+    for (const remover of this.#computedChildRemovers) {
+      remover.deref()?.removeOnce();
+    }
+    this.#computedChildRemovers = [];
   }
 }
 
