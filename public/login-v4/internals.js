@@ -419,6 +419,17 @@ class BehaviorSink extends Sink {
     }
     this.#computedChildRemovers = [];
   }
+
+  // Removes all strong references to [this].
+  // [removeFromParents] and [removeFromComputedChildren] take care of the strong references from parents.
+  // We don't need to worry about the strong references from modulators because
+  // the unpullability of [this] implies the unpullability of any modulators.
+  // It doesn't matter how long you wait to call this method
+  // because pushing an unpullable sink has no side effects.
+  [destroy]() {
+    this.#removeFromComputedChildren();
+    super[removeFromParents]();
+  }
 }
 
 class BehaviorSource extends EventSource {
