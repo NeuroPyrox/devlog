@@ -44,7 +44,7 @@ import { newEventPair, newBehaviorPair } from "./internals.js";
 
 // Reactives are either time-dependent or not.
 //   Time-dependent:   [switchE, stepper, mergeBind, output, loop]
-//   Time-independent: [input, never, map, filter, merge, mapTag, tag, observeE, getClicks]
+//   Time-independent: [input, never, mapE, filter, merge, mapTag, tag, observeE, getClicks]
 // Time-dependent reactives act differently depending on when you initialized them,
 //   but time-independent reactives don't care when you initialize them.
 // In other words, time-independent reactives obey referential transparency
@@ -98,7 +98,7 @@ export const input = (subscribe) =>
 
 export const never = input(() => () => {});
 
-export const map = (parent, f) =>
+export const mapE = (parent, f) =>
   lazyConstructor(
     (parentSource) =>
       newEventPair([parentSource], (value) => Push.pure(f(value)))[1],
@@ -106,7 +106,7 @@ export const map = (parent, f) =>
   );
 
 export const filter = (parent, predicate) =>
-  map(parent, (value) => (predicate(value) ? value : Util.nothing));
+  mapE(parent, (value) => (predicate(value) ? value : Util.nothing));
 
 export const merge = (
   parentA,
@@ -134,7 +134,6 @@ export const merge = (
   );
 
 // TODO
-// TODO are there any possible short circuits based on [behavior]'s state?
 export const mapTagB = (event, behavior, combine) =>
   lazyConstructor(
     (eventSource, behaviorSource) =>
@@ -145,11 +144,11 @@ export const mapTagB = (event, behavior, combine) =>
     behavior
   );
 export const mapTag = (parent, latchGet, combine) =>
-  map(parent, (x) => combine(x, latchGet()));
+  mapE(parent, (x) => combine(x, latchGet()));
 
 // TODO
 export const tagB = (event, behavior) => mapTagB(event, behavior, (e, b) => b);
-export const tag = (parent, latchGet) => map(parent, () => latchGet());
+export const tag = (parent, latchGet) => mapE(parent, () => latchGet());
 
 // TODO rename to "pull" and update comments accordingly.
 export const observeE = (parent) =>
@@ -240,7 +239,7 @@ export function* stepper(initialValue, newValues) {
 // TODO optimize with binary tree
 export function* mergeBind(eventOfEvent, f) {
   let current = never;
-  const next = map(eventOfEvent, (event) => merge(f(event), current));
+  const next = mapE(eventOfEvent, (event) => merge(f(event), current));
   // TODO memory management
   yield* output(next, (event) => (current = event));
   return yield* switchE(next);

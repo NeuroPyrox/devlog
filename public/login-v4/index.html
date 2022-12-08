@@ -20,7 +20,7 @@
       start,
       never,
       input,
-      map,
+      mapE,
       filter,
       merge,
       mapTagB,
@@ -73,7 +73,7 @@
         }),
         (x) => x !== null
       );
-      let tableTransform = map(
+      let tableTransform = mapE(
         signups,
         ([index, user]) =>
           (table) =>
@@ -95,13 +95,13 @@
           return [];
         }
       );
-      const createUserInsertions = map(
+      const createUserInsertions = mapE(
         filter(insertions, (x) => x[0] === "createUser"),
         ([, index, user]) => [index, user]
       );
       tableTransform = merge(
         tableTransform,
-        map(
+        mapE(
           createUserInsertions,
           ([index, user]) =>
             (table) =>
@@ -126,7 +126,7 @@
 
       tableTransform = merge(
         tableTransform,
-        map(
+        mapE(
           passwordChanges,
           ({ index, password }) =>
             (table) =>
@@ -144,7 +144,7 @@
       );
       tableTransform = merge(
         tableTransform,
-        map(
+        mapE(
           removedUsers,
           ({ index }) =>
             (table) =>
@@ -152,14 +152,14 @@
         ),
         noCoincidence
       );
-      const tableLengthOnClear = map(
+      const tableLengthOnClear = mapE(
         tagB(clears, internalTableB),
         (table) => table.length
       );
       clears = filter(tableLengthOnClear, (length) => length !== 0);
       tableTransform = merge(
         tableTransform,
-        map(clears, () => (table) => (table.length = 0)),
+        mapE(clears, () => (table) => (table.length = 0)),
         noCoincidence
       );
 
@@ -321,7 +321,7 @@
               userTableBody.children[index]
             );
           }
-          return map(getClicks(xButton), (_) => user.username);
+          return mapE(getClicks(xButton), (_) => user.username);
         })
       );
 
@@ -400,8 +400,8 @@
         return [
           root,
           merge(
-            map(getClicks(signupButton), k(createSignupDiv)),
-            map(
+            mapE(getClicks(signupButton), k(createSignupDiv)),
+            mapE(
               tag(
                 filter(loginAttempts, (success) => success),
                 getInputValues(usernameInput)
@@ -459,8 +459,8 @@
         return [
           root,
           merge(
-            map(getClicks(loginButton), k(createLoginDiv)),
-            map(
+            mapE(getClicks(loginButton), k(createLoginDiv)),
+            mapE(
               signupAttempts,
               ({ username }) =>
                 () =>
@@ -479,7 +479,7 @@
 
         return [
           loggedInDiv,
-          map(
+          mapE(
             merge(
               filter(
                 merge(passwordChanges, removedUsers),
@@ -510,10 +510,10 @@
       });
 
       signupAttempts.loop(
-        yield* switchE(map(appPages, ([, , signupAttempts]) => signupAttempts))
+        yield* switchE(mapE(appPages, ([, , signupAttempts]) => signupAttempts))
       );
       authPages.loop(
-        yield* switchE(map(appPages, ([, nextAuthPage]) => nextAuthPage))
+        yield* switchE(mapE(appPages, ([, nextAuthPage]) => nextAuthPage))
       );
 
       return publishLoginDiv;
