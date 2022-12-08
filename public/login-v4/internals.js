@@ -339,7 +339,7 @@ class BehaviorSink extends Sink {
       1 < parentSources.length
         ? parentSources.map((parentSource) => parentSource[getVariable]())
         : Array(parentSources.length);
-    
+
     this.#evaluate = evaluate;
     // If [this] is a [stepper].
     if (evaluate === undefined) {
@@ -462,10 +462,7 @@ class BehaviorSource extends EventSource {
 }
 
 export const newBehaviorPair = (parentSources, options) => {
-  const sink = new BehaviorSink(
-    parentSources.map((source) => source[getWeakSink]()),
-    options
-  );
+  const sink = new BehaviorSink(parentSources, options);
   const source = new BehaviorSource(parentSources, sink);
   finalizers.register(sink, new WeakRef(source));
   finalizers.register(source, source[getWeakSink]());
