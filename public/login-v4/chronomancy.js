@@ -231,7 +231,7 @@ export function* switchE(newParents) {
 export function* stepper(initialValue, newValues) {
   // We're safe evaluating the behavior pair eagerly instead of using [lazyConstructor]
   // because there are no parents yet.
-  const [sink, source] = newBehaviorPair([], initialValue, undefined);
+  const [sink, source] = newBehaviorPair([], { initialValue });
   return yield* modulate(source, newValues, (value) =>
     Push.enqueueBehavior(sink, value)
   );
