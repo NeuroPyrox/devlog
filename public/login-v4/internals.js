@@ -319,46 +319,68 @@ export const newEventPair = (parentSources, push, options = {}) => {
 };
 
 class BehaviorSink extends Sink {
+  #computedChildren;
+  #computedChildRemovers;
+  #weakVariable;
   #rememberedParentVariables;
   #evaluate;
-  #weakVariable;
 
-  constructor(parentSources, initialValue, evaluate) {
+  constructor(parentSources, { evaluate, initialValue }) {
     super(parentSources.map((parentSource) => parentSource[getWeakSink]()));
     this.#computedChildren = new ShrinkingList();
     this.#computedChildRemovers = [];
     // The strong references are from [BehaviorSource], uncomputed children, and children with more than one pushable parent,
     // which will need to access the value in the future.
-    this.#weakVariable = new WeakRef({
-      thunk: () => initialValue,
-    });
+    this.#weakVariable = new WeakRef({});
     this.#rememberedParentVariables =
       1 < parentSources.length
         ? parentSources.map((parentSource) => parentSource[getVariable]())
         : Array(parentSources.length);
     // Not used for [stepper]s.
     this.#evaluate = evaluate;
+    if (evaluate === undefined) {
+      this.#initializeValue(initialValue);
+    } else {
+      assert(initialValue === undefined);
+      this.#inivializeThunk();
+    }
   }
 
   // Only used for [stepper]s.
   setValue(value) {
     assertLazy();
-    assert(this.#rememberedParentVariables.length === 0);
     if (this.#weakVariable.deref() === undefined) {
       this.#weakVariable = new WeakRef({});
     }
-    // Assign to instead of replacing [weakVariable] because we want to
-    // propagate the changes to any uncomputed children and to the source.
-    this.#weakVariable.deref().thunk = () => value;
+    this.#initializeValue(value);
   }
 
   // Not used for [stepper]s.
   push() {
     assertLazy();
+    assert(0 < this.#computedChildRemovers.length);
     this.#removeFromComputedChildren();
     if (this.#weakVariable.deref() === undefined) {
       this.#weakVariable = new WeakRef({});
     }
+    this.initializeThunk();
+  }
+
+  [getWeakVariable]() {
+    return this.#weakVariable;
+  }
+
+  #initializeValue(value) {
+    assert(this.#rememberedParentVariables.length === 0);
+    assert(this.#evaluate === undefined);
+    // Assign to instead of replacing [weakVariable] because we want to
+    // propagate the changes to any uncomputed children and to the source.
+    this.#weakVariable.deref().thunk = () => value;
+  }
+
+  #initializeThunk() {
+    assert(this.#rememberedParentVariables.length !== 0);
+    assert(this.#evaluate !== undefined);
     const parentVariables = this.#getParentVariables();
     // The point of these 2 lines is to avoid capturing [this] in the closure.
     const evaluate = this.#evaluate;
@@ -373,10 +395,6 @@ class BehaviorSink extends Sink {
     });
   }
 
-  [getWeakVariable]() {
-    return this.#weakVariable;
-  }
-
   // We can be sure that the [deref]s work because the non-remembered [weakParent]s were just pushed.
   // This is a separate method because we need to avoid accidentally capturing [this] in neighboring closures.
   #getParentVariables() {
@@ -387,11 +405,6 @@ class BehaviorSink extends Sink {
     );
   }
 
-  // There's some false negatives, but they don't matter at the current callsites.
-  #isComputed() {
-    return 0 < this.#computedChildRemovers.length;
-  }
-  
   #addToComputedChildren() {
     this[forEachParent]((parent) => {
       this.#computedChildRemovers.push(
@@ -399,9 +412,8 @@ class BehaviorSink extends Sink {
       );
     });
   }
-  
+
   #removeFromComputedChildren() {
-    assert(0 < this.#computedChildRemovers.length);
     for (const remover of this.#computedChildRemovers) {
       remover.deref()?.removeOnce();
     }
@@ -427,11 +439,10 @@ class BehaviorSource extends EventSource {
   }
 }
 
-export const newBehaviorPair = (parentSources, initialValue, push) => {
+export const newBehaviorPair = (parentSources, options) => {
   const sink = new BehaviorSink(
     parentSources.map((source) => source[getWeakSink]()),
-    initialValue,
-    push
+    options
   );
   const source = new BehaviorSource(parentSources, sink);
   finalizers.register(sink, new WeakRef(source));
