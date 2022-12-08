@@ -36,6 +36,7 @@ const removeFromParents = Symbol();
 const destroy = Symbol();
 const getWeakSink = Symbol();
 const getWeakVariable = Symbol();
+const getVariable = Symbol();
 
 const incrementPriority = (weakParents) =>
   Math.max(
@@ -346,7 +347,7 @@ class BehaviorSink extends Sink {
       this.#initializeValue(initialValue);
     } else {
       assert(initialValue === undefined);
-      this.#inivializeThunk();
+      this.#initializeThunk();
     }
   }
 
