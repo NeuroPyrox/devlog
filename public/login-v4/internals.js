@@ -318,12 +318,15 @@ export const newEventPair = (parentSources, push, options = {}) => {
   return [sink, source];
 };
 
+// This class desperately wants to be refactored into 2 subclasses,
+// but to keep the code style consistent I'd have to turn every combinator
+// into a subclass of [Sink], which I think would be a good but lengthy refactoring.
 class BehaviorSink extends Sink {
   #computedChildren;
-  #computedChildRemovers;
+  #computedChildRemovers; // Not used for [stepper]s.
   #weakVariable;
-  #rememberedParentVariables;
-  #evaluate;
+  #rememberedParentVariables; // Not used for [stepper]s.
+  #evaluate; // Not used for [stepper]s.
 
   constructor(parentSources, { evaluate, initialValue }) {
     super(parentSources.map((parentSource) => parentSource[getWeakSink]()));
@@ -336,8 +339,9 @@ class BehaviorSink extends Sink {
       1 < parentSources.length
         ? parentSources.map((parentSource) => parentSource[getVariable]())
         : Array(parentSources.length);
-    // Not used for [stepper]s.
+    
     this.#evaluate = evaluate;
+    // If [this] is a [stepper].
     if (evaluate === undefined) {
       this.#initializeValue(initialValue);
     } else {
@@ -358,7 +362,7 @@ class BehaviorSink extends Sink {
   // Not used for [stepper]s.
   push() {
     assertLazy();
-    assert(0 < this.#computedChildRemovers.length);
+    assert(this.#computedChildRemovers.length !== 0);
     this.#removeFromComputedChildren();
     if (this.#weakVariable.deref() === undefined) {
       this.#weakVariable = new WeakRef({});
@@ -370,7 +374,9 @@ class BehaviorSink extends Sink {
     return this.#weakVariable;
   }
 
+  // Only used for [stepper]s.
   #initializeValue(value) {
+    assert(this.#computedChildRemovers.length === 0);
     assert(this.#rememberedParentVariables.length === 0);
     assert(this.#evaluate === undefined);
     // Assign to instead of replacing [weakVariable] because we want to
@@ -378,7 +384,9 @@ class BehaviorSink extends Sink {
     this.#weakVariable.deref().thunk = () => value;
   }
 
+  // Not used for [stepper]s.
   #initializeThunk() {
+    assert(this.#computedChildRemovers.length === 0);
     assert(this.#rememberedParentVariables.length !== 0);
     assert(this.#evaluate !== undefined);
     const parentVariables = this.#getParentVariables();
@@ -395,6 +403,7 @@ class BehaviorSink extends Sink {
     });
   }
 
+  // Not used for [stepper]s.
   // We can be sure that the [deref]s work because the non-remembered [weakParent]s were just pushed.
   // This is a separate method because we need to avoid accidentally capturing [this] in neighboring closures.
   #getParentVariables() {
@@ -405,6 +414,7 @@ class BehaviorSink extends Sink {
     );
   }
 
+  // Not used for [stepper]s.
   #addToComputedChildren() {
     this[forEachParent]((parent) => {
       this.#computedChildRemovers.push(
@@ -413,6 +423,7 @@ class BehaviorSink extends Sink {
     });
   }
 
+  // Not used for [stepper]s.
   #removeFromComputedChildren() {
     for (const remover of this.#computedChildRemovers) {
       remover.deref()?.removeOnce();
