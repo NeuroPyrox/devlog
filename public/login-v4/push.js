@@ -79,10 +79,6 @@ export const push = (sink, value) =>
       heap.push(child);
     }
     for (const { sink } of heap) {
-      // Some nodes may be visited twice in the case of a [merge], but we only need to [push] them once.
-      if (readEvent(sink) !== nothing) {
-        continue;
-      }
       const value = sink.push(readEvent)[key](context);
       if (value === nothing) {
         continue;
