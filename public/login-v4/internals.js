@@ -52,7 +52,6 @@ const sourceLinkFinalizers = new FinalizationRegistry((weakChildLink) =>
   weakChildLink.deref()?.removeOnce()
 );
 
-// TODO implied variable name prefixes
 class Sink {
   // These 3 variables interact with each other a lot.
   #weakParents;
@@ -321,7 +320,7 @@ export const newEventPair = (parentSources, push, options = {}) => {
 
 // This class desperately wants to be refactored into 2 subclasses,
 // but to keep the code style consistent I'd have to turn every combinator
-// into a subclass of [Sink], which I think would be a good but lengthy refactoring.
+// into a subclass of [Sink], which would be hard without metaprogramming.
 class BehaviorSink extends Sink {
   #computedChildren;
   #computedChildRemovers; // Not used for [stepper]s.

@@ -226,7 +226,6 @@ export function* switchE(newParents) {
   });
 }
 
-// TODO lift boundary cases up the call stack
 export function* stepper(initialValue, newValues) {
   // We're safe evaluating the behavior pair eagerly instead of using [lazyConstructor]
   // because there are no parents yet.
@@ -251,7 +250,17 @@ export const getClicks = (domNode) =>
     return () => domNode.removeEventListener("click", push);
   });
 
-// TODO replace with behavior
+export const inputValues = function* (domNode) {
+  return yield* stepper(
+    domNode.value,
+    input((push) => {
+      domNode.addEventListener("input", push);
+      return () => domNode.removeEventListener("input", push);
+    })
+  );
+};
+
+// TODO replace with [inputValues].
 export const getInputValues = (domNode) => () => domNode.value;
 
 export { loop, start } from "./pull.js";
