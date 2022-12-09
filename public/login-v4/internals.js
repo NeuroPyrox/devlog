@@ -4,6 +4,7 @@ import {
   weakRefUndefined,
   derefMany,
   memoize,
+  nothing
 } from "./util.js";
 import {
   assertLazy,
@@ -211,9 +212,12 @@ class EventSink extends Sink {
 
   // This function is pure, but we name it "push" because
   // it returns an imperative command that the caller executes.
-  // TODO refactor to enable calling more than once.
   push(read) {
     assertLazy();
+    if (read(this) !== nothing) {
+      // Guards against being called more than once.
+      return nothing;
+    }
     return this.#push(
       ...this[mapWeakParents]((weakParent) => read(weakParent.deref()))
     );
@@ -369,10 +373,10 @@ class BehaviorSink extends Sink {
   }
 
   // Not used for [stepper]s.
-  // Returns false if it's already been called in the current traversal.
   push() {
     assertLazy();
     if (this.#computedChildRemovers.length === 0) {
+      // Guards against being called more than once.
       return false;
     }
     this.#removeFromComputedChildren();
