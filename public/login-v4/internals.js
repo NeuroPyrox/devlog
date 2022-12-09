@@ -211,6 +211,7 @@ class EventSink extends Sink {
 
   // This function is pure, but we name it "push" because
   // it returns an imperative command that the caller executes.
+  // TODO refactor to enable calling more than once.
   push(read) {
     assertLazy();
     return this.#push(
@@ -350,6 +351,14 @@ class BehaviorSink extends Sink {
     }
   }
 
+  // Iterate instead of returning the list itself for the sake of encapsulation.
+  *iterateComputedChildren() {
+    for (const sink of this.#computedChildren) {
+      assertLazy();
+      yield { priority: sink[getPriority](), sink };
+    }
+  }
+
   // Only used for [stepper]s.
   setValue(value) {
     assertLazy();
@@ -360,14 +369,18 @@ class BehaviorSink extends Sink {
   }
 
   // Not used for [stepper]s.
+  // Returns false if it's already been called in the current traversal.
   push() {
     assertLazy();
-    assert(this.#computedChildRemovers.length !== 0);
+    if (this.#computedChildRemovers.length === 0) {
+      return false;
+    }
     this.#removeFromComputedChildren();
     if (this.#weakVariable.deref() === undefined) {
       this.#weakVariable = new WeakRef({});
     }
     this.initializeThunk();
+    return true;
   }
 
   [getWeakVariable]() {
