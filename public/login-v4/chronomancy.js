@@ -215,10 +215,9 @@ export function* switchE(newParents) {
     if (source !== undefined) {
       lazyConstructor((newParentSource) => {
         // It's not possible to switch to an unpullable [newParentSource].
-        // If [newParentSource] is unpushable, [source.switch] has a case that deals with it.
+        // If [newParentSource] is unpushable or [source] is unpullable,
+        // garbage collection still continues in its normal course.
         source.switch(newParentSource);
-        // If we switch to an unpushable sink that's not GC'd yet,
-        // then it will still get GC'd properly.
         sink.switch(newParentSource);
       }, newParent);
     }
@@ -231,7 +230,7 @@ export function* stepper(initialValue, newValues) {
   // because there are no parents yet.
   const [sink, source] = newBehaviorPair([], { initialValue });
   return yield* modulate(source, newValues, (value) =>
-    Push.enqueueBehavior(sink, value)
+    Push.enqueueBehaviorValue(sink, value)
   );
 }
 

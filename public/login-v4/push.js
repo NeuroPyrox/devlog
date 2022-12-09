@@ -35,7 +35,7 @@ class Context {
   }
 
   // TODO make PushBehavior monad
-  enqueueBehavior(sink, value) {
+  enqueueBehaviorValue(sink, value) {
     this.#behaviorValues.push([sink, value]);
     return nothing;
   }
@@ -52,8 +52,8 @@ export const pure = (value) => ({ [key]: (context) => value });
 export const liftPull = (monadicValue) => ({
   [key]: (context) => context.liftPull(monadicValue),
 });
-export const enqueueBehavior = (sink, value) => ({
-  [key]: (context) => context.enqueueBehavior(sink, value),
+export const enqueueBehaviorValue = (sink, value) => ({
+  [key]: (context) => context.enqueueBehaviorValue(sink, value),
 });
 
 // Delay construction because we don't want to visit newly created reactives.
