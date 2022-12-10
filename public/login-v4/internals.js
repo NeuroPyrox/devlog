@@ -355,36 +355,27 @@ class BehaviorSink extends Sink {
     }
   }
 
-  // Iterate instead of returning the list itself for the sake of encapsulation.
-  *iterateComputedChildren() {
-    for (const sink of this.#computedChildren) {
-      assertLazy();
-      yield { priority: sink[getPriority](), sink };
-    }
-  }
-
   // Only used for [stepper]s.
-  setValue(value) {
-    assertLazy();
+  // Must only be called once per call of [this.#weakVariable.deref().thunk],
+  // though we don't have any assertions for it right now.
+  *pushValue(value) {
     if (this.#weakVariable.deref() === undefined) {
       this.#weakVariable = new WeakRef({});
     }
     this.#initializeValue(value);
+    yield* this.#dequeueComputedChildren();
   }
 
   // Not used for [stepper]s.
-  push() {
-    assertLazy();
-    if (this.#computedChildRemovers.length === 0) {
-      // Guards against being called more than once.
-      return false;
-    }
-    this.#removeFromComputedChildren();
+  // TODO add asserion.
+  // Must only be called once per call of [this.#weakVariable.deref().thunk],
+  // though we don't have any assertions for it right now.
+  *push() {
     if (this.#weakVariable.deref() === undefined) {
       this.#weakVariable = new WeakRef({});
     }
-    this.initializeThunk();
-    return true;
+    this.#initializeThunk();
+    yield* this.#dequeueComputedChildren();
   }
 
   [getWeakVariable]() {
@@ -440,12 +431,21 @@ class BehaviorSink extends Sink {
     });
   }
 
-  // Not used for [stepper]s.
+  // Not needed for [stepper]s.
   #removeFromComputedChildren() {
     for (const remover of this.#computedChildRemovers) {
       remover.deref()?.removeOnce();
     }
     this.#computedChildRemovers = [];
+  }
+  
+  *#dequeueComputedChildren() {
+    for (const sink of this.#computedChildren) {
+      assertLazy();
+      // Mutating [this.#computedChildren] while iterating over it.
+      sink.#removeFromComputedChildren();
+      yield {priority: sink[getPriority](), sink};
+    }
   }
 
   // Removes all strong references to [this].
