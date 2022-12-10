@@ -46,7 +46,7 @@ class Context {
   }
   
   doAction(action) {
-    action[key](this);
+    return action[key](this);
   }
 
   // We use "lift" in the name of this method because [Context] resembles a monad.
