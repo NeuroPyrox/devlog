@@ -42,18 +42,14 @@ class Context {
   dequeueBehaviorValues() {
     const heap = new Heap((a, b) => a.priority < b.priority);
     for (const [sink, value] of this.#behaviorValues) {
-      sink.setValue(value);
-      for (const child of sink.iterateComputedChildren()) {
+      for (const child of sink.pushValue(value)) {
         heap.push(child);
       }
     }
+    // Propagate
     for (const { sink } of heap) {
-      // The [if] statement guards against [sink]s that appear more than once in [heap].
-      if (sink.push()) {
-        for (const child of sink.iterateComputedChildren()) {
-          // Mutating the heap while iterating over it.
-          heap.push(child);
-        }
+      for (const child of sink.push()) {
+        heap.push(child);
       }
     }
   }
