@@ -159,14 +159,6 @@ class EventSink extends Sink {
     this.#unsubscribe = unsubscribe; // Only used for input events.
   }
 
-  // Iterate instead of returning the list itself for the sake of encapsulation.
-  *iterateActiveChildren() {
-    for (const sink of this.#activeChildren) {
-      assertLazy();
-      yield { priority: sink[getPriority](), sink };
-    }
-  }
-
   activate() {
     assertConstructing();
     if (this.#activeChildRemovers.length !== 0) {
@@ -209,18 +201,36 @@ class EventSink extends Sink {
       this.activate();
     }
   }
-
-  // This function is pure, but we name it "push" because
-  // it returns an imperative command that the caller executes.
-  push(read) {
+  
+  *pushValue(context, value) {
     assertLazy();
-    if (read(this) !== nothing) {
+    context.writeEvent(this, value);
+    yield* this.#iterateActiveChildren();
+  }
+
+  *push(context) {
+    assertLazy();
+    // TODO update this guard to account for [filter]s and [output]s.
+    if (context.readEvent(this) !== nothing) {
       // Guards against being called more than once.
-      return nothing;
+      return;
     }
-    return this.#push(
-      ...this[mapWeakParents]((weakParent) => read(weakParent.deref()))
+    const action = this.#push(
+      ...this[mapWeakParents]((weakParent) => context.readEvent(weakParent.deref()))
     );
+    const value = context.doAction(action);
+    if (value === nothing) {
+      return [];
+    }
+    context.writeEvent(this, value);
+    yield* this.#iterateActiveChildren();
+  }
+
+  *#iterateActiveChildren() {
+    for (const sink of this.#activeChildren) {
+      assertLazy();
+      yield { priority: sink[getPriority](), sink };
+    }
   }
 
   // Removes all strong references to [this].
@@ -312,6 +322,7 @@ class EventSource {
 // Some of the event's parents may not be passed into this function but added via [EventSource.addParent].
 // The only parents passed here are the ones that [EventSink.push] immediately depends on.
 export const newEventPair = (parentSources, push, options = {}) => {
+  assertConstructing();
   const sink = new EventSink(
     parentSources.map((source) => source[getWeakSink]()),
     push,
@@ -359,6 +370,7 @@ class BehaviorSink extends Sink {
   // Must only be called once per call of [this.#weakVariable.deref().thunk],
   // though we don't have any assertions for it right now.
   *pushValue(value) {
+    assertLazy();
     if (this.#weakVariable.deref() === undefined) {
       this.#weakVariable = new WeakRef({});
     }
@@ -371,6 +383,7 @@ class BehaviorSink extends Sink {
   // Must only be called once per call of [this.#weakVariable.deref().thunk],
   // though we don't have any assertions for it right now.
   *push() {
+    assertLazy();
     if (this.#weakVariable.deref() === undefined) {
       this.#weakVariable = new WeakRef({});
     }
@@ -479,6 +492,7 @@ class BehaviorSource extends EventSource {
 }
 
 export const newBehaviorPair = (parentSources, options) => {
+  assertConstructing();
   const sink = new BehaviorSink(parentSources, options);
   const source = new BehaviorSource(parentSources, sink);
   finalizers.register(sink, new WeakRef(source));
