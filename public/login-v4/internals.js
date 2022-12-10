@@ -320,7 +320,9 @@ class EventSource {
 // Some of the event's parents may not be passed into this function but added via [EventSource.addParent].
 // The only parents passed here are the ones that [EventSink.push] immediately depends on.
 export const newEventPair = (parentSources, push, options = {}) => {
-  assertConstructing();
+  if (parentSources.length !== 0) {
+    assertConstructing();
+  }
   const sink = new EventSink(
     parentSources.map((source) => source[getWeakSink]()),
     push,
@@ -490,7 +492,9 @@ class BehaviorSource extends EventSource {
 }
 
 export const newBehaviorPair = (parentSources, options) => {
-  assertConstructing();
+  if (parentSources.length !== 0) {
+    assertConstructing();
+  }
   const sink = new BehaviorSink(parentSources, options);
   const source = new BehaviorSource(parentSources, sink);
   finalizers.register(sink, new WeakRef(source));
