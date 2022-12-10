@@ -210,8 +210,7 @@ class EventSink extends Sink {
 
   *push(context) {
     assertLazy();
-    // TODO update this guard to account for [filter]s and [output]s.
-    if (context.readEvent(this) !== nothing) {
+    if (context.isWritten(this)) {
       // Guards against being called more than once.
       return;
     }
@@ -219,11 +218,10 @@ class EventSink extends Sink {
       ...this[mapWeakParents]((weakParent) => context.readEvent(weakParent.deref()))
     );
     const value = context.doAction(action);
-    if (value === nothing) {
-      return [];
-    }
     context.writeEvent(this, value);
-    yield* this.#iterateActiveChildren();
+    if (value !== nothing) {
+      yield* this.#iterateActiveChildren();
+    }
   }
 
   *#iterateActiveChildren() {

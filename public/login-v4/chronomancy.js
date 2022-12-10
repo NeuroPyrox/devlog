@@ -8,8 +8,6 @@ import { assertPullMonad } from "./pull.js";
 import * as Push from "./push.js";
 import { newEventPair, newBehaviorPair } from "./internals.js";
 
-// TODO use freeze and seal to make things more functional
-
 // Approximate lifecycle:
 //   while(waitingForStart()) {
 //     codeFromOutsideTheLibrary();
