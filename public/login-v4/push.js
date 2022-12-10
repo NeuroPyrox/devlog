@@ -39,6 +39,12 @@ class Context {
     return value.value;
   }
   
+  // We need this instead of [this.readEvent(sink) !== nothing] because
+  // we need to avoid visiting a sink twice if it had [nothing] written to it.
+  isWritten(sink) {
+    return this.#eventValues.get(sink) !== undefined;
+  }
+  
   doAction(action) {
     action[key](this);
   }
