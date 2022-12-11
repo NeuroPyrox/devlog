@@ -120,17 +120,20 @@ export const unnestable = (f) => {
 };
 
 export const memoize = (f) => {
-  let done = false;
+  let thunk;
   let value;
-  return () => {
-    if (!done) {
-      done = true;
+  thunk = () => {
+    if (f !== null) {
       value = f();
-      // Free memory
+      // Dual purpose of freeing memory and signalling that [value] was computed.
       f = null;
+      // Signal to caller that [value] was computed.
+      // We don't check this signal in the enclosing [if] statement because the caller might write to it.
+      thunk.computed = true;
     }
     return value;
   };
+  return thunk;
 };
 
 // Idk how to force GC, so this function logs every second whether [garbage] was collected yet.

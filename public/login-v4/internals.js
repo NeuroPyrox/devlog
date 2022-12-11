@@ -371,8 +371,6 @@ class BehaviorSink extends Sink {
   }
 
   // Only used for [stepper]s.
-  // Must only be called once per call of [this.#weakVariable.deref().thunk],
-  // though we don't have any assertions for it right now.
   *pushValue(value) {
     assertLazy();
     if (this.#weakVariable.deref() === undefined) {
@@ -383,13 +381,12 @@ class BehaviorSink extends Sink {
   }
 
   // Not used for [stepper]s.
-  // TODO add asserion.
-  // Must only be called once per call of [this.#weakVariable.deref().thunk],
-  // though we don't have any assertions for it right now.
   *push() {
     assertLazy();
     if (this.#weakVariable.deref() === undefined) {
       this.#weakVariable = new WeakRef({});
+    } else {
+      assert(this.#weakVariable.deref().thunk.computed);
     }
     this.#initializeThunk();
     yield* this.#dequeueComputedChildren();
