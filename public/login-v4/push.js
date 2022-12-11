@@ -25,6 +25,7 @@ class Context {
   }
 
   writeEvent(sink, value) {
+    assert(!this.isWritten(sink));
     // Store an object so that we can differentiate between
     // an unwritten sink and a sink that had [undefined] written to it.
     this.#eventValues.set(sink, { value });

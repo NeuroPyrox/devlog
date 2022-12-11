@@ -371,6 +371,7 @@ class BehaviorSink extends Sink {
   }
 
   // Only used for [stepper]s.
+  // Must only be called once per [Push.push], but idk of any non-clunky ways to assert this.
   *pushValue(value) {
     assertLazy();
     if (this.#weakVariable.deref() === undefined) {
