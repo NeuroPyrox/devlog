@@ -4,7 +4,7 @@ import {
   weakRefUndefined,
   derefMany,
   memoize,
-  nothing
+  nothing,
 } from "./util.js";
 import {
   assertLazy,
@@ -201,7 +201,7 @@ class EventSink extends Sink {
       this.activate();
     }
   }
-  
+
   *pushValue(context, value) {
     assertLazy();
     context.writeEvent(this, value);
@@ -212,10 +212,14 @@ class EventSink extends Sink {
     assertLazy();
     if (context.isWritten(this)) {
       // Guards against being called more than once.
+      // We don't need any fancy algorithmic optimizations
+      // because [EventSink]s have at most 2 parents.
       return;
     }
     const action = this.#push(
-      ...this[mapWeakParents]((weakParent) => context.readEvent(weakParent.deref()))
+      ...this[mapWeakParents]((weakParent) =>
+        context.readEvent(weakParent.deref())
+      )
     );
     const value = context.doAction(action);
     context.writeEvent(this, value);
@@ -451,13 +455,15 @@ class BehaviorSink extends Sink {
     }
     this.#computedChildRemovers = [];
   }
-  
+
+  // Dequeue instead of iterating in order to prevent [push]
+  // from being called twice on any [BehaviorSink].
   *#dequeueComputedChildren() {
     for (const sink of this.#computedChildren) {
       assertLazy();
       // Mutating [this.#computedChildren] while iterating over it.
       sink.#removeFromComputedChildren();
-      yield {priority: sink[getPriority](), sink};
+      yield { priority: sink[getPriority](), sink };
     }
   }
 
