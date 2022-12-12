@@ -38,6 +38,8 @@ const destroy = Symbol();
 const getWeakSink = Symbol();
 const getWeakVariable = Symbol();
 const getVariable = Symbol();
+const forgetLeftParentVariable = Symbol();
+const forgetRightParentVariable = Symbol();
 
 const incrementPriority = (weakParents) =>
   Math.max(
@@ -338,9 +340,8 @@ export const newEventPair = (parentSources, push, options = {}) => {
   return [sink, source];
 };
 
-// This class desperately wants to be refactored into 2 subclasses,
-// but to keep the code style consistent I'd have to turn every combinator
-// into a subclass of [Sink], which would be hard without metaprogramming.
+// This class desperately wants to be refactored into 2 or 3 subclasses,
+// but idk how to do so while keeping the code cleanly organizedd.
 class BehaviorSink extends Sink {
   #computedChildren;
   #computedChildRemovers; // Not used for [stepper]s.
@@ -395,6 +396,18 @@ class BehaviorSink extends Sink {
 
   [getWeakVariable]() {
     return this.#weakVariable;
+  }
+  
+  [forgetLeftParentVariable]() {
+    assert(this.#rememberedParentVariables.length === 2);
+    assert(this.#rememberedParentVariables[0]);
+    this.#rememberedParentVariables[0] = null;
+  }
+  
+  [forgetRightParentVariable]() {
+    assert(this.#rememberedParentVariables.length === 2);
+    assert(this.#rememberedParentVariables[1]);
+    this.#rememberedParentVariables[1] = null;
   }
 
   // Only used for [stepper]s.
@@ -479,10 +492,20 @@ class BehaviorSink extends Sink {
 
 class BehaviorSource extends EventSource {
   #variable;
+  #weakLeftChildSinks;
+  #weakRightChildSinks;
 
   constructor(parents, sink) {
     super(parents, sink);
     this.#variable = sink[getWeakVariable]().deref();
+    this.#weakLeftChildSinks = new ShrinkingList();
+    this.#weakRightChildSinks = new ShrinkingList();
+    if(parents.length === 2) {
+      const weakSink = this[getWeakSink]();
+      const [left, right] = parents;
+      sourceLinkFinalizers.register(this, new WeakRef(left.#weakLeftChildSinks.add(weakSink)));
+      sourceLinkFinalizers.register(this, new WeakRef(right.#weakRightChildSinks.add(weakSink)));
+    }
   }
 
   getCurrentValue() {
@@ -492,6 +515,16 @@ class BehaviorSource extends EventSource {
 
   [getVariable]() {
     return this.#variable;
+  }
+  
+  [destroy]() {
+    super[destroy]();
+    for (const weakLeftChildSink of this.#weakLeftChildSinks) {
+      weakLeftChildSink.deref()?.[forgetRightParentVariable]();
+    }
+    for (const weakRightChildSink of this.#weakRightChildSinks) {
+      weakRightChildSink.deref()?.[forgetLeftParentVariable]();
+    }
   }
 }
 
