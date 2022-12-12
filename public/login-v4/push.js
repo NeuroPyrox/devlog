@@ -1,5 +1,5 @@
 import Heap from "https://cdn.jsdelivr.net/gh/NeuroPyrox/heap/heap.js";
-import { nothing } from "./util.js";
+import { nothing, assert } from "./util.js";
 import { delayConstructionDuring } from "./lazyConstructors.js";
 import { pull } from "./pull.js";
 
