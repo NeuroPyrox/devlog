@@ -46,8 +46,8 @@ export const lazyConstructor = (f, ...args) => {
     return eagerConstructor(f, ...args);
   }
   assertLazy();
-  // The order of composition between [Util.memoize] and [Util.unnestable] doesn't matter,
-  // but [Util.memoize(Util.unnestable(...))] heuristically seems like it'd be more efficient.
+  // The order of composition between [memoize] and [unnestable] doesn't matter,
+  // but [memoize(unnestable(...))] heuristically seems like it'd be more efficient.
   const result = {
     [construct]: memoize(
       unnestable(() => f(...args.map((arg) => arg[construct]())))
