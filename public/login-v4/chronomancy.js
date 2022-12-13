@@ -266,7 +266,7 @@ export const inputValues = (domNode) =>
     return yield* stepper(
       domNode.value,
       input((push) => {
-        domNode.addEventListener("input", push);
+        domNode.addEventListener("input", (e) => push(e.target.value));
         return () => domNode.removeEventListener("input", push);
       })
     );
