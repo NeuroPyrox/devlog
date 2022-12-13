@@ -149,7 +149,7 @@ export const apply = (parentA, parentB, f) =>
   );
 
 // TODO
-export const mapTagB = (event, behavior, combine) =>
+export const mapTag = (event, behavior, combine) =>
   lazyConstructor(
     (eventSource, behaviorSource) =>
       newEventPair([eventSource], (value) =>
@@ -160,7 +160,7 @@ export const mapTagB = (event, behavior, combine) =>
   );
 
 // TODO
-export const tagB = (event, behavior) => mapTagB(event, behavior, (e, b) => b);
+export const tag = (event, behavior) => mapTag(event, behavior, (e, b) => b);
 
 export const observeE = (parent) =>
   lazyConstructor(
