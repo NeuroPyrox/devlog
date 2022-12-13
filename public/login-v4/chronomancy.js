@@ -6,6 +6,7 @@ import {
 } from "./lazyConstructors.js";
 import { assertPullMonad } from "./pull.js";
 import * as Push from "./push.js";
+import { pull } from "./pull.js";
 import { newEventPair, newBehaviorPair } from "./internals.js";
 
 // Approximate lifecycle:
@@ -157,12 +158,9 @@ export const mapTagB = (event, behavior, combine) =>
     event,
     behavior
   );
-export const mapTag = (parent, latchGet, combine) =>
-  mapE(parent, (x) => combine(x, latchGet()));
 
 // TODO
 export const tagB = (event, behavior) => mapTagB(event, behavior, (e, b) => b);
-export const tag = (parent, latchGet) => mapE(parent, () => latchGet());
 
 export const observeE = (parent) =>
   lazyConstructor(
@@ -262,15 +260,17 @@ export const getClicks = (domNode) =>
     return () => domNode.removeEventListener("click", push);
   });
 
-export const inputValues = function* (domNode) {
-  return yield* stepper(
-    domNode.value,
-    input((push) => {
-      domNode.addEventListener("input", push);
-      return () => domNode.removeEventListener("input", push);
-    })
-  );
-};
+// This use of [pull] is an ugly hack. TODO get rid of it.
+export const inputValues = (domNode) =>
+  pull(function* () {
+    return yield* stepper(
+      domNode.value,
+      input((push) => {
+        domNode.addEventListener("input", push);
+        return () => domNode.removeEventListener("input", push);
+      })
+    );
+  });
 
 // TODO replace with [inputValues].
 export const getInputValues = (domNode) => () => domNode.value;
