@@ -397,13 +397,13 @@ class BehaviorSink extends Sink {
   [getWeakVariable]() {
     return this.#weakVariable;
   }
-  
+
   [forgetLeftParentVariable]() {
     assert(this.#rememberedParentVariables.length === 2);
     assert(this.#rememberedParentVariables[0]);
     this.#rememberedParentVariables[0] = null;
   }
-  
+
   [forgetRightParentVariable]() {
     assert(this.#rememberedParentVariables.length === 2);
     assert(this.#rememberedParentVariables[1]);
@@ -500,11 +500,17 @@ class BehaviorSource extends EventSource {
     this.#variable = sink[getWeakVariable]().deref();
     this.#weakLeftChildSinks = new ShrinkingList();
     this.#weakRightChildSinks = new ShrinkingList();
-    if(parents.length === 2) {
+    if (parents.length === 2) {
       const weakSink = this[getWeakSink]();
       const [left, right] = parents;
-      sourceLinkFinalizers.register(this, new WeakRef(left.#weakLeftChildSinks.add(weakSink)));
-      sourceLinkFinalizers.register(this, new WeakRef(right.#weakRightChildSinks.add(weakSink)));
+      sourceLinkFinalizers.register(
+        this,
+        new WeakRef(left.#weakLeftChildSinks.add(weakSink))
+      );
+      sourceLinkFinalizers.register(
+        this,
+        new WeakRef(right.#weakRightChildSinks.add(weakSink))
+      );
     }
   }
 
@@ -516,7 +522,7 @@ class BehaviorSource extends EventSource {
   [getVariable]() {
     return this.#variable;
   }
-  
+
   [destroy]() {
     super[destroy]();
     for (const weakLeftChildSink of this.#weakLeftChildSinks) {

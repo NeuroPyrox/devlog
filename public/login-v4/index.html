@@ -24,16 +24,14 @@
       filter,
       merge,
       mapTagB,
-      mapTag,
       tagB,
-      tag,
       observeE,
       output,
       switchE,
       stepper,
       mergeBind,
       getClicks,
-      getInputValues,
+      inputValues,
     } from "./chronomancy.js";
     const k = (x) => () => x;
 
@@ -272,9 +270,9 @@
       ).build();
 
       const insertions = filter(
-        mapTag(
-          tag(getClicks(insertButton), getInputValues(usernameInsertInput)),
-          getInputValues(passwordInsertInput),
+        mapTagB(
+          tagB(getClicks(insertButton), inputValues(usernameInsertInput)),
+          inputValues(passwordInsertInput),
           (username, password) => ({
             username,
             password,
@@ -360,9 +358,9 @@
           button.var("signupButton").textContent("Signup")
         ).build();
 
-        let loginAttempts = mapTag(
-          tag(getClicks(loginButton), getInputValues(usernameInput)),
-          getInputValues(passwordInput),
+        let loginAttempts = mapTagB(
+          tagB(getClicks(loginButton), inputValues(usernameInput)),
+          inputValues(passwordInput),
           (username, password) => ({
             username,
             password,
@@ -395,9 +393,9 @@
           merge(
             mapE(getClicks(signupButton), k(createSignupDiv)),
             mapE(
-              tag(
+              tagB(
                 filter(loginAttempts, (success) => success),
-                getInputValues(usernameInput)
+                inputValues(usernameInput)
               ),
               (username) => () => createLoggedInDiv(username)
             )
@@ -425,9 +423,9 @@
           button.var("loginButton").textContent("Login")
         ).build();
 
-        let signupAttempts = mapTag(
-          tag(getClicks(signupButton), getInputValues(usernameInput)),
-          getInputValues(passwordInput),
+        let signupAttempts = mapTagB(
+          tagB(getClicks(signupButton), inputValues(usernameInput)),
+          inputValues(passwordInput),
           (username, password) => ({
             username,
             password,
