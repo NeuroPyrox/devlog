@@ -148,11 +148,24 @@ export const mapTag = (parent, latchGet, combine) =>
 export const tagB = (event, behavior) => mapTagB(event, behavior, (e, b) => b);
 export const tag = (parent, latchGet) => mapE(parent, () => latchGet());
 
-// TODO rename to "pull" and update comments accordingly.
 export const observeE = (parent) =>
   lazyConstructor(
     (parentSource) => newEventPair([parentSource], Push.liftPull)[1],
     parent
+  );
+
+export const mapB = (parent, f) =>
+  lazyConstructor(
+    (parentSource) => newBehaviorPair([parentSource], { evaluate: f })[1],
+    parent
+  );
+
+export const applyB = (parentA, parentB, f) =>
+  lazyConstructor(
+    (parentASource, parentBSource) =>
+      newBehaviorPair([parentASource, parentBSource], { evaluate: f })[1],
+    parentA,
+    parentB
   );
 
 // TODO remove and replace with proper garbage collection.
