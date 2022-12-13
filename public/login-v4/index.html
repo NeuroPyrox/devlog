@@ -43,9 +43,6 @@
       clears,
       signupAttempts,
     }) {
-      const noCoincidence = () => {
-        throw "Shouldn't be simultaneous";
-      };
       const internalTableB = yield loop;
 
       const protoFindUsername = (table, start, end, username) => {
@@ -106,8 +103,7 @@
           ([index, user]) =>
             (table) =>
               table.splice(index, 0, user)
-        ),
-        noCoincidence
+        )
       );
       const createdUsers = merge(createUserInsertions, signups);
       const changePasswordInsertions = filter(
@@ -131,8 +127,7 @@
           ({ index, password }) =>
             (table) =>
               (table[index].password = password)
-        ),
-        noCoincidence
+        )
       );
       const removedUsers = mapTagB(
         usernamesToRemove,
@@ -149,8 +144,7 @@
           ({ index }) =>
             (table) =>
               table.splice(index, 1)
-        ),
-        noCoincidence
+        )
       );
       const tableLengthOnClear = mapE(
         tagB(clears, internalTableB),
@@ -159,8 +153,7 @@
       clears = filter(tableLengthOnClear, (length) => length !== 0);
       tableTransform = merge(
         tableTransform,
-        mapE(clears, () => (table) => (table.length = 0)),
-        noCoincidence
+        mapE(clears, () => (table) => (table.length = 0))
       );
 
       // TODO make a combinator for this use case.
