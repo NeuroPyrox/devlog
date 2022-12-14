@@ -29,4 +29,5 @@ module.exports = P.end
   .or(moduleHandler("pull"))
   .or(moduleHandler("push"))
   .or(moduleHandler("internals"))
-  .or(moduleHandler("chronomancy"));
+  .or(moduleHandler("chronomancy")
+  .or(moduleHandler("reactives")));
