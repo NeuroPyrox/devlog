@@ -7,9 +7,6 @@ import { pull } from "./pull.js";
 // The encapsulation prevents new types of mutators from being made.
 const key = Symbol();
 export const pure = (value) => ({ [key]: (context) => value });
-export const liftPull = (monadicValue) => ({
-  [key]: (context) => context.liftPull(monadicValue),
-});
 export const enqueueBehaviorValue = (sink, value) => ({
   [key]: (context) => context.enqueueBehaviorValue(sink, value),
 });
@@ -48,12 +45,6 @@ class Context {
   
   doAction(action) {
     return action[key](this);
-  }
-
-  // We use "lift" in the name of this method because [Context] resembles a monad.
-  // In fact, it used to be a monad before I refactored it.
-  liftPull(monadicValue) {
-    return pull(monadicValue);
   }
 
   enqueueBehaviorValue(sink, value) {

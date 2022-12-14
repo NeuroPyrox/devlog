@@ -161,7 +161,7 @@ export const tag = (event, behavior) => mapTag(event, behavior, (e, b) => b);
 
 export const observeE = (parent) =>
   lazyConstructor(
-    (parentSource) => newEventPair([parentSource], Push.liftPull)[1],
+    (parentSource) => newEventPair([parentSource], (x) => Push.pure(pull(x)))[1],
     parent
   );
 
