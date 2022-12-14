@@ -1,8 +1,5 @@
-import * as Util from "./util.js";
-import {
-  constConstructor,
-  lazyConstructor,
-} from "./lazyConstructors.js";
+import { nothing } from "./util.js";
+import { constConstructor, lazyConstructor } from "./lazyConstructors.js";
 import { assertPullMonad } from "./pull.js";
 import * as Push from "./push.js";
 import { pull } from "./pull.js";
@@ -104,7 +101,7 @@ export const mapE = (parent, f) =>
   );
 
 export const filter = (parent, predicate) =>
-  mapE(parent, (value) => (predicate(value) ? value : Util.nothing));
+  mapE(parent, (value) => (predicate(value) ? value : nothing));
 
 export const merge = (
   parentA,
@@ -120,10 +117,10 @@ export const merge = (
       newEventPair(
         [parentASource, parentBSource],
         (parentAValue, parentBValue) => {
-          if (parentAValue === Util.nothing) {
+          if (parentAValue === nothing) {
             return Push.pure(BtoC(parentBValue));
           }
-          if (parentBValue === Util.nothing) {
+          if (parentBValue === nothing) {
             return Push.pure(AtoC(parentAValue));
           }
           return Push.pure(ABtoC(parentAValue, parentBValue));
@@ -161,7 +158,8 @@ export const tag = (event, behavior) => mapTag(event, behavior, (e, b) => b);
 
 export const observeE = (parent) =>
   lazyConstructor(
-    (parentSource) => newEventPair([parentSource], (x) => Push.pure(pull(x)))[1],
+    (parentSource) =>
+      newEventPair([parentSource], (x) => Push.pure(pull(x)))[1],
     parent
   );
 
@@ -189,7 +187,7 @@ export function* output(parent, handle) {
     parent,
     (value) => {
       lazyConstructor(() => handle(value));
-      return Push.pure(Util.nothing);
+      return Push.pure(nothing);
     },
     true
   );
@@ -229,7 +227,7 @@ export function* switchE(newParents) {
         sink.switch(newParentSource);
       }, newParent);
     }
-    return Push.pure(Util.nothing);
+    return Push.pure(nothing);
   });
 }
 
