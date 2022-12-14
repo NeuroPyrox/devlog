@@ -245,18 +245,42 @@
       _impureBuild: (_) => string,
     });
 
+    function* userTable2(signupAttempts) {
+      let usernameInsertInput, passwordInsertInput, insertButton, userTableBody;
+      const clearButton = yield* html.button("Clear");
+      yield* html.table(function* () {
+        yield* html.thead(function* () {
+          yield* html.tr(function* () {
+            yield* html.th("Username");
+            yield* html.th("Password");
+          });
+          yield* html.tr(function* () {
+            yield* html.td(function* () {
+              usernameInsertInput = yield* html.textInput;
+            });
+            yield* html.td(function* () {
+              passwordInsertInput = yield* html.textInput;
+            });
+            yield* html.td(function* () {
+              insertButton = yield* html.button("Insert");
+            });
+          });
+        });
+        userTableBody = yield* html.tbody;
+      });
+    }
+
     function* userTable(signupAttempts) {
       const {
         root: userTableDiv,
         clearButton,
-        userTable,
         usernameInsertInput,
         passwordInsertInput,
         insertButton,
         userTableBody,
       } = div(
         button.var("clearButton").textContent("Clear"),
-        table.var("userTable")(
+        table(
           thead(
             tr(th.textContent("Username"), th.textContent("Password")),
             tr(
