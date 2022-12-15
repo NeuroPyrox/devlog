@@ -246,7 +246,10 @@
     });
 
     function* userTable2(signupAttempts) {
-      let usernameInsertInput, passwordInsertInput, insertButton, userTableBody;
+      let usernameInsertInput,
+        passwordInsertInput,
+        insertButton,
+        usernamesToRemove;
       const clearButton = yield* html.button("Clear");
       yield* html.table(function* () {
         yield* html.thead(function* () {
@@ -266,7 +269,66 @@
             });
           });
         });
-        userTableBody = yield* html.tbody;
+        yield* html.tbody(function* () {
+          const list = yield* html.list({ splice: map(createdUsers, ([index, user]) => [index, function*() {
+            // TODO translate
+            const { root: rowElement, xButton } = tr(
+              td.textContent(user.username),
+              td.textContent(user.password),
+              td(button.var("xButton").textContent("X"))
+            ).build();
+          }])});
+          usernamesToRemove = yield* html.pull(() =>
+            mergeBind(list.insertedValues(), (usernameUponX) => usernameUponX)
+          );
+        });
+      });
+
+      const insertions = filter(
+        mapTag(
+          tag(getClicks(insertButton), inputValues(usernameInsertInput)),
+          inputValues(passwordInsertInput),
+          (username, password) => ({
+            username,
+            password,
+          })
+        ),
+        ({ username, password }) => username !== "" && password !== ""
+      );
+
+      html.pull(function* () {
+        const {
+          createdUsers,
+          passwordChanges,
+          removedUsers,
+          clears,
+          tryLogins,
+        } = yield* userDatabase({
+          insertions,
+          usernamesToRemove,
+          clears: getClicks(clearButton),
+          signupAttempts,
+        });
+
+        // TODO make pure
+        usernamesToRemove.loop(
+          yield* mergeBind(createdUsers, ([index, user]) => {
+            const { root: rowElement, xButton } = tr(
+              td.textContent(user.username),
+              td.textContent(user.password),
+              td(button.var("xButton").textContent("X"))
+            ).build();
+            if (index === userTableBody.children.length) {
+              userTableBody.appendChild(rowElement);
+            } else {
+              userTableBody.insertBefore(
+                rowElement,
+                userTableBody.children[index]
+              );
+            }
+            return mapE(getClicks(xButton), (_) => user.username);
+          })
+        );
       });
     }
 
