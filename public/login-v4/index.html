@@ -250,6 +250,11 @@
         passwordInsertInput,
         insertButton,
         usernamesToRemove;
+      
+      const createdUsersModel = yield* html.pull(function*() {
+        return yield loop;
+      })
+      
       const clearButton = yield* html.button("Clear");
       yield* html.table(function* () {
         yield* html.thead(function* () {
@@ -270,14 +275,20 @@
           });
         });
         yield* html.tbody(function* () {
-          const list = yield* html.list({ splice: map(createdUsers, ([index, user]) => [index, function*() {
-            // TODO translate
-            const { root: rowElement, xButton } = tr(
-              td.textContent(user.username),
-              td.textContent(user.password),
-              td(button.var("xButton").textContent("X"))
-            ).build();
-          }])});
+          const list = yield* html.list({
+            insert: map(createdUsers, ([index, { username, password }]) => [
+              index,
+              function* () {
+                let xButton;
+                yield* html.td(username);
+                yield* html.td(password);
+                yield* html.td(function* () {
+                  xButton = yield* html.button("X");
+                });
+                return mapE(getClicks(xButton), () => username);
+              },
+            ]),
+          });
           usernamesToRemove = yield* html.pull(() =>
             mergeBind(list.insertedValues(), (usernameUponX) => usernameUponX)
           );
@@ -309,26 +320,7 @@
           clears: getClicks(clearButton),
           signupAttempts,
         });
-
-        // TODO make pure
-        usernamesToRemove.loop(
-          yield* mergeBind(createdUsers, ([index, user]) => {
-            const { root: rowElement, xButton } = tr(
-              td.textContent(user.username),
-              td.textContent(user.password),
-              td(button.var("xButton").textContent("X"))
-            ).build();
-            if (index === userTableBody.children.length) {
-              userTableBody.appendChild(rowElement);
-            } else {
-              userTableBody.insertBefore(
-                rowElement,
-                userTableBody.children[index]
-              );
-            }
-            return mapE(getClicks(xButton), (_) => user.username);
-          })
-        );
+        createdUsersModel.loop(createdUsers);
       });
     }
 
