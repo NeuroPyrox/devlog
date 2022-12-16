@@ -250,11 +250,11 @@
         passwordInsertInput,
         insertButton,
         usernamesToRemove;
-      
-      const createdUsersModel = yield* html.pull(function*() {
-        return yield loop;
-      })
-      
+
+      const [createdUsersModel, insertions] = yield* html.pull(function* () {
+        return [yield loop, yield loop];
+      });
+
       const clearButton = yield* html.button("Clear");
       yield* html.table(function* () {
         yield* html.thead(function* () {
@@ -264,10 +264,14 @@
           });
           yield* html.tr(function* () {
             yield* html.td(function* () {
-              usernameInsertInput = yield* html.textInput;
+              usernameInsertInput = yield* html.textInput({
+                setValue: insertions.map(() => ""),
+              });
             });
             yield* html.td(function* () {
-              passwordInsertInput = yield* html.textInput;
+              passwordInsertInput = yield* html.textInput({
+                setValue: insertions.map(() => ""),
+              });
             });
             yield* html.td(function* () {
               insertButton = yield* html.button("Insert");
@@ -295,16 +299,18 @@
         });
       });
 
-      const insertions = filter(
-        mapTag(
-          tag(getClicks(insertButton), inputValues(usernameInsertInput)),
-          inputValues(passwordInsertInput),
-          (username, password) => ({
-            username,
-            password,
-          })
-        ),
-        ({ username, password }) => username !== "" && password !== ""
+      insertions.loop(
+        filter(
+          mapTag(
+            tag(getClicks(insertButton), inputValues(usernameInsertInput)),
+            inputValues(passwordInsertInput),
+            (username, password) => ({
+              username,
+              password,
+            })
+          ),
+          ({ username, password }) => username !== "" && password !== ""
+        )
       );
 
       html.pull(function* () {
