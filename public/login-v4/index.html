@@ -251,8 +251,16 @@
         insertButton,
         usernamesToRemove;
 
-      const [createdUsersModel, insertions] = yield* html.pull(function* () {
-        return [yield loop, yield loop];
+      const [insertions, model] = yield* html.pull(function* () {
+        return [
+          yield loop,
+          {
+            createdUsers: yield loop,
+            passwordChanges: yield loop,
+            removedUsers: yield loop,
+            clears: yield loop,
+          },
+        ];
       });
 
       const clearButton = yield* html.button("Clear");
@@ -280,18 +288,21 @@
         });
         yield* html.tbody(function* () {
           const list = yield* html.list({
-            insert: map(createdUsers, ([index, { username, password }]) => [
-              index,
-              function* () {
-                let xButton;
-                yield* html.td(username);
-                yield* html.td(password);
-                yield* html.td(function* () {
-                  xButton = yield* html.button("X");
-                });
-                return mapE(getClicks(xButton), () => username);
-              },
-            ]),
+            insert: map(
+              model.createdUsers,
+              ([index, { username, password }]) => [
+                index,
+                function* () {
+                  let xButton;
+                  yield* html.td(username);
+                  yield* html.td(password);
+                  yield* html.td(function* () {
+                    xButton = yield* html.button("X");
+                  });
+                  return mapE(getClicks(xButton), () => username);
+                },
+              ]
+            ),
           });
           usernamesToRemove = yield* html.pull(() =>
             mergeBind(list.insertedValues(), (usernameUponX) => usernameUponX)
@@ -326,7 +337,10 @@
           clears: getClicks(clearButton),
           signupAttempts,
         });
-        createdUsersModel.loop(createdUsers);
+        model.createdUsers.loop(createdUsers);
+        model.passwordChanges.loop(passwordChanges);
+        model.removedUsers.loop(removedUsers);
+        model.clears.loop(clears);
       });
     }
 
