@@ -286,27 +286,25 @@
             });
           });
         });
-        yield* html.tbody(function* () {
-          const list = yield* html.list({
-            insert: map(
-              model.createdUsers,
-              ([index, { username, password }]) => [
-                index,
-                function* () {
-                  let xButton;
-                  yield* html.td(username);
-                  yield* html.td({setTextContent: model.passwordChanges(username)}, password);
-                  yield* html.td(function* () {
-                    xButton = yield* html.button("X");
-                  });
-                  return mapE(getClicks(xButton), () => username);
-                },
-              ]
-            ),
-          });
-          usernamesToRemove = yield* html.pull(() =>
-            mergeBind(list.insertedValues(), (usernameUponX) => usernameUponX)
-          );
+        yield* html.tbody({
+          insertChild: map(
+            model.createdUsers,
+            ([index, { username, password }]) => [
+              index,
+              function* () {
+                let xButton;
+                yield* html.td(username);
+                yield* html.td(
+                  { setTextContent: model.passwordChanges(username) },
+                  password
+                );
+                yield* html.td(function* () {
+                  xButton = yield* html.button("X");
+                });
+                return mapE(getClicks(xButton), () => username);
+              },
+            ]
+          ),
         });
       });
 
