@@ -295,7 +295,7 @@
                 function* () {
                   let xButton;
                   yield* html.td(username);
-                  yield* html.td(password);
+                  yield* html.td({setTextContent: model.passwordChanges(username)}, password);
                   yield* html.td(function* () {
                     xButton = yield* html.button("X");
                   });
