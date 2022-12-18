@@ -286,7 +286,7 @@
             });
           });
         });
-        yield* html.tbody({
+        const tbody = yield* html.tbody({
           insertChild: map(
             model.createdUsers,
             ([index, { username, password }]) => [
@@ -307,6 +307,9 @@
           ),
           removeChild: map(model.removedUsers, ({ index }) => index),
         });
+        usernamesToRemove = yield* html.pull(() =>
+          mergeBind(tbody.afterInsertChild(), (usernameUponX) => usernameUponX)
+        );
       });
 
       insertions.loop(
