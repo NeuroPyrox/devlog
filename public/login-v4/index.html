@@ -306,6 +306,7 @@
             ]
           ),
           removeChild: map(model.removedUsers, ({ index }) => index),
+          setInnerHtml: map(model.clears, () => function* () {}),
         });
         usernamesToRemove = yield* html.pull(() =>
           mergeBind(tbody.afterInsertChild(), (usernameUponX) => usernameUponX)
