@@ -273,12 +273,12 @@
           yield* html.tr(function* () {
             yield* html.td(function* () {
               usernameInsertInput = yield* html.textInput({
-                setValue: insertions.map(() => ""),
+                setValue: map(insertions, () => ""),
               });
             });
             yield* html.td(function* () {
               passwordInsertInput = yield* html.textInput({
-                setValue: insertions.map(() => ""),
+                setValue: map(insertions, () => ""),
               });
             });
             yield* html.td(function* () {
@@ -289,7 +289,7 @@
         const tbody = yield* html.tbody({
           insertChild: map(
             model.createdUsers,
-            ([index, { username, password }]) => [
+            ({ index, username, password }) => [
               index,
               function* () {
                 let xButton;
