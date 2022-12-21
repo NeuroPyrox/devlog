@@ -1,7 +1,6 @@
 import {
   assert,
   ShrinkingList,
-  weakRefUndefined,
   derefMany,
   memoize,
   nothing,
@@ -11,8 +10,6 @@ import {
   assertConstructing,
   eagerConstructor,
 } from "./lazyConstructors.js";
-
-const k = (x) => () => x;
 
 // TODO clarify "sink" vs [Sink] and "source" vs [EventSource].
 // TODO update all comments.
