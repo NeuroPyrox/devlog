@@ -1,10 +1,4 @@
-import {
-  assert,
-  ShrinkingList,
-  derefMany,
-  memoize,
-  nothing,
-} from "./util.js";
+import { assert, ShrinkingList, derefMany, memoize, nothing } from "./util.js";
 import {
   assertLazy,
   assertConstructing,
@@ -38,12 +32,6 @@ const getVariable = Symbol();
 const forgetLeftParentVariable = Symbol();
 const forgetRightParentVariable = Symbol();
 
-const incrementPriority = (weakParents) =>
-  Math.max(
-    -1,
-    ...derefMany(weakParents).map((parent) => parent[getPriority]())
-  ) + 1;
-
 // Neither of these will interrupt [Push.push]
 const finalizers = new FinalizationRegistry(
   (weakRef) => eagerConstructor(() => weakRef.deref()?.[destroy]()) // Wrap in [eagerConstructor] to meet an assertion in [deactivate].
@@ -64,7 +52,11 @@ class Sink {
   constructor(weakParents) {
     this.#setWeakParents(weakParents);
     this.#children = new ShrinkingList();
-    this.#priority = incrementPriority(weakParents);
+    this.#priority =
+      Math.max(
+        -1,
+        ...derefMany(weakParents).map((parent) => parent[getPriority]())
+      ) + 1;
   }
 
   switch(weakParent) {

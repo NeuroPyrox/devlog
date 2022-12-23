@@ -12,17 +12,15 @@ import { assert, ShrinkingList, derefMany } from "./util.js";
 const { newSink } = (() => {
   const p = Symbol();
 
-  const incrementPriority = (weakParents) =>
-    Math.max(
-      -1,
-      ...derefMany(weakParents).map((parent) => parent[p].getPriority())
-    ) + 1;
-
   class Sink {
     constructor(weakParents) {
       this.#setWeakParents(weakParents);
       this.children = new ShrinkingList();
-      this.priority = incrementPriority(weakParents);
+      this.priority =
+        Math.max(
+          -1,
+          ...derefMany(weakParents).map((parent) => parent[p].getPriority())
+        ) + 1;
     }
 
     switch(weakParent) {
@@ -67,7 +65,9 @@ const { newSink } = (() => {
     #switchPriority(childPriority) {
       if (childPriority <= this.priority) {
         this.priority = childPriority - 1;
-        this.forEachParent((parent) => parent[p].#switchPriority(this.priority));
+        this.forEachParent((parent) =>
+          parent[p].#switchPriority(this.priority)
+        );
       }
     }
   }
