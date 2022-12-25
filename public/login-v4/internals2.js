@@ -9,8 +9,6 @@ import { assert, ShrinkingList, derefMany } from "./util.js";
 //   Input:                                                                                                          pushValue
 //   Else:                                                                                                                     push
 
-// In this file "o" means public and "i" means private. Think of them as outer and inner.
-
 const sink = (() => {
   const p = Symbol();
 
@@ -83,43 +81,43 @@ const sink = (() => {
   return {};
 })();
 
-const eventSink = sink.iSubclass((o, i) => ({
+const eventSink = sink.privateSubclass((k) => ({
   constructor(
     weakParents,
     push,
     { unsubscribe = () => {}, enforceManualDeactivation = false }
   ) {
     super(weakParents);
-    this[i].activeChildren = new ShrinkingList();
-    this[i].activeChildRemovers = [];
-    this[i].enforceManualDeactivation = enforceManualDeactivation; // Only used for output events.
-    this[i].push = push;
-    this[i].unsubscribe = unsubscribe; // Only used for input events.
+    this[k].activeChildren = new ShrinkingList();
+    this[k].activeChildRemovers = [];
+    this[k].enforceManualDeactivation = enforceManualDeactivation; // Only used for output events.
+    this[k].push = push;
+    this[k].unsubscribe = unsubscribe; // Only used for input events.
   },
-  o: {
+  public: {
     activate() {
       assertConstructing();
-      if (this[i].activeChildRemovers.length !== 0) {
+      if (this[k].activeChildRemovers.length !== 0) {
         // Filters out all sinks that are already active, except for inputs.
         return;
       }
-      this[i].forEachParent((parent) => {
-        parent[o].activate();
-        this[i].activeChildRemovers.push(
-          new WeakRef(parent[i].activeChildren.add(this))
+      this[k].forEachParent((parent) => {
+        parent[k].activate();
+        this[k].activeChildRemovers.push(
+          new WeakRef(parent[k].activeChildren.add(this))
         );
       });
     },
     deactivate() {
       assertConstructing();
-      for (const deactivator of this[i].activeChildRemovers) {
+      for (const deactivator of this[k].activeChildRemovers) {
         deactivator.deref()?.removeOnce();
       }
-      this[i].activeChildRemovers = [];
-      this[i].forEachParent((parent) => {
-        if (parent[i].activeChildren.isEmpty()) {
+      this[k].activeChildRemovers = [];
+      this[k].forEachParent((parent) => {
+        if (parent[k].activeChildren.isEmpty()) {
           // From one to zero children.
-          parent[o].deactivate();
+          parent[k].deactivate();
         }
       });
     },
@@ -127,20 +125,20 @@ const eventSink = sink.iSubclass((o, i) => ({
       assertConstructing();
       const weakParent = parentSource.getWeakSink();
       // This early exit is an O(# of nested parents) optimization.
-      if (this[i].isFirstParent(weakParent)) {
+      if (this[k].isFirstParent(weakParent)) {
         return;
       }
-      this[o].deactivate();
-      this[i].switch(weakParent); // TODO resolve shadowing
-      const hasActiveChild = !this[i].activeChildren.isEmpty();
+      this[k].deactivate();
+      this[k].switch(weakParent); // TODO resolve shadowing
+      const hasActiveChild = !this[k].activeChildren.isEmpty();
       if (hasActiveChild) {
-        this[o].activate();
+        this[k].activate();
       }
     },
     *pushValue(context, value) {
       assertLazy();
       context.writeEvent(this, value);
-      yield* this[i].iterateActiveChildren();
+      yield* this[k].iterateActiveChildren();
     },
     *push(context) {
       assertLazy();
@@ -150,17 +148,17 @@ const eventSink = sink.iSubclass((o, i) => ({
         // because [EventSink]s have at most 2 parents.
         return;
       }
-      const action = this[i].push(
-        ...this[i].mapWeakParents((weakParent) =>
+      const action = this[k].push(
+        ...this[k].mapWeakParents((weakParent) =>
           context.readEvent(weakParent.deref())
         )
       );
       const value = context.doAction(action);
       context.writeEvent(this, value);
       if (value !== nothing) {
-        yield* this[i].iterateActiveChildren();
+        yield* this[k].iterateActiveChildren();
       }
     },
   },
-  i: {},
+  private: {},
 }));
