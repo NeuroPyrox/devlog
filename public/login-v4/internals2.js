@@ -1,4 +1,5 @@
-import { assert, ShrinkingList, derefMany } from "./util.js";
+import { assert, ShrinkingList, derefMany, nothing } from "./util.js";
+import { assertLazy, assertConstructing } from "./lazyConstructors.js";
 
 // Sink:         switch mapWeakParents isFirstParent forEachParent getPriority removeFromParents
 // EventSink:    switch                                                                          activate deactivate pushValue push
@@ -8,6 +9,8 @@ import { assert, ShrinkingList, derefMany } from "./util.js";
 // BehaviorSink:                                                                                                     pushValue push
 //   Input:                                                                                                          pushValue
 //   Else:                                                                                                                     push
+
+const privatelyInheritableClass = undefined;
 
 const sink = privatelyInheritableClass((k) => ({
   constructor(weakParents) {
@@ -63,18 +66,20 @@ const sink = privatelyInheritableClass((k) => ({
 }));
 
 const eventSink = sink.privateSubclass((k) => ({
-  constructor(
+  constructor: (
     weakParents,
     push,
     { unsubscribe = () => {}, enforceManualDeactivation = false }
-  ) {
-    super(weakParents);
-    this[k].activeChildren = new ShrinkingList();
-    this[k].activeChildRemovers = [];
-    this[k].enforceManualDeactivation = enforceManualDeactivation; // Only used for output events.
-    this[k].push = push;
-    this[k].unsubscribe = unsubscribe; // Only used for input events.
-  },
+  ) => [
+    weakParents,
+    () => {
+      this[k].activeChildren = new ShrinkingList();
+      this[k].activeChildRemovers = [];
+      this[k].enforceManualDeactivation = enforceManualDeactivation; // Only used for output events.
+      this[k].push = push;
+      this[k].unsubscribe = unsubscribe; // Only used for input events.
+    },
+  ],
   public: {
     activate() {
       assertConstructing();
