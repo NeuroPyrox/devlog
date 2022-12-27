@@ -66,20 +66,24 @@ const sink = privatelyInheritableClass((k) => ({
 }));
 
 const eventSink = sink.privateSubclass((k) => ({
-  constructor: (
+  // We don't use an arrow function because glitch.com won't parse it correctly.
+  // TODO test in browser if using an arrow function is just a syntax error.
+  constructor(
     weakParents,
     push,
     { unsubscribe = () => {}, enforceManualDeactivation = false }
-  ) => [
-    weakParents,
-    () => {
-      this[k].activeChildren = new ShrinkingList();
-      this[k].activeChildRemovers = [];
-      this[k].enforceManualDeactivation = enforceManualDeactivation; // Only used for output events.
-      this[k].push = push;
-      this[k].unsubscribe = unsubscribe; // Only used for input events.
-    },
-  ],
+  ) {
+    return [
+      weakParents,
+      () => {
+        this[k].activeChildren = new ShrinkingList();
+        this[k].activeChildRemovers = [];
+        this[k].enforceManualDeactivation = enforceManualDeactivation; // Only used for output events.
+        this[k].push = push;
+        this[k].unsubscribe = unsubscribe; // Only used for input events.
+      },
+    ];
+  },
   public: {
     activate() {
       assertConstructing();
