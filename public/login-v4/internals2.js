@@ -29,6 +29,9 @@ const sink = privatelyInheritableClass((k) => ({
       this[k].setWeakParents([weakParent]);
       weakParent.deref()?.[k]?.switchPriority(this[k].priority);
     },
+    mapWeakParents(f) {
+      return this[k].weakParents.map(f);
+    },
     // Used for early exits from [EventSink.switch]
     isFirstParent(weakParent) {
       return weakParent.deref() === this[k].weakParents[0]?.deref();
