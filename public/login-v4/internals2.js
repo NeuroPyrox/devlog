@@ -155,3 +155,31 @@ const eventSink = sink.privateSubclass((k) => ({
   },
   private: {},
 }));
+
+const behaviorSink = sink.privateSubclass((k) => ({
+  constructor(parentSources, { evaluate, initialValue }) {
+    return [
+      parentSources.map((parentSource) => parentSource.getWeakSink()),
+      () => {
+        this[k].computedChildren = new ShrinkingList();
+        this[k].computedChildRemovers = [];
+        // The strong references are from [BehaviorSource], uncomputed children, and children with more than one pushable parent,
+        // which will need to access the value in the future.
+        this[k].weakVariable = new WeakRef({});
+        this[k].rememberedParentVariables =
+          1 < parentSources.length
+            ? parentSources.map((parentSource) => parentSource.getVariable())
+            : Array(parentSources.length);
+
+        this[k].evaluate = evaluate;
+        // If [this] is a [stepper].
+        if (evaluate === undefined) {
+          this[k].initializeValue(initialValue);
+        } else {
+          assert(initialValue === undefined);
+          this[k].initializeThunk();
+        }
+      },
+    ];
+  },
+}));
