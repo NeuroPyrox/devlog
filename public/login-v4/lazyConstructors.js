@@ -1,5 +1,6 @@
 import { assert, memoize, unnestable } from "./util.js";
 
+// TODO Use another method for privacy.
 const construct = Symbol();
 
 let state = "eager";
