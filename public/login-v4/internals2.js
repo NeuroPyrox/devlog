@@ -12,6 +12,8 @@ import { assertLazy, assertConstructing } from "./lazyConstructors.js";
 
 const privatelyInheritableClass = undefined;
 
+const moduleKey = Symbol();
+
 const sink = privatelyInheritableClass((k) => ({
   constructor(weakParents) {
     this[k].setWeakParents(weakParents);
@@ -152,8 +154,25 @@ const eventSink = sink.privateSubclass((k) => ({
         yield* this[k].iterateActiveChildren();
       }
     },
+    destroy(mk) {
+      assert(mk === moduleKey);
+      if (this[k].enforceManualDeactivation) {
+        assert(this[k].activeChildRemovers.length === 0);
+      } else {
+        this[k].deactivate();
+      }
+      this[k].unsubscribe();
+      this[k].removeFromParents();
+    }
   },
-  private: {},
+  private: {
+    *iterateActiveChildren() {
+      for (const sink of this[k].activeChildren) {
+        assertLazy();
+        yield { priority: sink[k].getPriority(), sink };
+      }
+    }
+  },
 }));
 
 const behaviorSink = sink.privateSubclass((k) => ({
