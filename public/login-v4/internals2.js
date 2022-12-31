@@ -1,4 +1,4 @@
-import { assert, ShrinkingList, derefMany, nothing } from "./util.js";
+import { assert, ShrinkingList, derefMany, memoize, nothing } from "./util.js";
 import { assertLazy, assertConstructing } from "./lazyConstructors.js";
 
 // Sink:         switch mapWeakParents isFirstParent forEachParent getPriority removeFromParents
@@ -163,7 +163,7 @@ const eventSink = sink.privateSubclass((k) => ({
       }
       this[k].unsubscribe();
       this[k].removeFromParents();
-    }
+    },
   },
   private: {
     *iterateActiveChildren() {
@@ -171,7 +171,7 @@ const eventSink = sink.privateSubclass((k) => ({
         assertLazy();
         yield { priority: sink[k].getPriority(), sink };
       }
-    }
+    },
   },
 }));
 
@@ -200,5 +200,119 @@ const behaviorSink = sink.privateSubclass((k) => ({
         }
       },
     ];
+  },
+  public: {
+    // Only used for [stepper]s.
+    // Must only be called once per [Push.push], but idk of any non-clunky ways to assert this.
+    *pushValue(value) {
+      assertLazy();
+      if (this[k].weakVariable.deref() === undefined) {
+        this[k].weakVariable = new WeakRef({});
+      }
+      this[k].initializeValue(value);
+      yield* this[k].dequeueComputedChildren();
+    },
+    // Not used for [stepper]s.
+    *push() {
+      assertLazy();
+      if (this[k].weakVariable.deref() === undefined) {
+        this[k].weakVariable = new WeakRef({});
+      } else {
+        assert(this[k].weakVariable.deref().thunk.computed);
+      }
+      this[k].initializeThunk();
+      yield* this[k].dequeueComputedChildren();
+    },
+    getWeakVariable(mk) {
+      assert(mk === moduleKey);
+      return this[k].weakVariable;
+    },
+    forgetLeftParentVariable(mk) {
+      assert(mk === moduleKey);
+      assert(this[k].rememberedParentVariables.length === 2);
+      assert(this[k].rememberedParentVariables[0]);
+      this[k].rememberedParentVariables[0] = null;
+    },
+    forgetRightParentVariable(mk) {
+      assert(mk === moduleKey);
+      assert(this[k].rememberedParentVariables.length === 2);
+      assert(this[k].rememberedParentVariables[1]);
+      this[k].rememberedParentVariables[1] = null;
+    },
+    // Removes all strong references to [this].
+    // [removeFromParents] and [removeFromComputedChildren] take care of the strong references from parents.
+    // We don't need to worry about the strong references from modulators because
+    // the unpullability of [this] implies the unpullability of any modulators.
+    // It doesn't matter how long you wait to call this method
+    // because pushing an unpullable sink has no side effects.
+    destroy(mk) {
+      assert(mk === moduleKey);
+      this[k].removeFromComputedChildren();
+      this[k].removeFromParents();
+    },
+  },
+  private: {
+    // Only used for [stepper]s.
+    initializeValue(value) {
+      assert(this[k].computedChildRemovers.length === 0);
+      assert(this[k].rememberedParentVariables.length === 0);
+      assert(this[k].evaluate === undefined);
+      // Assign to instead of replacing [weakVariable] because we want to
+      // propagate the changes to any uncomputed children and to the source.
+      this[k].weakVariable.deref().thunk = () => value;
+    },
+    // Not used for [stepper]s.
+    initializeThunk() {
+      assert(this[k].computedChildRemovers.length === 0);
+      assert(this[k].rememberedParentVariables.length !== 0);
+      assert(this[k].evaluate !== undefined);
+      const parentVariables = this[k].getParentVariables();
+      // The point of these 2 lines is to avoid capturing [this] in the closure.
+      const evaluate = this[k].evaluate;
+      const weakThisK = new WeakRef(this[k]);
+      // Assign to instead of replacing [weakVariable] because we want to
+      // propagate the changes to any uncomputed children and to the source.
+      this[k].weakVariable.deref().thunk = memoize(() => {
+        weakThisK.deref()?.addToComputedChildren();
+        return evaluate(
+          ...parentVariables.map((parentVariable) => parentVariable.thunk())
+        );
+      });
+    },
+    // Not used for [stepper]s.
+    // We can be sure that the [deref]s work because the non-remembered [weakParent]s were just pushed.
+    // This is a separate method because we need to avoid accidentally capturing [this] in neighboring closures.
+    getParentVariables() {
+      return this[k].mapWeakParents(
+        (weakParent, i) =>
+          this[k].rememberedParentVariables[i] ??
+          weakParent.deref()[k].weakVariable.deref()
+      );
+    },
+    // Not used for [stepper]s.
+    addToComputedChildren() {
+      this[k].forEachParent((parent) => {
+        this[k].computedChildRemovers.push(
+          new WeakRef(parent[k].computedChildren.add(this))
+        );
+      });
+    },
+    // Not needed for [stepper]s.
+    removeFromComputedChildren() {
+      for (const remover of this[k].computedChildRemovers) {
+        remover.deref()?.removeOnce();
+      }
+      this[k].computedChildRemovers = [];
+    },
+    // Dequeue instead of iterating in order to prevent [push]
+    // from being called twice on any [BehaviorSink].
+    *dequeueComputedChildren() {
+      for (const sink of this[k].computedChildren) {
+        assertLazy();
+        // Mutating [this.#computedChildren] while iterating over it.
+        sink[k].removeFromComputedChildren();
+        yield { priority: sink[k].getPriority(), sink };
+      }
+    },
   },
 }));
