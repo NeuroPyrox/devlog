@@ -12,6 +12,7 @@ import { assertLazy, assertConstructing } from "./lazyConstructors.js";
 
 const privatelyInheritableClass = undefined;
 
+const inherit = Symbol();
 const moduleKey = Symbol();
 
 const sink = privatelyInheritableClass((k) => ({
@@ -79,7 +80,7 @@ const eventSink = sink.privateSubclass((k) => ({
     { unsubscribe = () => {}, enforceManualDeactivation = false }
   ) {
     return [
-      weakParents,
+      [weakParents],
       () => {
         this[k].activeChildren = new ShrinkingList();
         this[k].activeChildRemovers = [];
@@ -178,7 +179,7 @@ const eventSink = sink.privateSubclass((k) => ({
 const behaviorSink = sink.privateSubclass((k) => ({
   constructor(parentSources, { evaluate, initialValue }) {
     return [
-      parentSources.map((parentSource) => parentSource.getWeakSink()),
+      [parentSources.map((parentSource) => parentSource.getWeakSink())],
       () => {
         this[k].computedChildren = new ShrinkingList();
         this[k].computedChildRemovers = [];
@@ -314,5 +315,16 @@ const behaviorSink = sink.privateSubclass((k) => ({
         yield { priority: sink[k].getPriority(), sink };
       }
     },
+  },
+}));
+
+const stepperSink = behaviorSink.privateSubclass((k) => ({
+  constructor(...args) {
+    return [args, () => {}];
+  },
+  public: {
+    pushValue: inherit,
+    getWeakVariable: inherit,
+    destroy: () => {},
   },
 }));
