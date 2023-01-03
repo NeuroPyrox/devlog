@@ -182,6 +182,9 @@ const behaviorSink = sink.privateSubclass((k) => ({
       [parentSources.map((parentSource) => parentSource.getWeakSink())],
       () => {
         this[k].computedChildren = new ShrinkingList();
+        // The strong references are from [BehaviorSource], uncomputed children, and children with more than one pushable parent,
+        // which will need to access the value in the future.
+        this[k].weakVariable = new WeakRef({});
       },
     ];
   },
@@ -196,6 +199,10 @@ const behaviorSink = sink.privateSubclass((k) => ({
         yield { priority: sink[k].getPriority(), sink };
       }
     },
+    getWeakVariable(mk) {
+      assert(mk === moduleKey);
+      return this[k].weakVariable;
+    },
     removeFromParents: inherit,
   },
 }));
@@ -205,9 +212,6 @@ const stepperSink = behaviorSink.privateSubclass((k) => ({
     return [
       [[]],
       () => {
-        // The strong references are from [BehaviorSource], uncomputed children, and children with more than one pushable parent,
-        // which will need to access the value in the future.
-        this[k].weakVariable = new WeakRef({});
         this[k].initializeValue(initialValue);
       },
     ];
@@ -221,10 +225,6 @@ const stepperSink = behaviorSink.privateSubclass((k) => ({
       }
       this[k].initializeValue(value);
       yield* this[k].dequeueComputedChildren();
-    },
-    getWeakVariable(mk) {
-      assert(mk === moduleKey);
-      return this[k].weakVariable;
     },
     // We don't need a [destroy] method because the only strong reference to [this] is from a modulator,
     // but the unpullability of [this] implies the unpullability of the modulator.
@@ -245,9 +245,6 @@ const nonStepperBehaviorSink = behaviorSink.privateSubclass((k) => ({
       () => {
         assert(parentSources.length === 1 || parentSources.length === 2);
         this[k].computedChildRemovers = [];
-        // The strong references are from [BehaviorSource], uncomputed children, and children with more than one pushable parent,
-        // which will need to access the value in the future.
-        this[k].weakVariable = new WeakRef({});
         this[k].rememberedParentVariables =
           1 < parentSources.length
             ? parentSources.map((parentSource) => parentSource.getVariable())
