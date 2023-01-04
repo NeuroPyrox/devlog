@@ -10,22 +10,28 @@ import { assertLazy, assertConstructing } from "./lazyConstructors.js";
 //   Input:                                                                                                          pushValue
 //   Else:                                                                                                                     push
 
-const privatelyInheritableClass = undefined;
+const abstractClass = undefined;
+const generateScopes = undefined;
 
-const inherit = Symbol();
-const moduleKey = Symbol();
+const [
+  sinkScope,
+  eventSinkScope,
+  behaviorSinkScope,
+  stepperSinkScope,
+  nonStepperSinkScope,
+] = generateScopes();
 
-const sink = privatelyInheritableClass((k) => ({
+const sink = abstractClass(sinkScope, (k) => ({
   constructor(weakParents) {
-    this[k].setWeakParents(weakParents);
-    this[k].children = new ShrinkingList();
-    this[k].priority =
+    k(this).setWeakParents(weakParents);
+    k(this).children = new ShrinkingList();
+    k(this).priority =
       Math.max(
         -1,
-        ...derefMany(weakParents).map((parent) => parent[k].getPriority())
+        ...derefMany(weakParents).map((parent) => k(parent).getPriority())
       ) + 1;
   },
-  public: {
+  methods: {
     switchParent(weakParent) {
       assert(this[k].weakParents.length <= 1);
       this[k].removeFromParents();
@@ -51,8 +57,6 @@ const sink = privatelyInheritableClass((k) => ({
         weakParentLink.deref()?.removeOnce();
       }
     },
-  },
-  private: {
     setWeakParents(weakParents) {
       this[k].weakParents = weakParents;
       this[k].weakParentLinks = derefMany(weakParents).map(
@@ -68,6 +72,14 @@ const sink = privatelyInheritableClass((k) => ({
         );
       }
     },
+  },
+  friends: {
+    switchParent: [eventSinkScope],
+    mapWeakParents: [eventSinkScope, nonStepperSinkScope],
+    isFirstParent: [eventSinkScope],
+    forEachParent: [eventSinkScope, nonStepperSinkScope],
+    getPriority: [eventSinkScope, behaviorSinkScope],
+    removeFromParents: [eventSinkScope, nonStepperSinkScope],
   },
 }));
 
