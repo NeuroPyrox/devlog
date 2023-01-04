@@ -10,6 +10,7 @@ import { assertLazy, assertConstructing } from "./lazyConstructors.js";
 //   Input:                                                                                                          pushValue
 //   Else:                                                                                                                     push
 
+const globalScope = undefined;
 const abstractClass = undefined;
 const generateScopes = undefined;
 
@@ -83,7 +84,7 @@ const sink = abstractClass(sinkScope, (k) => ({
   },
 }));
 
-const eventSink = sink.privateSubclass((k) => ({
+const eventSink = sink.finalSubclass((k) => ({
   // We don't use an arrow function because glitch.com won't parse it correctly.
   // TODO test in browser if using an arrow function is just a syntax error.
   constructor(
@@ -102,7 +103,7 @@ const eventSink = sink.privateSubclass((k) => ({
       },
     ];
   },
-  public: {
+  methods: {
     activate() {
       assertConstructing();
       if (k(this).activeChildRemovers.length !== 0) {
@@ -167,8 +168,7 @@ const eventSink = sink.privateSubclass((k) => ({
         yield* k(this).iterateActiveChildren();
       }
     },
-    destroy(mk) {
-      assert(mk === moduleKey);
+    destroy() {
       if (k(this).enforceManualDeactivation) {
         assert(k(this).activeChildRemovers.length === 0);
       } else {
@@ -177,8 +177,6 @@ const eventSink = sink.privateSubclass((k) => ({
       k(this).unsubscribe();
       k(this).removeFromParents();
     },
-  },
-  private: {
     *iterateActiveChildren() {
       for (const sink of k(this).activeChildren) {
         assertLazy();
@@ -188,7 +186,7 @@ const eventSink = sink.privateSubclass((k) => ({
   },
 }));
 
-const behaviorSink = sink.privateSubclass((k) => ({
+const behaviorSink = sink.abstractSubclass((k) => ({
   constructor(parentSources) {
     return [
       [parentSources.map((parentSource) => parentSource.getWeakSink())],
@@ -200,7 +198,7 @@ const behaviorSink = sink.privateSubclass((k) => ({
       },
     ];
   },
-  public: {
+  methods: {
     // Dequeue instead of iterating in order to prevent [push]
     // from being called twice on any [BehaviorSink].
     *dequeueComputedChildren() {
@@ -211,15 +209,16 @@ const behaviorSink = sink.privateSubclass((k) => ({
         yield { priority: k(sink).getPriority(), sink };
       }
     },
-    getWeakVariable(mk) {
-      assert(mk === moduleKey);
+    getWeakVariable() {
       return k(this).weakVariable;
     },
-    removeFromParents: inherit,
+  },
+  friends: {
+    dequeueComputedChildren: [stepperSinkScope, nonStepperSinkScope],
   },
 }));
 
-const stepperSink = behaviorSink.privateSubclass((k) => ({
+const stepperSink = behaviorSink.finalSubclass((k) => ({
   constructor(initialValue) {
     return [
       [[]],
@@ -228,7 +227,7 @@ const stepperSink = behaviorSink.privateSubclass((k) => ({
       },
     ];
   },
-  public: {
+  methods: {
     // Must only be called once per [Push.push], but idk of any clean ways to assert this.
     *pushValue(value) {
       assertLazy();
@@ -238,19 +237,17 @@ const stepperSink = behaviorSink.privateSubclass((k) => ({
       k(this).initializeValue(value);
       yield* k(this).dequeueComputedChildren();
     },
-    // We don't need a [destroy] method because the only strong reference to [this] is from a modulator,
-    // but the unpullability of [this] implies the unpullability of the modulator.
-  },
-  private: {
     initializeValue(value) {
       // Assign to instead of replacing [weakVariable] because we want to
       // propagate the changes to any uncomputed children and to the source.
       k(this).weakVariable.deref().thunk = () => value;
     },
+    // We don't need a [destroy] method because the only strong reference to [this] is from a modulator,
+    // but the unpullability of [this] implies the unpullability of the modulator.
   },
 }));
 
-const nonStepperBehaviorSink = behaviorSink.privateSubclass((k) => ({
+const nonStepperBehaviorSink = behaviorSink.finalSubclass((k) => ({
   constructor(parentSources, evaluate) {
     return [
       [parentSources],
@@ -266,7 +263,7 @@ const nonStepperBehaviorSink = behaviorSink.privateSubclass((k) => ({
       },
     ];
   },
-  public: {
+  methods: {
     *push() {
       assertLazy();
       if (k(this).weakVariable.deref() === undefined) {
@@ -277,18 +274,12 @@ const nonStepperBehaviorSink = behaviorSink.privateSubclass((k) => ({
       k(this).initializeThunk();
       yield* k(this).dequeueComputedChildren();
     },
-    getWeakVariable(mk) {
-      assert(mk === moduleKey);
-      return k(this).weakVariable;
-    },
-    forgetLeftParentVariable(mk) {
-      assert(mk === moduleKey);
+    forgetLeftParentVariable() {
       assert(k(this).rememberedParentVariables.length === 2);
       assert(k(this).rememberedParentVariables[0]);
       k(this).rememberedParentVariables[0] = null;
     },
-    forgetRightParentVariable(mk) {
-      assert(mk === moduleKey);
+    forgetRightParentVariable() {
       assert(k(this).rememberedParentVariables.length === 2);
       assert(k(this).rememberedParentVariables[1]);
       k(this).rememberedParentVariables[1] = null;
@@ -299,13 +290,10 @@ const nonStepperBehaviorSink = behaviorSink.privateSubclass((k) => ({
     // the unpullability of [this] implies the unpullability of any modulators.
     // It doesn't matter how long you wait to call this method
     // because pushing an unpullable sink has no side effects.
-    destroy(mk) {
-      assert(mk === moduleKey);
+    destroy() {
       k(this).removeFromComputedChildren();
       k(this).removeFromParents();
     },
-  },
-  private: {
     initializeThunk() {
       assert(k(this).computedChildRemovers.length === 0);
       assert(k(this).rememberedParentVariables.length !== 0);
