@@ -10,12 +10,12 @@ import { assertLazy, assertConstructing } from "./lazyConstructors.js";
 //   Input:                                                                                                          pushValue
 //   Else:                                                                                                                     push
 
-const globalScope = undefined;
 const abstractClass = undefined;
 const generateScopes = undefined;
 
 const [
   sinkScope,
+  childSinkScope,
   eventSinkScope,
   behaviorSinkScope,
   stepperSinkScope,
@@ -26,6 +26,7 @@ const sink = abstractClass(sinkScope, (k) => ({
   constructor(weakParents) {
     k(this).setWeakParents(weakParents);
     k(this).children = new ShrinkingList();
+    k(this).childrenToPush = new ShrinkingList();
     k(this).priority =
       Math.max(
         -1,
@@ -42,12 +43,12 @@ const sink = abstractClass(sinkScope, (k) => ({
     mapWeakParents(f) {
       return k(this).weakParents.map(f);
     },
+    forEachParent(f) {
+      derefMany(k(this).weakParents).forEach(f);
+    },
     // Used for early exits from [EventSink.switch]
     isFirstParent(weakParent) {
       return weakParent.deref() === k(this).weakParents[0]?.deref();
-    },
-    forEachParent(f) {
-      derefMany(k(this).weakParents).forEach(f);
     },
     getPriority() {
       return k(this).priority;
@@ -75,14 +76,36 @@ const sink = abstractClass(sinkScope, (k) => ({
     },
   },
   friends: {
+    childrenToPush: [eventSinkScope],
     switchParent: [eventSinkScope],
     mapWeakParents: [eventSinkScope, nonStepperSinkScope],
-    isFirstParent: [eventSinkScope],
     forEachParent: [eventSinkScope, nonStepperSinkScope],
+    isFirstParent: [eventSinkScope],
     getPriority: [eventSinkScope, behaviorSinkScope],
     removeFromParents: [eventSinkScope, nonStepperSinkScope],
   },
 }));
+
+const childSink = sink.abstractSubclass(childSinkScope, (k) => ({
+  constructor() {
+    k(this).childToPushRemovers = [];
+  },
+  methods: {
+    addAsChildToPush() {
+      k(this).forEachParent((parent) => {
+        k(this).childToPushRemovers.push(
+          new WeakRef(k(parent).childrenToPush.add(this))
+        );
+      });
+    },
+    removeAsChildToPush() {
+      for (const remover of k(this).childToPushRemovers) {
+        remover.deref()?.removeOnce();
+      }
+      k(this).childToPushRemovers = [];
+    },
+  }
+}))
 
 const eventSink = sink.finalSubclass((k) => ({
   // We don't use an arrow function because glitch.com won't parse it correctly.
@@ -95,8 +118,6 @@ const eventSink = sink.finalSubclass((k) => ({
     return [
       [weakParents],
       () => {
-        k(this).activeChildren = new ShrinkingList();
-        k(this).activeChildRemovers = [];
         k(this).enforceManualDeactivation = enforceManualDeactivation; // Only used for output events.
         k(this).push = push;
         k(this).unsubscribe = unsubscribe; // Only used for input events.
@@ -106,25 +127,25 @@ const eventSink = sink.finalSubclass((k) => ({
   methods: {
     activate() {
       assertConstructing();
-      if (k(this).activeChildRemovers.length !== 0) {
+      if (k(this).childToPushRemovers.length !== 0) {
         // Filters out all sinks that are already active, except for inputs.
         return;
       }
       k(this).forEachParent((parent) => {
         k(parent).activate();
-        k(this).activeChildRemovers.push(
-          new WeakRef(k(parent).activeChildren.add(this))
+        k(this).childToPushRemovers.push(
+          new WeakRef(k(parent).childrenToPush.add(this))
         );
       });
     },
     deactivate() {
       assertConstructing();
-      for (const deactivator of k(this).activeChildRemovers) {
+      for (const deactivator of k(this).childToPushRemovers) {
         deactivator.deref()?.removeOnce();
       }
-      k(this).activeChildRemovers = [];
+      k(this).childToPushRemovers = [];
       k(this).forEachParent((parent) => {
-        if (k(parent).activeChildren.isEmpty()) {
+        if (k(parent).childrenToPush.isEmpty()) {
           // From one to zero children.
           k(parent).deactivate();
         }
@@ -138,8 +159,8 @@ const eventSink = sink.finalSubclass((k) => ({
         return;
       }
       k(this).deactivate();
-      k(this).switch(weakParent); // TODO resolve shadowing
-      const hasActiveChild = !k(this).activeChildren.isEmpty();
+      k(this).switchParent(weakParent);
+      const hasActiveChild = !k(this).childrenToPush.isEmpty();
       if (hasActiveChild) {
         k(this).activate();
       }
@@ -170,7 +191,7 @@ const eventSink = sink.finalSubclass((k) => ({
     },
     destroy() {
       if (k(this).enforceManualDeactivation) {
-        assert(k(this).activeChildRemovers.length === 0);
+        assert(k(this).childToPushRemovers.length === 0);
       } else {
         k(this).deactivate();
       }
@@ -178,7 +199,7 @@ const eventSink = sink.finalSubclass((k) => ({
       k(this).removeFromParents();
     },
     *iterateActiveChildren() {
-      for (const sink of k(this).activeChildren) {
+      for (const sink of k(this).childrenToPush) {
         assertLazy();
         yield { priority: k(sink).getPriority(), sink };
       }
@@ -191,7 +212,6 @@ const behaviorSink = sink.abstractSubclass((k) => ({
     return [
       [parentSources.map((parentSource) => parentSource.getWeakSink())],
       () => {
-        k(this).computedChildren = new ShrinkingList();
         // The strong references are from [BehaviorSource], uncomputed children, and children with more than one pushable parent,
         // which will need to access the value in the future.
         k(this).weakVariable = new WeakRef({});
@@ -202,9 +222,9 @@ const behaviorSink = sink.abstractSubclass((k) => ({
     // Dequeue instead of iterating in order to prevent [push]
     // from being called twice on any [BehaviorSink].
     *dequeueComputedChildren() {
-      for (const sink of k(this).computedChildren) {
+      for (const sink of k(this).childrenToPush) {
         assertLazy();
-        // Mutating [k(this).computedChildren] while iterating over it.
+        // Mutating [k(this).childrenToPush] while iterating over it.
         k(sink).removeFromComputedChildren();
         yield { priority: k(sink).getPriority(), sink };
       }
@@ -253,7 +273,6 @@ const nonStepperBehaviorSink = behaviorSink.finalSubclass((k) => ({
       [parentSources],
       () => {
         assert(parentSources.length === 1 || parentSources.length === 2);
-        k(this).computedChildRemovers = [];
         k(this).rememberedParentVariables =
           1 < parentSources.length
             ? parentSources.map((parentSource) => parentSource.getVariable())
@@ -295,7 +314,7 @@ const nonStepperBehaviorSink = behaviorSink.finalSubclass((k) => ({
       k(this).removeFromParents();
     },
     initializeThunk() {
-      assert(k(this).computedChildRemovers.length === 0);
+      assert(k(this).childToPushRemovers.length === 0);
       assert(k(this).rememberedParentVariables.length !== 0);
       assert(k(this).evaluate !== undefined);
       const parentVariables = k(this).getParentVariables();
@@ -319,19 +338,6 @@ const nonStepperBehaviorSink = behaviorSink.finalSubclass((k) => ({
           k(this).rememberedParentVariables[i] ??
           k(weakParent.deref()).weakVariable.deref()
       );
-    },
-    addToComputedChildren() {
-      k(this).forEachParent((parent) => {
-        k(this).computedChildRemovers.push(
-          new WeakRef(k(parent).computedChildren.add(this))
-        );
-      });
-    },
-    removeFromComputedChildren() {
-      for (const remover of k(this).computedChildRemovers) {
-        remover.deref()?.removeOnce();
-      }
-      k(this).computedChildRemovers = [];
     },
   },
 }));
