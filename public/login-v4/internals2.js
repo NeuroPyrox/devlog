@@ -33,42 +33,42 @@ const sink = abstractClass(sinkScope, (k) => ({
   },
   methods: {
     switchParent(weakParent) {
-      assert(this[k].weakParents.length <= 1);
-      this[k].removeFromParents();
-      this[k].setWeakParents([weakParent]);
-      weakParent.deref()?.[k]?.switchPriority(this[k].priority);
+      assert(k(this).weakParents.length <= 1);
+      k(this).removeFromParents();
+      k(this).setWeakParents([weakParent]);
+      k(weakParent.deref())?.switchPriority(k(this).priority);
     },
     mapWeakParents(f) {
-      return this[k].weakParents.map(f);
+      return k(this).weakParents.map(f);
     },
     // Used for early exits from [EventSink.switch]
     isFirstParent(weakParent) {
-      return weakParent.deref() === this[k].weakParents[0]?.deref();
+      return weakParent.deref() === k(this).weakParents[0]?.deref();
     },
     forEachParent(f) {
-      derefMany(this[k].weakParents).forEach(f);
+      derefMany(k(this).weakParents).forEach(f);
     },
     getPriority() {
-      return this[k].priority;
+      return k(this).priority;
     },
     // Removes all strong references from the [children] of [weakParents].
     removeFromParents() {
-      for (const weakParentLink of this[k].weakParentLinks) {
+      for (const weakParentLink of k(this).weakParentLinks) {
         weakParentLink.deref()?.removeOnce();
       }
     },
     setWeakParents(weakParents) {
-      this[k].weakParents = weakParents;
-      this[k].weakParentLinks = derefMany(weakParents).map(
-        (parent) => new WeakRef(parent[k].children.add(this))
+      k(this).weakParents = weakParents;
+      k(this).weakParentLinks = derefMany(weakParents).map(
+        (parent) => new WeakRef(k(parent).children.add(this))
       );
     },
     // TODO custom error message for infinite recursion
     switchPriority(childPriority) {
-      if (childPriority <= this[k].priority) {
-        this[k].priority = childPriority - 1;
-        this[k].forEachParent((parent) =>
-          parent[k].switchPriority(this[k].priority)
+      if (childPriority <= k(this).priority) {
+        k(this).priority = childPriority - 1;
+        k(this).forEachParent((parent) =>
+          k(parent).switchPriority(k(this).priority)
         );
       }
     },
@@ -94,38 +94,38 @@ const eventSink = sink.privateSubclass((k) => ({
     return [
       [weakParents],
       () => {
-        this[k].activeChildren = new ShrinkingList();
-        this[k].activeChildRemovers = [];
-        this[k].enforceManualDeactivation = enforceManualDeactivation; // Only used for output events.
-        this[k].push = push;
-        this[k].unsubscribe = unsubscribe; // Only used for input events.
+        k(this).activeChildren = new ShrinkingList();
+        k(this).activeChildRemovers = [];
+        k(this).enforceManualDeactivation = enforceManualDeactivation; // Only used for output events.
+        k(this).push = push;
+        k(this).unsubscribe = unsubscribe; // Only used for input events.
       },
     ];
   },
   public: {
     activate() {
       assertConstructing();
-      if (this[k].activeChildRemovers.length !== 0) {
+      if (k(this).activeChildRemovers.length !== 0) {
         // Filters out all sinks that are already active, except for inputs.
         return;
       }
-      this[k].forEachParent((parent) => {
-        parent[k].activate();
-        this[k].activeChildRemovers.push(
-          new WeakRef(parent[k].activeChildren.add(this))
+      k(this).forEachParent((parent) => {
+        k(parent).activate();
+        k(this).activeChildRemovers.push(
+          new WeakRef(k(parent).activeChildren.add(this))
         );
       });
     },
     deactivate() {
       assertConstructing();
-      for (const deactivator of this[k].activeChildRemovers) {
+      for (const deactivator of k(this).activeChildRemovers) {
         deactivator.deref()?.removeOnce();
       }
-      this[k].activeChildRemovers = [];
-      this[k].forEachParent((parent) => {
-        if (parent[k].activeChildren.isEmpty()) {
+      k(this).activeChildRemovers = [];
+      k(this).forEachParent((parent) => {
+        if (k(parent).activeChildren.isEmpty()) {
           // From one to zero children.
-          parent[k].deactivate();
+          k(parent).deactivate();
         }
       });
     },
@@ -133,20 +133,20 @@ const eventSink = sink.privateSubclass((k) => ({
       assertConstructing();
       const weakParent = parentSource.getWeakSink();
       // This early exit is an O(# of nested parents) optimization.
-      if (this[k].isFirstParent(weakParent)) {
+      if (k(this).isFirstParent(weakParent)) {
         return;
       }
-      this[k].deactivate();
-      this[k].switch(weakParent); // TODO resolve shadowing
-      const hasActiveChild = !this[k].activeChildren.isEmpty();
+      k(this).deactivate();
+      k(this).switch(weakParent); // TODO resolve shadowing
+      const hasActiveChild = !k(this).activeChildren.isEmpty();
       if (hasActiveChild) {
-        this[k].activate();
+        k(this).activate();
       }
     },
     *pushValue(context, value) {
       assertLazy();
       context.writeEvent(this, value);
-      yield* this[k].iterateActiveChildren();
+      yield* k(this).iterateActiveChildren();
     },
     *push(context) {
       assertLazy();
@@ -156,33 +156,33 @@ const eventSink = sink.privateSubclass((k) => ({
         // because [EventSink]s have at most 2 parents.
         return;
       }
-      const action = this[k].push(
-        ...this[k].mapWeakParents((weakParent) =>
+      const action = k(this).push(
+        ...k(this).mapWeakParents((weakParent) =>
           context.readEvent(weakParent.deref())
         )
       );
       const value = context.doAction(action);
       context.writeEvent(this, value);
       if (value !== nothing) {
-        yield* this[k].iterateActiveChildren();
+        yield* k(this).iterateActiveChildren();
       }
     },
     destroy(mk) {
       assert(mk === moduleKey);
-      if (this[k].enforceManualDeactivation) {
-        assert(this[k].activeChildRemovers.length === 0);
+      if (k(this).enforceManualDeactivation) {
+        assert(k(this).activeChildRemovers.length === 0);
       } else {
-        this[k].deactivate();
+        k(this).deactivate();
       }
-      this[k].unsubscribe();
-      this[k].removeFromParents();
+      k(this).unsubscribe();
+      k(this).removeFromParents();
     },
   },
   private: {
     *iterateActiveChildren() {
-      for (const sink of this[k].activeChildren) {
+      for (const sink of k(this).activeChildren) {
         assertLazy();
-        yield { priority: sink[k].getPriority(), sink };
+        yield { priority: k(sink).getPriority(), sink };
       }
     },
   },
@@ -193,10 +193,10 @@ const behaviorSink = sink.privateSubclass((k) => ({
     return [
       [parentSources.map((parentSource) => parentSource.getWeakSink())],
       () => {
-        this[k].computedChildren = new ShrinkingList();
+        k(this).computedChildren = new ShrinkingList();
         // The strong references are from [BehaviorSource], uncomputed children, and children with more than one pushable parent,
         // which will need to access the value in the future.
-        this[k].weakVariable = new WeakRef({});
+        k(this).weakVariable = new WeakRef({});
       },
     ];
   },
@@ -204,16 +204,16 @@ const behaviorSink = sink.privateSubclass((k) => ({
     // Dequeue instead of iterating in order to prevent [push]
     // from being called twice on any [BehaviorSink].
     *dequeueComputedChildren() {
-      for (const sink of this[k].computedChildren) {
+      for (const sink of k(this).computedChildren) {
         assertLazy();
-        // Mutating [this[k].computedChildren] while iterating over it.
-        sink[k].removeFromComputedChildren();
-        yield { priority: sink[k].getPriority(), sink };
+        // Mutating [k(this).computedChildren] while iterating over it.
+        k(sink).removeFromComputedChildren();
+        yield { priority: k(sink).getPriority(), sink };
       }
     },
     getWeakVariable(mk) {
       assert(mk === moduleKey);
-      return this[k].weakVariable;
+      return k(this).weakVariable;
     },
     removeFromParents: inherit,
   },
@@ -224,7 +224,7 @@ const stepperSink = behaviorSink.privateSubclass((k) => ({
     return [
       [[]],
       () => {
-        this[k].initializeValue(initialValue);
+        k(this).initializeValue(initialValue);
       },
     ];
   },
@@ -232,11 +232,11 @@ const stepperSink = behaviorSink.privateSubclass((k) => ({
     // Must only be called once per [Push.push], but idk of any clean ways to assert this.
     *pushValue(value) {
       assertLazy();
-      if (this[k].weakVariable.deref() === undefined) {
-        this[k].weakVariable = new WeakRef({});
+      if (k(this).weakVariable.deref() === undefined) {
+        k(this).weakVariable = new WeakRef({});
       }
-      this[k].initializeValue(value);
-      yield* this[k].dequeueComputedChildren();
+      k(this).initializeValue(value);
+      yield* k(this).dequeueComputedChildren();
     },
     // We don't need a [destroy] method because the only strong reference to [this] is from a modulator,
     // but the unpullability of [this] implies the unpullability of the modulator.
@@ -245,7 +245,7 @@ const stepperSink = behaviorSink.privateSubclass((k) => ({
     initializeValue(value) {
       // Assign to instead of replacing [weakVariable] because we want to
       // propagate the changes to any uncomputed children and to the source.
-      this[k].weakVariable.deref().thunk = () => value;
+      k(this).weakVariable.deref().thunk = () => value;
     },
   },
 }));
@@ -256,42 +256,42 @@ const nonStepperBehaviorSink = behaviorSink.privateSubclass((k) => ({
       [parentSources],
       () => {
         assert(parentSources.length === 1 || parentSources.length === 2);
-        this[k].computedChildRemovers = [];
-        this[k].rememberedParentVariables =
+        k(this).computedChildRemovers = [];
+        k(this).rememberedParentVariables =
           1 < parentSources.length
             ? parentSources.map((parentSource) => parentSource.getVariable())
             : Array(parentSources.length);
-        this[k].evaluate = evaluate;
-        this[k].initializeThunk();
+        k(this).evaluate = evaluate;
+        k(this).initializeThunk();
       },
     ];
   },
   public: {
     *push() {
       assertLazy();
-      if (this[k].weakVariable.deref() === undefined) {
-        this[k].weakVariable = new WeakRef({});
+      if (k(this).weakVariable.deref() === undefined) {
+        k(this).weakVariable = new WeakRef({});
       } else {
-        assert(this[k].weakVariable.deref().thunk.computed);
+        assert(k(this).weakVariable.deref().thunk.computed);
       }
-      this[k].initializeThunk();
-      yield* this[k].dequeueComputedChildren();
+      k(this).initializeThunk();
+      yield* k(this).dequeueComputedChildren();
     },
     getWeakVariable(mk) {
       assert(mk === moduleKey);
-      return this[k].weakVariable;
+      return k(this).weakVariable;
     },
     forgetLeftParentVariable(mk) {
       assert(mk === moduleKey);
-      assert(this[k].rememberedParentVariables.length === 2);
-      assert(this[k].rememberedParentVariables[0]);
-      this[k].rememberedParentVariables[0] = null;
+      assert(k(this).rememberedParentVariables.length === 2);
+      assert(k(this).rememberedParentVariables[0]);
+      k(this).rememberedParentVariables[0] = null;
     },
     forgetRightParentVariable(mk) {
       assert(mk === moduleKey);
-      assert(this[k].rememberedParentVariables.length === 2);
-      assert(this[k].rememberedParentVariables[1]);
-      this[k].rememberedParentVariables[1] = null;
+      assert(k(this).rememberedParentVariables.length === 2);
+      assert(k(this).rememberedParentVariables[1]);
+      k(this).rememberedParentVariables[1] = null;
     },
     // Removes all strong references to [this].
     // [removeFromParents] and [removeFromComputedChildren] take care of the strong references from parents.
@@ -301,22 +301,22 @@ const nonStepperBehaviorSink = behaviorSink.privateSubclass((k) => ({
     // because pushing an unpullable sink has no side effects.
     destroy(mk) {
       assert(mk === moduleKey);
-      this[k].removeFromComputedChildren();
-      this[k].removeFromParents();
+      k(this).removeFromComputedChildren();
+      k(this).removeFromParents();
     },
   },
   private: {
     initializeThunk() {
-      assert(this[k].computedChildRemovers.length === 0);
-      assert(this[k].rememberedParentVariables.length !== 0);
-      assert(this[k].evaluate !== undefined);
-      const parentVariables = this[k].getParentVariables();
+      assert(k(this).computedChildRemovers.length === 0);
+      assert(k(this).rememberedParentVariables.length !== 0);
+      assert(k(this).evaluate !== undefined);
+      const parentVariables = k(this).getParentVariables();
       // The point of these 2 lines is to avoid capturing [this] in the closure.
-      const evaluate = this[k].evaluate;
-      const weakThisK = new WeakRef(this[k]);
+      const evaluate = k(this).evaluate;
+      const weakThisK = new WeakRef(k(this));
       // Assign to instead of replacing [weakVariable] because we want to
       // propagate the changes to any uncomputed children and to the source.
-      this[k].weakVariable.deref().thunk = memoize(() => {
+      k(this).weakVariable.deref().thunk = memoize(() => {
         weakThisK.deref()?.addToComputedChildren();
         return evaluate(
           ...parentVariables.map((parentVariable) => parentVariable.thunk())
@@ -326,24 +326,24 @@ const nonStepperBehaviorSink = behaviorSink.privateSubclass((k) => ({
     // We can be sure that the [deref]s work because the non-remembered [weakParent]s were just pushed.
     // This is a separate method because we need to avoid accidentally capturing [this] in neighboring closures.
     getParentVariables() {
-      return this[k].mapWeakParents(
+      return k(this).mapWeakParents(
         (weakParent, i) =>
-          this[k].rememberedParentVariables[i] ??
-          weakParent.deref()[k].weakVariable.deref()
+          k(this).rememberedParentVariables[i] ??
+          k(weakParent.deref()).weakVariable.deref()
       );
     },
     addToComputedChildren() {
-      this[k].forEachParent((parent) => {
-        this[k].computedChildRemovers.push(
-          new WeakRef(parent[k].computedChildren.add(this))
+      k(this).forEachParent((parent) => {
+        k(this).computedChildRemovers.push(
+          new WeakRef(k(parent).computedChildren.add(this))
         );
       });
     },
     removeFromComputedChildren() {
-      for (const remover of this[k].computedChildRemovers) {
+      for (const remover of k(this).computedChildRemovers) {
         remover.deref()?.removeOnce();
       }
-      this[k].computedChildRemovers = [];
+      k(this).computedChildRemovers = [];
     },
   },
 }));
