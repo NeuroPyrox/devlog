@@ -14,12 +14,13 @@ class SinkParents {
   constructor(sink, weakParents) {
     this.sink = sink;
     this.attach(weakParents);
+    this.weakParentsChildToPushRemovers = [];
   }
   
   attach(weakParents) {
     this.weakParents = weakParents;
     this.weakParentsChildRemovers = derefMany(weakParents).map(
-      (parent) => new WeakRef(parent.children.children.add(this))
+      (parent) => new WeakRef(parent.children.children.add(this.sink))
     );
   }
   
@@ -48,6 +49,65 @@ class SinkParents {
     this.detach();
     this.attach([weakParent]);
     weakParent.deref()?.switchPriority(this.sink.getPriority());
+  }
+  
+  addAsChildToPush() {
+    this.forEachParent((parent) => {
+      this.weakParentsChildToPushRemovers.push(
+        new WeakRef(parent.children.childrenToPush.add(this.sink))
+      );
+    });
+  }
+  
+  removeAsChildToPush() {
+    for (const weakChildToPushRemover of this
+      .weakParentsChildToPushRemovers) {
+      weakChildToPushRemover.deref()?.removeOnce();
+    }
+    this.weakParentsChildToPushRemovers = [];
+  }
+  
+  isAChildToPush() {
+    return this.weakParentsChildToPushRemovers.length !== 0;
+  }
+  
+  recursivelyAddAsChildToPush() {
+    assertConstructing();
+    if (this.isAChildToPush()) {
+      return;
+    }
+    this.forEachParent((parent) => {
+      parent.parents.recursivelyAddAsChildToPush();
+    });
+    this.addAsChildToPush();
+  }
+  
+  recursivelyRemoveAsChildToPush() {
+    assertConstructing();
+    this.removeAsChildToPush();
+    this.forEachParent((parent) => {
+      if (!parent.children.hasChildrenToPush()) {
+        // From one to zero children.
+        parent.parents.recursivelyRemoveAsChildToPush();
+      }
+    });
+  }
+}
+
+const noSinkParents = {
+  recursivelyAddAsChildToPush() {},
+  recursivelyRemoveAsChildToPush() {},
+}
+
+class SinkChildren {
+  constructor(sink) {
+    this.sink = sink;
+    this.children = new ShrinkingList();
+    this.childrenToPush = new ShrinkingList();
+  }
+  
+  hasChildrenToPush() {
+    return !this.childrenToPush.isEmpty();
   }
 }
 
