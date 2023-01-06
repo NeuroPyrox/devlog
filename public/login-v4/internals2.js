@@ -10,6 +10,47 @@ import { assertLazy, assertConstructing } from "./lazyConstructors.js";
 //   Input:                                                                                                          pushValue
 //   Else:                                                                                                                     push
 
+class SinkParents {
+  constructor(sink, weakParents) {
+    this.sink = sink;
+    this.attach(weakParents);
+  }
+  
+  attach(weakParents) {
+    this.weakParents = weakParents;
+    this.weakParentsChildRemovers = derefMany(weakParents).map(
+      (parent) => new WeakRef(parent.children.children.add(this))
+    );
+  }
+  
+  // Removes all strong references from the [children] of [weakParents].
+  detach() {
+    for (const weakParentsChildRemover of this.weakParentsChildRemovers) {
+      weakParentsChildRemover.deref()?.removeOnce();
+    }
+  }
+  
+  mapWeakParents(f) {
+    return this.weakParents.map(f);
+  }
+  
+  forEachParent(f) {
+    derefMany(this.weakParents).forEach(f);
+  }
+  
+  // Used for early exits from [EventSink.switch]
+  isFirstParent(weakParent) {
+    return weakParent.deref() === this.weakParents[0]?.deref();
+  }
+  
+  switch(weakParent) {
+    assert(this.weakParents.length <= 1);
+    this.detach();
+    this.attach([weakParent]);
+    weakParent.deref()?.switchPriority(this.sink.getPriority());
+  }
+}
+
 const abstractClass = undefined;
 const generateScopes = undefined;
 
