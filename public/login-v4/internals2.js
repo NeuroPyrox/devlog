@@ -14,40 +14,99 @@ class SinkParents {
   constructor(sink, weakParents) {
     this.sink = sink;
     this.attach(weakParents);
+    this.weakParentsChildToPushRemovers = [];
   }
-  
+
   attach(weakParents) {
     this.weakParents = weakParents;
     this.weakParentsChildRemovers = derefMany(weakParents).map(
-      (parent) => new WeakRef(parent.children.children.add(this))
+      (parent) => new WeakRef(parent.children.children.add(this.sink))
     );
   }
-  
+
   // Removes all strong references from the [children] of [weakParents].
   detach() {
     for (const weakParentsChildRemover of this.weakParentsChildRemovers) {
       weakParentsChildRemover.deref()?.removeOnce();
     }
   }
-  
+
   mapWeakParents(f) {
     return this.weakParents.map(f);
   }
-  
+
   forEachParent(f) {
     derefMany(this.weakParents).forEach(f);
   }
-  
+
   // Used for early exits from [EventSink.switch]
   isFirstParent(weakParent) {
     return weakParent.deref() === this.weakParents[0]?.deref();
   }
-  
+
   switch(weakParent) {
     assert(this.weakParents.length <= 1);
     this.detach();
     this.attach([weakParent]);
     weakParent.deref()?.switchPriority(this.sink.getPriority());
+  }
+
+  addAsChildToPush() {
+    this.forEachParent((parent) => {
+      this.weakParentsChildToPushRemovers.push(
+        new WeakRef(parent.children.childrenToPush.add(this.sink))
+      );
+    });
+  }
+
+  removeAsChildToPush() {
+    for (const weakChildToPushRemover of this.weakParentsChildToPushRemovers) {
+      weakChildToPushRemover.deref()?.removeOnce();
+    }
+    this.weakParentsChildToPushRemovers = [];
+  }
+
+  isAChildToPush() {
+    return this.weakParentsChildToPushRemovers.length !== 0;
+  }
+
+  recursivelyAddAsChildToPush() {
+    assertConstructing();
+    if (this.isAChildToPush()) {
+      return;
+    }
+    this.forEachParent((parent) => {
+      parent.parents.recursivelyAddAsChildToPush();
+    });
+    this.addAsChildToPush();
+  }
+
+  recursivelyRemoveAsChildToPush() {
+    assertConstructing();
+    this.removeAsChildToPush();
+    this.forEachParent((parent) => {
+      if (!parent.children.hasChildrenToPush()) {
+        // From one to zero children.
+        parent.parents.recursivelyRemoveAsChildToPush();
+      }
+    });
+  }
+}
+
+const noSinkParents = {
+  recursivelyAddAsChildToPush() {},
+  recursivelyRemoveAsChildToPush() {},
+};
+
+class SinkChildren {
+  constructor(sink) {
+    this.sink = sink;
+    this.children = new ShrinkingList();
+    this.childrenToPush = new ShrinkingList();
+  }
+
+  hasChildrenToPush() {
+    return !this.childrenToPush.isEmpty();
   }
 }
 
@@ -55,6 +114,7 @@ const abstractClass = undefined;
 const generateScopes = undefined;
 
 const [
+  sinkParentsAndChildrenScope,
   sinkScope,
   eventSinkScope,
   behaviorSinkScope,
@@ -63,110 +123,126 @@ const [
 ] = generateScopes();
 
 // This class has too many responsibilities, but the only solutions I can think of run into diamond inheritance.
-const sink = abstractClass(sinkScope, (k) => ({
+const sinkParentsAndChildren = abstractClass(
+  sinkParentsAndChildrenScope,
+  (k) => ({
+    constructor(weakParents) {
+      k(this).setWeakParents(weakParents);
+      k(this).children = new ShrinkingList();
+      k(this).priority =
+        Math.max(
+          -1,
+          ...derefMany(weakParents).map((parent) => k(parent).getPriority())
+        ) + 1;
+    },
+    methods: {
+      switchParent(weakParent) {
+        assert(k(this).weakParents.length <= 1);
+        k(this).removeFromParents();
+        k(this).setWeakParents([weakParent]);
+        k(weakParent.deref())?.switchPriority(k(this).priority);
+      },
+      mapWeakParents(f) {
+        return k(this).weakParents.map(f);
+      },
+      forEachParent(f) {
+        derefMany(k(this).weakParents).forEach(f);
+      },
+      // Used for early exits from [EventSink.switch]
+      isFirstParent(weakParent) {
+        return weakParent.deref() === k(this).weakParents[0]?.deref();
+      },
+      getPriority() {
+        return k(this).priority;
+      },
+      // Removes all strong references from the [children] of [weakParents].
+      removeFromParents() {
+        for (const weakChildRemover of k(this).weakParentsChildRemovers) {
+          weakChildRemover.deref()?.removeOnce();
+        }
+      },
+      setWeakParents(weakParents) {
+        k(this).weakParents = weakParents;
+        k(this).weakParentsChildRemovers = derefMany(weakParents).map(
+          (parent) => new WeakRef(k(parent).children.add(this))
+        );
+      },
+      // TODO custom error message for infinite recursion
+      switchPriority(childPriority) {
+        if (childPriority <= k(this).priority) {
+          k(this).priority = childPriority - 1;
+          k(this).forEachParent((parent) =>
+            k(parent).switchPriority(k(this).priority)
+          );
+        }
+      },
+    },
+    friends: {
+      switchParent: [eventSinkScope],
+      mapWeakParents: [eventSinkScope, nonStepperSinkScope],
+      forEachParent: [sinkScope, eventSinkScope, nonStepperSinkScope],
+      isFirstParent: [eventSinkScope],
+      getPriority: [eventSinkScope, behaviorSinkScope],
+      removeFromParents: [eventSinkScope, nonStepperSinkScope],
+    },
+  })
+);
+
+const sink = sinkParentsAndChildren.abstractSubclass((k) => ({
   constructor(weakParents) {
-    k(this).setWeakParents(weakParents);
-    k(this).children = new ShrinkingList();
-    k(this).priority =
-      Math.max(
-        -1,
-        ...derefMany(weakParents).map((parent) => k(parent).getPriority())
-      ) + 1;
-    k(this).childrenToPush = new ShrinkingList();
-    k(this).weakParentsChildToPushRemovers = [];
+    return [
+      [weakParents],
+      () => {
+        k(this).waitingChildren = new ShrinkingList();
+        k(this).weakParentsWaitingChildRemovers = [];
+      },
+    ];
   },
   methods: {
-    switchParent(weakParent) {
-      assert(k(this).weakParents.length <= 1);
-      k(this).removeFromParents();
-      k(this).setWeakParents([weakParent]);
-      k(weakParent.deref())?.switchPriority(k(this).priority);
-    },
-    mapWeakParents(f) {
-      return k(this).weakParents.map(f);
-    },
-    forEachParent(f) {
-      derefMany(k(this).weakParents).forEach(f);
-    },
-    // Used for early exits from [EventSink.switch]
-    isFirstParent(weakParent) {
-      return weakParent.deref() === k(this).weakParents[0]?.deref();
-    },
-    getPriority() {
-      return k(this).priority;
-    },
-    // Removes all strong references from the [children] of [weakParents].
-    removeFromParents() {
-      for (const weakChildRemover of k(this).weakParentsChildRemovers) {
-        weakChildRemover.deref()?.removeOnce();
-      }
-    },
-    setWeakParents(weakParents) {
-      k(this).weakParents = weakParents;
-      k(this).weakParentsChildRemovers = derefMany(weakParents).map(
-        (parent) => new WeakRef(k(parent).children.add(this))
-      );
-    },
-    // TODO custom error message for infinite recursion
-    switchPriority(childPriority) {
-      if (childPriority <= k(this).priority) {
-        k(this).priority = childPriority - 1;
-        k(this).forEachParent((parent) =>
-          k(parent).switchPriority(k(this).priority)
-        );
-      }
-    },
-    addAsChildToPush() {
+    wait() {
       k(this).forEachParent((parent) => {
-        k(this).weakParentsChildToPushRemovers.push(
-          new WeakRef(k(parent).childrenToPush.add(this))
+        k(this).weakParentsWaitingChildRemovers.push(
+          new WeakRef(k(parent).waitingChildren.add(this))
         );
       });
     },
-    removeAsChildToPush() {
+    unwait() {
       for (const weakChildToPushRemover of k(this)
-        .weakParentsChildToPushRemovers) {
+        .weakParentsWaitingChildRemovers) {
         weakChildToPushRemover.deref()?.removeOnce();
       }
-      k(this).weakParentsChildToPushRemovers = [];
+      k(this).weakParentsWaitingChildRemovers = [];
     },
-    isAChildToPush() {
-      return k(this).weakParentsChildToPushRemovers.length !== 0;
+    isWaiting() {
+      return k(this).weakParentsWaitingChildRemovers.length !== 0;
     },
-    activate() {
+    recursivelyWait() {
       assertConstructing();
-      if (k(this).isAChildToPush()) {
-        // Blocks redundant activation
+      if (k(this).isWaiting()) {
         return;
       }
       k(this).forEachParent((parent) => {
-        k(parent).activate();
+        k(parent).recursivelyWait();
       });
-      k(this).addAsChildToPush();
+      k(this).wait();
     },
-    deactivate() {
+    recursivelyUnwait() {
       assertConstructing();
-      k(this).removeAsChildToPush();
+      k(this).unwait();
       k(this).forEachParent((parent) => {
-        if (k(parent).childrenToPush.isEmpty()) {
+        if (k(parent).waitingChildren.isEmpty()) {
           // From one to zero children.
-          k(parent).deactivate();
+          k(parent).recursivelyUnwait();
         }
       });
     },
   },
   friends: {
-    switchParent: [eventSinkScope],
-    mapWeakParents: [eventSinkScope, nonStepperSinkScope],
-    forEachParent: [eventSinkScope, nonStepperSinkScope],
-    isFirstParent: [eventSinkScope],
-    getPriority: [eventSinkScope, behaviorSinkScope],
-    removeFromParents: [eventSinkScope, nonStepperSinkScope],
-    addAsChildToPush: [],
-    removeAsChildToPush: [],
-    isAChildToPush: [eventSinkScope],
-    activate: [eventSinkScope],
-    deactivate: [eventSinkScope],
+    wait: [],
+    unwait: [],
+    isWaiting: [eventSinkScope],
+    recursivelyWait: [eventSinkScope],
+    recursivelyUnwait: [eventSinkScope],
   },
 }));
 
