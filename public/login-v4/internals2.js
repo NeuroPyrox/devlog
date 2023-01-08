@@ -10,6 +10,11 @@ import { assertLazy, assertConstructing } from "./lazyConstructors.js";
 //   Input:                                                                                                          pushValue
 //   Else:                                                                                                                     push
 
+// I'm organizing methods by which variables they use.
+// I tried moving methods only to the subclasses that use them, but the result was messy.
+// To get the benefits of both worlds, I reimplemented C++'s feature of friends.
+// This is probably overengineering, but it satisfies an itch for encapsulation.
+
 const abstractClass = undefined;
 const generateScopes = undefined;
 
@@ -85,7 +90,7 @@ const sinkParentsAndChildren = abstractClass(
       mapWeakParents: [eventSinkScope, nonStepperSinkScope],
       forEachParent: [sinkScope, eventSinkScope, nonStepperSinkScope],
       isFirstParent: [sinkScope],
-      getPriority: [eventSinkScope, behaviorSinkScope],
+      getPriority: [sinkScope],
       removeFromParents: [eventSinkScope, nonStepperSinkScope],
     },
   })
@@ -153,13 +158,30 @@ const sink = sinkParentsAndChildren.abstractSubclass((k) => ({
       if (isWaiting) {
         k(this).recursivelyWait();
       }
-    }
+    },
+    *iterateWaitingChildren() {
+      for (const sink of k(this).waitingChildren) {
+        assertLazy();
+        yield { priority: k(sink).getPriority(), sink };
+      }
+    },
+    *dequeueWaitingChildren() {
+      for (const sink of k(this).waitingChildren) {
+        assertLazy();
+        // Mutating [k(this).waitingChildren] while iterating over it.
+        // Prevents any [sink] from being yielded twice.
+        k(sink).unwait();
+        yield { priority: k(sink).getPriority(), sink };
+      }
+    },
   },
   friends: {
     wait: [],
     unwait: [],
     isWaiting: [eventSinkScope],
-    switchEvent: [eventSinkScope]
+    switchEvent: [eventSinkScope],
+    iterateWaitingChildren: [eventSinkScope],
+    dequeueWaitingChildren: [behaviorSinkScope]
   },
 }));
 
@@ -187,7 +209,7 @@ const eventSink = sink.finalSubclass((k) => ({
     *pushValue(context, value) {
       assertLazy();
       context.writeEvent(this, value);
-      yield* k(this).iterateActiveChildren();
+      yield* k(this).iterateWaitingChildren();
     },
     *push(context) {
       assertLazy();
@@ -205,9 +227,10 @@ const eventSink = sink.finalSubclass((k) => ({
       const value = context.doAction(action);
       context.writeEvent(this, value);
       if (value !== nothing) {
-        yield* k(this).iterateActiveChildren();
+        yield* k(this).iterateWaitingChildren();
       }
     },
+    // TODO update
     destroy() {
       if (k(this).enforceManualDeactivation) {
         assert(!k(this).isAChildToPush());
@@ -216,13 +239,6 @@ const eventSink = sink.finalSubclass((k) => ({
       }
       k(this).unsubscribe();
       k(this).removeFromParents();
-    },
-    // TODO move to base class
-    *iterateActiveChildren() {
-      for (const sink of k(this).childrenToPush) {
-        assertLazy();
-        yield { priority: k(sink).getPriority(), sink };
-      }
     },
   },
 }));
@@ -239,23 +255,11 @@ const behaviorSink = sink.abstractSubclass((k) => ({
     ];
   },
   methods: {
-    // Dequeue instead of iterating in order to prevent [push]
-    // from being called twice on any [BehaviorSink].
-    *dequeueComputedChildren() {
-      for (const sink of k(this).childrenToPush) {
-        assertLazy();
-        // Mutating [k(this).childrenToPush] while iterating over it.
-        k(sink).removeFromComputedChildren();
-        yield { priority: k(sink).getPriority(), sink };
-      }
-    },
     getWeakVariable() {
       return k(this).weakVariable;
     },
   },
-  friends: {
-    dequeueComputedChildren: [stepperSinkScope, nonStepperSinkScope],
-  },
+  friends: {},
 }));
 
 const stepperSink = behaviorSink.finalSubclass((k) => ({
@@ -275,7 +279,7 @@ const stepperSink = behaviorSink.finalSubclass((k) => ({
         k(this).weakVariable = new WeakRef({});
       }
       k(this).initializeValue(value);
-      yield* k(this).dequeueComputedChildren();
+      yield* k(this).dequeueWaitingChildren();
     },
     initializeValue(value) {
       // Assign to instead of replacing [weakVariable] because we want to
@@ -311,7 +315,7 @@ const nonStepperBehaviorSink = behaviorSink.finalSubclass((k) => ({
         assert(k(this).weakVariable.deref().thunk.computed);
       }
       k(this).initializeThunk();
-      yield* k(this).dequeueComputedChildren();
+      yield* k(this).dequeueWaitingChildren();
     },
     forgetLeftParentVariable() {
       assert(k(this).rememberedParentVariables.length === 2);
