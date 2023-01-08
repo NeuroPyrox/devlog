@@ -48,7 +48,7 @@ const sinkParentsAndChildren = abstractClass(
       forEachParent(f) {
         derefMany(k(this).weakParents).forEach(f);
       },
-      // Used for early exits from [EventSink.switch]
+      // Used for early exits from [switchEvent].
       isFirstParent(weakParent) {
         return weakParent.deref() === k(this).weakParents[0]?.deref();
       },
@@ -84,7 +84,7 @@ const sinkParentsAndChildren = abstractClass(
       switchParent: [eventSinkScope],
       mapWeakParents: [eventSinkScope, nonStepperSinkScope],
       forEachParent: [sinkScope, eventSinkScope, nonStepperSinkScope],
-      isFirstParent: [eventSinkScope],
+      isFirstParent: [sinkScope],
       getPriority: [eventSinkScope, behaviorSinkScope],
       removeFromParents: [eventSinkScope, nonStepperSinkScope],
     },
@@ -139,13 +139,27 @@ const sink = sinkParentsAndChildren.abstractSubclass((k) => ({
         }
       });
     },
+    switchEvent(parentSource) {
+      assertConstructing();
+      const weakParent = parentSource.getWeakSink();
+      // This early exit is an O(# of nested parents) optimization.
+      if (k(this).isFirstParent(weakParent)) {
+        return;
+      }
+      k(this).recursivelyUnwait();
+      k(this).switchParent(weakParent);
+      // Setting the value of [k(this).isWaiting()].
+      const isWaiting = !k(this).waitingChildren.isEmpty();
+      if (isWaiting) {
+        k(this).recursivelyWait();
+      }
+    }
   },
   friends: {
     wait: [],
     unwait: [],
     isWaiting: [eventSinkScope],
-    recursivelyWait: [eventSinkScope],
-    recursivelyUnwait: [eventSinkScope],
+    switchEvent: [eventSinkScope]
   },
 }));
 
@@ -168,19 +182,7 @@ const eventSink = sink.finalSubclass((k) => ({
   },
   methods: {
     switch(parentSource) {
-      assertConstructing();
-      const weakParent = parentSource.getWeakSink();
-      // This early exit is an O(# of nested parents) optimization.
-      if (k(this).isFirstParent(weakParent)) {
-        return;
-      }
-      k(this).deactivate();
-      k(this).switchParent(weakParent);
-      // TODO use base class
-      const hasActiveChild = !k(this).childrenToPush.isEmpty();
-      if (hasActiveChild) {
-        k(this).activate();
-      }
+      k(this).switchEvent(parentSource);
     },
     *pushValue(context, value) {
       assertLazy();
