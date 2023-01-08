@@ -60,6 +60,9 @@ const sinkParentsAndChildren = abstractClass(
         for (const weakChildRemover of k(this).weakParentsChildRemovers) {
           weakChildRemover.deref()?.removeOnce();
         }
+        // Left out as an optimization because [setWeakParents] and GC make this redundant:
+        // k(this).weakParents = [];
+        // k(this).weakParentsChildRemovers = [];
       },
       setWeakParents(weakParents) {
         k(this).weakParents = weakParents;
