@@ -1,7 +1,7 @@
 import { assert, ShrinkingList, derefMany, memoize, nothing } from "./util.js";
 import { assertLazy, assertConstructing } from "./lazyConstructors.js";
 
-// Sink:         switch mapWeakParents isFirstParent forEachParent getPriority removeFromParents
+// Sink:         switch mapWeakParents isFirstParent forEachParent getPriority removeParents
 // EventSink:    switch                                                                          activate deactivate pushValue push
 //   Input:                                                                                                          pushValue
 //   Middle:                                                                                                                   push
@@ -32,9 +32,11 @@ const [
   nonStepperSinkScope,
 ] = generateScopes();
 
+// It might seem inefficient to have subclasses with no [weakParents],
+// but the only alternatives I can think of are messy.
 const sink = abstractClass(sinkScope, (k) => ({
   constructor(weakParents) {
-    k(this).setWeakParents(weakParents);
+    k(this).setParents(weakParents);
     k(this).children = new ShrinkingList();
     k(this).priority =
       Math.max(
@@ -43,11 +45,20 @@ const sink = abstractClass(sinkScope, (k) => ({
       ) + 1;
   },
   methods: {
-    switchParent(weakParent) {
-      assert(k(this).weakParents.length <= 1);
-      k(this).removeFromParents();
-      k(this).setWeakParents([weakParent]);
-      k(weakParent.deref())?.switchPriority(k(this).priority);
+    setParents(weakParents) {
+      k(this).weakParents = weakParents;
+      k(this).weakParentsChildRemovers = derefMany(weakParents).map(
+        (parent) => new WeakRef(k(parent).children.add(this))
+      );
+    },
+    // Removes [this] from the [children] of [weakParents].
+    removeParents() {
+      for (const weakChildRemover of k(this).weakParentsChildRemovers) {
+        weakChildRemover.deref()?.removeOnce();
+      }
+      // Left out as an optimization because [setParents] and GC make this redundant:
+      // k(this).weakParents = [];
+      // k(this).weakParentsChildRemovers = [];
     },
     mapWeakParents(f) {
       return k(this).weakParents.map(f);
@@ -55,27 +66,18 @@ const sink = abstractClass(sinkScope, (k) => ({
     forEachParent(f) {
       derefMany(k(this).weakParents).forEach(f);
     },
-    // Used for early exits from [switchEvent].
-    isFirstParent(weakParent) {
-      return weakParent.deref() === k(this).weakParents[0]?.deref();
-    },
     getPriority() {
       return k(this).priority;
     },
-    // Removes all strong references from the [children] of [weakParents].
-    removeFromParents() {
-      for (const weakChildRemover of k(this).weakParentsChildRemovers) {
-        weakChildRemover.deref()?.removeOnce();
-      }
-      // Left out as an optimization because [setWeakParents] and GC make this redundant:
-      // k(this).weakParents = [];
-      // k(this).weakParentsChildRemovers = [];
+    // Used for early exits from [switch].
+    isFirstParent(weakParent) {
+      return weakParent.deref() === k(this).weakParents[0]?.deref();
     },
-    setWeakParents(weakParents) {
-      k(this).weakParents = weakParents;
-      k(this).weakParentsChildRemovers = derefMany(weakParents).map(
-        (parent) => new WeakRef(k(parent).children.add(this))
-      );
+    switchParent(weakParent) {
+      assert(k(this).weakParents.length <= 1);
+      k(this).removeParents();
+      k(this).setParents([weakParent]);
+      k(weakParent.deref())?.switchPriority(k(this).priority);
     },
     // TODO custom error message for infinite recursion
     switchPriority(childPriority) {
@@ -88,12 +90,12 @@ const sink = abstractClass(sinkScope, (k) => ({
     },
   },
   friends: {
-    switchParent: [eventSinkWaitersScope],
+    removeParents: [eventSinkScope, nonStepperSinkScope],
     mapWeakParents: [eventSinkScope, nonStepperSinkScope],
     forEachParent: [eventSinkWaitersScope, behaviorSinkWaitersScope],
-    isFirstParent: [eventSinkWaitersScope],
     getPriority: [eventSinkWaitersScope, behaviorSinkWaitersScope],
-    removeFromParents: [eventSinkScope, nonStepperSinkScope],
+    isFirstParent: [eventSinkWaitersScope],
+    switchParent: [eventSinkWaitersScope],
   },
 }));
 
@@ -108,8 +110,11 @@ const eventSinkWaiters = sink.abstractSubclass(eventSinkWaitersScope, (k) => ({
     ];
   },
   methods: {
-    isWaiting() {
-      return k(this).weakParentsWaitingChildRemovers.length !== 0;
+    *iterateWaitingChildren() {
+      for (const sink of k(this).waitingChildren) {
+        assertLazy();
+        yield { priority: k(sink).getPriority(), sink };
+      }
     },
     recursivelyWait() {
       assertConstructing();
@@ -137,6 +142,9 @@ const eventSinkWaiters = sink.abstractSubclass(eventSinkWaitersScope, (k) => ({
         }
       });
     },
+    isWaiting() {
+      return k(this).weakParentsWaitingChildRemovers.length !== 0;
+    },
     switch(parentSource) {
       assertConstructing();
       const weakParent = parentSource.getWeakSink();
@@ -152,22 +160,14 @@ const eventSinkWaiters = sink.abstractSubclass(eventSinkWaitersScope, (k) => ({
         k(this).recursivelyWait();
       }
     },
-    *iterateWaitingChildren() {
-      for (const sink of k(this).waitingChildren) {
-        assertLazy();
-        yield { priority: k(sink).getPriority(), sink };
-      }
-    },
   },
   friends: {
-    isWaiting: [eventSinkScope],
     iterateWaitingChildren: [eventSinkScope],
+    isWaiting: [eventSinkScope],
   },
 }));
 
 const eventSink = eventSinkWaiters.finalSubclass((k) => ({
-  // We don't use an arrow function because glitch.com won't parse it correctly.
-  // TODO test in browser if using an arrow function is just a syntax error.
   constructor(
     weakParents,
     push,
@@ -215,7 +215,7 @@ const eventSink = eventSinkWaiters.finalSubclass((k) => ({
         k(this).deactivate();
       }
       k(this).unsubscribe();
-      k(this).removeFromParents();
+      k(this).removeParents();
     },
   },
 }));
@@ -233,6 +233,15 @@ const behaviorSinkWaiters = sink.abstractSubclass(
       ];
     },
     methods: {
+      *dequeueWaitingChildren() {
+        for (const sink of k(this).waitingChildren) {
+          assertLazy();
+          // Mutating [k(this).waitingChildren] while iterating over it.
+          // Prevents any [sink] from being yielded twice.
+          k(sink).unwait();
+          yield { priority: k(sink).getPriority(), sink };
+        }
+      },
       wait() {
         k(this).forEachParent((parent) => {
           k(this).weakParentsWaitingChildRemovers.push(
@@ -246,15 +255,6 @@ const behaviorSinkWaiters = sink.abstractSubclass(
           weakChildToPushRemover.deref()?.removeOnce();
         }
         k(this).weakParentsWaitingChildRemovers = [];
-      },
-      *dequeueWaitingChildren() {
-        for (const sink of k(this).waitingChildren) {
-          assertLazy();
-          // Mutating [k(this).waitingChildren] while iterating over it.
-          // Prevents any [sink] from being yielded twice.
-          k(sink).unwait();
-          yield { priority: k(sink).getPriority(), sink };
-        }
       },
     },
     friends: {
@@ -348,14 +348,14 @@ const nonStepperBehaviorSink = behaviorSink.finalSubclass((k) => ({
       k(this).rememberedParentVariables[1] = null;
     },
     // Removes all strong references to [this].
-    // [removeFromParents] and [removeFromComputedChildren] take care of the strong references from parents.
+    // [removeParents] and [removeFromComputedChildren] take care of the strong references from parents.
     // We don't need to worry about the strong references from modulators because
     // the unpullability of [this] implies the unpullability of any modulators.
     // It doesn't matter how long you wait to call this method
     // because pushing an unpullable sink has no side effects.
     destroy() {
       k(this).removeFromComputedChildren();
-      k(this).removeFromParents();
+      k(this).removeParents();
     },
     initializeThunk() {
       assert(k(this).childToPushRemovers.length === 0);
