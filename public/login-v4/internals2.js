@@ -10,10 +10,10 @@ import { assertLazy, assertConstructing } from "./lazyConstructors.js";
 //   Input:                                                                                                          pushValue
 //   Else:                                                                                                                     push
 
-// I'm organizing methods by which variables they use.
+// I'm organizing methods by which class the variables come from.
 // I tried moving methods only to the subclasses that use them, but the result was messy.
 // To get the benefits of both worlds, I reimplemented C++'s feature of friends.
-// This is probably overengineering, but it satisfies an itch for encapsulation.
+// This is probably overengineering, but it satisfies my itch for encapsulation.
 
 // [eventSinkWaiters] is a different class from [behaviorSinkWaiters] because
 // even though they have the same variables and semantics, they don't share any methods.
@@ -25,6 +25,7 @@ const globalScope = undefined;
 const [
   sinkScope,
   eventSinkWaitersScope,
+  inputSinkScope,
   eventSinkScope,
   behaviorSinkWaitersScope,
   behaviorSinkScope,
@@ -33,7 +34,7 @@ const [
 ] = generateScopes();
 
 // It might seem inefficient to have subclasses with no [weakParents],
-// but the only alternatives I can think of are messy.
+// but the only alternatives I could think of were messy.
 const sink = abstractClass(sinkScope, (k) => ({
   constructor(weakParents) {
     k(this).setParents(weakParents);
@@ -162,12 +163,30 @@ const eventSinkWaiters = sink.abstractSubclass(eventSinkWaitersScope, (k) => ({
     },
   },
   friends: {
-    iterateWaitingChildren: [eventSinkScope],
+    iterateWaitingChildren: [inputSinkScope, eventSinkScope],
     isWaiting: [eventSinkScope],
   },
 }));
 
-const eventSink = eventSinkWaiters.finalSubclass((k) => ({
+const inputSink = eventSinkWaiters.finalSubclass(inputSinkScope, (k) => ({
+  constructor(unsubscribe) {
+    return [[[]], () => {
+      k(this).unsubscribe = unsubscribe;
+    }]
+  },
+  methods: {
+    *pushValue(context, value) {
+      assertLazy();
+      context.writeEvent(this, value);
+      yield* k(this).iterateWaitingChildren();
+    },
+    destroy() {
+      k(this).unsubscribe();
+    },
+  }
+}))
+
+const eventSink = eventSinkWaiters.finalSubclass(eventSinkScope, (k) => ({
   constructor(
     weakParents,
     push,
@@ -183,11 +202,6 @@ const eventSink = eventSinkWaiters.finalSubclass((k) => ({
     ];
   },
   methods: {
-    *pushValue(context, value) {
-      assertLazy();
-      context.writeEvent(this, value);
-      yield* k(this).iterateWaitingChildren();
-    },
     *push(context) {
       assertLazy();
       if (context.isWritten(this)) {
