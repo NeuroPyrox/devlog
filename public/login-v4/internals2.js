@@ -25,6 +25,7 @@ const globalScope = undefined;
 const [
   sinkScope,
   eventSinkWaitersScope,
+  neverSinkScope,
   inputSinkScope,
   eventSinkScope,
   behaviorSinkWaitersScope,
@@ -168,11 +169,20 @@ const eventSinkWaiters = sink.abstractSubclass(eventSinkWaitersScope, (k) => ({
   },
 }));
 
+const neverSink = eventSinkWaiters.finalSubclass(neverSinkScope, (k) => ({
+  constructor() {
+    return [[[]], () => {}];
+  },
+}));
+
 const inputSink = eventSinkWaiters.finalSubclass(inputSinkScope, (k) => ({
   constructor(unsubscribe) {
-    return [[[]], () => {
-      k(this).unsubscribe = unsubscribe;
-    }]
+    return [
+      [[]],
+      () => {
+        k(this).unsubscribe = unsubscribe;
+      },
+    ];
   },
   methods: {
     *pushValue(context, value) {
@@ -183,8 +193,8 @@ const inputSink = eventSinkWaiters.finalSubclass(inputSinkScope, (k) => ({
     destroy() {
       k(this).unsubscribe();
     },
-  }
-}))
+  },
+}));
 
 const eventSink = eventSinkWaiters.finalSubclass(eventSinkScope, (k) => ({
   constructor(
