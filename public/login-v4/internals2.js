@@ -28,6 +28,7 @@ const [
   neverSinkScope,
   inputSinkScope,
   mapEventSinkScope,
+  filterEventSinkScope,
   eventSinkScope,
   behaviorSinkWaitersScope,
   behaviorSinkScope,
@@ -199,22 +200,50 @@ const inputSink = eventSinkWaiters.finalSubclass(inputSinkScope, (k) => ({
 
 const mapEventSink = eventSinkWaiters.finalSubclass(mapEventSinkScope, (k) => ({
   constructor(weakParent, f) {
-    return [[[weakParent]], () => {
-      k(this).f = f;
-    }]
+    return [
+      [[weakParent]],
+      () => {
+        k(this).f = f;
+      },
+    ];
   },
   methods: {
     *push(context) {
       assertLazy();
       const [parentValue] = k(this).mapWeakParents((weakParent) =>
-          context.readEvent(weakParent.deref()));
+        context.readEvent(weakParent.deref())
+      );
       context.writeEvent(this, k(this).f(parentValue));
       yield* k(this).iterateWaitingChildren();
     },
     destroy() {
       k(this).deactivate();
       k(this).removeParents();
-    }
+    },
+  },
+}));
+
+const filterEventSink = eventSinkWaiters.finalSubclass(filterEventSinkScope, (k) => ({
+  constructor(weakParent, predicate) {
+    return [[[weakParent]], ()=> {
+      k(this).predicate = predicate;
+    }]
+  },
+  methods: {
+    *push(context) {
+      assertLazy();
+      const [parentValue] = k(this).mapWeakParents((weakParent) =>
+        context.readEvent(weakParent.deref())
+      );
+      if (k(this).predicate(parentValue)) {
+        context.writeEvent(this, parentValue);
+        yield* k(this).iterateWaitingChildren();
+      }
+    },
+    destroy() {
+      k(this).deactivate();
+      k(this).removeParents();
+    },
   }
 }))
 
