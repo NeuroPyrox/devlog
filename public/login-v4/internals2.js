@@ -27,6 +27,7 @@ const [
   eventSinkWaitersScope,
   neverSinkScope,
   inputSinkScope,
+  mapEventSinkScope,
   eventSinkScope,
   behaviorSinkWaitersScope,
   behaviorSinkScope,
@@ -195,6 +196,27 @@ const inputSink = eventSinkWaiters.finalSubclass(inputSinkScope, (k) => ({
     },
   },
 }));
+
+const mapEventSink = eventSinkWaiters.finalSubclass(mapEventSinkScope, (k) => ({
+  constructor(weakParent, f) {
+    return [[[weakParent]], () => {
+      k(this).f = f;
+    }]
+  },
+  methods: {
+    *push(context) {
+      assertLazy();
+      const [parentValue] = k(this).mapWeakParents((weakParent) =>
+          context.readEvent(weakParent.deref()));
+      context.writeEvent(this, k(this).f(parentValue));
+      yield* k(this).iterateWaitingChildren();
+    },
+    destroy() {
+      k(this).deactivate();
+      k(this).removeParents();
+    }
+  }
+}))
 
 const eventSink = eventSinkWaiters.finalSubclass(eventSinkScope, (k) => ({
   constructor(
