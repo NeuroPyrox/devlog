@@ -29,6 +29,7 @@ const [
   inputSinkScope,
   mapEventSinkScope,
   filterEventSinkScope,
+  mergeEventSinkScope,
   eventSinkScope,
   behaviorSinkWaitersScope,
   behaviorSinkScope,
@@ -223,29 +224,75 @@ const mapEventSink = eventSinkWaiters.finalSubclass(mapEventSinkScope, (k) => ({
   },
 }));
 
-const filterEventSink = eventSinkWaiters.finalSubclass(filterEventSinkScope, (k) => ({
-  constructor(weakParent, predicate) {
-    return [[[weakParent]], ()=> {
-      k(this).predicate = predicate;
-    }]
-  },
-  methods: {
-    *push(context) {
-      assertLazy();
-      const [parentValue] = k(this).mapWeakParents((weakParent) =>
-        context.readEvent(weakParent.deref())
-      );
-      if (k(this).predicate(parentValue)) {
-        context.writeEvent(this, parentValue);
+const filterEventSink = eventSinkWaiters.finalSubclass(
+  filterEventSinkScope,
+  (k) => ({
+    constructor(weakParent, predicate) {
+      return [
+        [[weakParent]],
+        () => {
+          k(this).predicate = predicate;
+        },
+      ];
+    },
+    methods: {
+      *push(context) {
+        assertLazy();
+        const [parentValue] = k(this).mapWeakParents((weakParent) =>
+          context.readEvent(weakParent.deref())
+        );
+        if (k(this).predicate(parentValue)) {
+          context.writeEvent(this, parentValue);
+          yield* k(this).iterateWaitingChildren();
+        }
+      },
+      destroy() {
+        k(this).deactivate();
+        k(this).removeParents();
+      },
+    },
+  })
+);
+
+const mergeEventSink = eventSinkWaiters.finalSubclass(
+  mergeEventSinkScope,
+  (k) => ({
+    constructor(weakParentA, weakParentB, fAB, fA, fB) {
+      return [
+        [[weakParentA, weakParentB]],
+        () => {
+          k(this).fAB = fAB;
+          k(this).fA = fA;
+          k(this).fB = fB;
+        },
+      ];
+    },
+    methods: {
+      *push(context) {
+        assertLazy();
+        if (context.isWritten(this)) {
+          // We need this guard because there's more than one parent.
+          return;
+        }
+        const [parentAValue, parentBValue] = k(this).mapWeakParents(
+          (weakParent) => context.readEvent(weakParent.deref())
+        );
+        const value =
+          parentAValue === nothing
+            ? k(this).fB(parentBValue)
+            : parentBValue === nothing
+            ? k(this).fA(parentAValue)
+            : k(this).fAB(parentAValue, parentBValue);
+        context.writeEvent(this, value);
         yield* k(this).iterateWaitingChildren();
-      }
+      },
+      destroy() {
+        k(this).deactivate();
+        k(this).removeParents();
+      },
     },
-    destroy() {
-      k(this).deactivate();
-      k(this).removeParents();
-    },
-  }
-}))
+  })
+);
 
 const eventSink = eventSinkWaiters.finalSubclass(eventSinkScope, (k) => ({
   constructor(
