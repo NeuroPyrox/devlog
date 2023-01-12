@@ -1,5 +1,9 @@
 import { assert, ShrinkingList, derefMany, memoize, nothing } from "./util.js";
-import { assertLazy, assertConstructing } from "./lazyConstructors.js";
+import {
+  assertLazy,
+  assertConstructing,
+  lazyConstructor,
+} from "./lazyConstructors.js";
 
 // Sink:         switch mapWeakParents isFirstParent forEachParent getPriority removeParents
 // EventSink:    switch                                                                          activate deactivate pushValue push
@@ -30,6 +34,7 @@ const [
   mapEventSinkScope,
   filterEventSinkScope,
   mergeEventSinkScope,
+  outputEventSinkScope,
   eventSinkScope,
   behaviorSinkWaitersScope,
   behaviorSinkScope,
@@ -69,7 +74,9 @@ const sink = abstractClass(sinkScope, (k) => ({
       return k(this).weakParents.map(f);
     },
     readEventParents(context) {
-      return k(this).weakParents.map(weakParent => context.readEvent(weakParent.deref()))
+      return k(this).weakParents.map((weakParent) =>
+        context.readEvent(weakParent.deref())
+      );
     },
     forEachParent(f) {
       derefMany(k(this).weakParents).forEach(f);
@@ -100,7 +107,11 @@ const sink = abstractClass(sinkScope, (k) => ({
   friends: {
     removeParents: [eventSinkScope, nonStepperSinkScope],
     mapWeakParents: [nonStepperSinkScope],
-    readEventParents: [mapEventSinkScope, filterEventSinkScope, mergeEventSinkScope],
+    readEventParents: [
+      mapEventSinkScope,
+      filterEventSinkScope,
+      mergeEventSinkScope,
+    ],
     forEachParent: [eventSinkWaitersScope, behaviorSinkWaitersScope],
     getPriority: [eventSinkWaitersScope, behaviorSinkWaitersScope],
     isFirstParent: [eventSinkWaitersScope],
@@ -287,6 +298,30 @@ const mergeEventSink = eventSinkWaiters.finalSubclass(
       destroy() {
         k(this).deactivate();
         k(this).removeParents();
+      },
+    },
+  })
+);
+
+const outputEventSink = eventSinkWaiters.finalSubsclass(
+  outputEventSinkScope,
+  (k) => ({
+    constructor(weakParent, handle) {
+      return [
+        [[weakParent]],
+        () => {
+          k(this).handle = handle;
+        },
+      ];
+    },
+    methods: {
+      *push(context) {
+        assertLazy();
+        const [parentValue] = k(this).readEventParents(context);
+        lazyConstructor(() => k(this).handle(parentValue));
+      },
+      destroy() {
+        assert(!k(this).isWaiting());
       },
     },
   })
