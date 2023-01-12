@@ -219,6 +219,8 @@ export function* switchE(newParents) {
   return yield* modulate(source, newParents, (newParent) => {
     const source = weakSource.deref(); // Weakness prevents memory leaks of unpullable but pushable [source]s.
     if (source !== undefined) {
+      // It's important to call [lazyConstructor] within the [if] statement
+      // because we want to avoid unneeded evaluations of [newParentSource].
       lazyConstructor((newParentSource) => {
         // It's not possible to switch to an unpullable [newParentSource].
         // If [newParentSource] is unpushable or [source] is unpullable,
