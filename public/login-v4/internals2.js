@@ -68,6 +68,9 @@ const sink = abstractClass(sinkScope, (k) => ({
     mapWeakParents(f) {
       return k(this).weakParents.map(f);
     },
+    readEventParents(context) {
+      return k(this).weakParents.map(weakParent => context.readEvent(weakParent.deref()))
+    },
     forEachParent(f) {
       derefMany(k(this).weakParents).forEach(f);
     },
@@ -96,7 +99,8 @@ const sink = abstractClass(sinkScope, (k) => ({
   },
   friends: {
     removeParents: [eventSinkScope, nonStepperSinkScope],
-    mapWeakParents: [eventSinkScope, nonStepperSinkScope],
+    mapWeakParents: [nonStepperSinkScope],
+    readEventParents: [mapEventSinkScope, filterEventSinkScope, mergeEventSinkScope],
     forEachParent: [eventSinkWaitersScope, behaviorSinkWaitersScope],
     getPriority: [eventSinkWaitersScope, behaviorSinkWaitersScope],
     isFirstParent: [eventSinkWaitersScope],
@@ -211,9 +215,7 @@ const mapEventSink = eventSinkWaiters.finalSubclass(mapEventSinkScope, (k) => ({
   methods: {
     *push(context) {
       assertLazy();
-      const [parentValue] = k(this).mapWeakParents((weakParent) =>
-        context.readEvent(weakParent.deref())
-      );
+      const [parentValue] = k(this).readEventParents(context);
       context.writeEvent(this, k(this).f(parentValue));
       yield* k(this).iterateWaitingChildren();
     },
@@ -238,9 +240,7 @@ const filterEventSink = eventSinkWaiters.finalSubclass(
     methods: {
       *push(context) {
         assertLazy();
-        const [parentValue] = k(this).mapWeakParents((weakParent) =>
-          context.readEvent(weakParent.deref())
-        );
+        const [parentValue] = k(this).readEventParents(context);
         if (k(this).predicate(parentValue)) {
           context.writeEvent(this, parentValue);
           yield* k(this).iterateWaitingChildren();
@@ -274,9 +274,7 @@ const mergeEventSink = eventSinkWaiters.finalSubclass(
           // We need this guard because there's more than one parent.
           return;
         }
-        const [parentAValue, parentBValue] = k(this).mapWeakParents(
-          (weakParent) => context.readEvent(weakParent.deref())
-        );
+        const [parentAValue, parentBValue] = k(this).readEventParents(context);
         const value =
           parentAValue === nothing
             ? k(this).fB(parentBValue)
