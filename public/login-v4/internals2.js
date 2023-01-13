@@ -35,6 +35,7 @@ const [
   filterEventSinkScope,
   mergeEventSinkScope,
   outputEventSinkScope,
+  switchEventModulateeSinkScope,
   eventSinkScope,
   behaviorSinkWaitersScope,
   behaviorSinkScope,
@@ -184,6 +185,7 @@ const eventSinkWaiters = sink.abstractSubclass(eventSinkWaitersScope, (k) => ({
   friends: {
     iterateWaitingChildren: [inputSinkScope, eventSinkScope],
     isWaiting: [eventSinkScope],
+    switch: [switchEventModulateeSinkScope],
   },
 }));
 
@@ -227,6 +229,7 @@ const mapEventSink = eventSinkWaiters.finalSubclass(mapEventSinkScope, (k) => ({
     *push(context) {
       assertLazy();
       const [parentValue] = k(this).readEventParents(context);
+      // TODO remove [k(this)] access from [f].
       context.writeEvent(this, k(this).f(parentValue));
       yield* k(this).iterateWaitingChildren();
     },
@@ -322,6 +325,27 @@ const outputEventSink = eventSinkWaiters.finalSubsclass(
       },
       destroy() {
         assert(!k(this).isWaiting());
+        k(this).removeParents();
+      },
+    },
+  })
+);
+
+const switchEventModulateeSink = eventSinkWaiters.finalSubclass(
+  switchEventModulateeSinkScope,
+  (k) => ({
+    constructor() {
+      return [[[]], () => {}];
+    },
+    methods: {
+      *push(context) {
+        assertLazy();
+        const [parentValue] = k(this).readEventParents(context);
+        context.writeEvent(this, parentValue);
+        yield* k(this).iterateWaitingChildren();
+      },
+      destroy() {
+        k(this).deactivate();
         k(this).removeParents();
       },
     },
