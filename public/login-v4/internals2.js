@@ -37,6 +37,7 @@ const [
   outputEventSinkScope,
   switchEventModulateeSinkScope,
   switchEventModulatorSinkScope,
+  stepperBehaviorModulatorSinkScope,
   eventSinkScope,
   behaviorSinkWaitersScope,
   behaviorSinkScope,
@@ -382,6 +383,31 @@ const switchEventModulatorSink = eventSinkWaiters.finalSubclass(
             k(this).modulatee.switch(newModulateeParentSource);
           }, newModulateeParent);
         }
+      },
+      destroy() {
+        k(this).deactivate();
+        k(this).removeParents();
+      },
+    },
+  })
+);
+
+const stepperBehaviorModulatorSink = eventSinkWaiters.finalSubclass(
+  stepperBehaviorModulatorSinkScope,
+  (k) => ({
+    constructor(weakParent, modulatee) {
+      return [
+        [[weakParent]],
+        () => {
+          k(this).modulatee = modulatee;
+        },
+      ];
+    },
+    methods: {
+      *push(context) {
+        assertLazy();
+        const [modulateeValue] = k(this).readEventParents(context);
+        context.enqueueBehaviorValue(k(this).modulatee, modulateeValue);
       },
       destroy() {
         k(this).deactivate();
