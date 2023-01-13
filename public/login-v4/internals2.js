@@ -322,6 +322,7 @@ const outputEventSink = eventSinkWaiters.finalSubsclass(
       },
       destroy() {
         assert(!k(this).isWaiting());
+        k(this).removeParents();
       },
     },
   })
