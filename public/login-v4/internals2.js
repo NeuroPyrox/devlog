@@ -36,6 +36,7 @@ const [
   mergeEventSinkScope,
   outputEventSinkScope,
   switchEventModulateeSinkScope,
+  switchEventModulatorSinkScope,
   eventSinkScope,
   behaviorSinkWaitersScope,
   behaviorSinkScope,
@@ -343,6 +344,44 @@ const switchEventModulateeSink = eventSinkWaiters.finalSubclass(
         const [parentValue] = k(this).readEventParents(context);
         context.writeEvent(this, parentValue);
         yield* k(this).iterateWaitingChildren();
+      },
+      destroy() {
+        k(this).deactivate();
+        k(this).removeParents();
+      },
+    },
+  })
+);
+
+const switchEventModulatorSink = eventSinkWaiters.finalSubclass(
+  switchEventModulatorSinkScope,
+  (k) => ({
+    constructor(weakParent, weakModulateeSource, modulatee) {
+      return [
+        [[weakParent]],
+        () => {
+          // Weakness prevents memory leaks of unpullable but pushable [source]s.
+          k(this).weakModulateeSource = weakModulateeSource;
+          k(this).modulatee = modulatee;
+        },
+      ];
+    },
+    methods: {
+      *push(context) {
+        assertLazy();
+        const [newModulateeParent] = k(this).readEventParents(context);
+        const modulateeSource = k(this).weakModulateeSource.deref();
+        if (modulateeSource !== undefined) {
+          // It's important to call [lazyConstructor] within the [if] statement
+          // because we want to avoid unneeded evaluations of [newModulateeParentSource].
+          lazyConstructor((newModulateeParentSource) => {
+            // It's not possible to switch to an unpullable [newModulateeParentSource].
+            // If [newModulateeParentSource] is unpushable or [modulateeSource] is unpullable,
+            // garbage collection still continues in its normal course.
+            modulateeSource.switch(newModulateeParentSource);
+            k(this).modulatee.switch(newModulateeParentSource);
+          }, newModulateeParent);
+        }
       },
       destroy() {
         k(this).deactivate();
