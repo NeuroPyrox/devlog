@@ -47,62 +47,62 @@ const [
 
 // It might seem inefficient to have subclasses with no [weakParents],
 // but the only alternatives I could think of were messy.
-const sink = abstractClass(sinkScope, (k) => ({
+const sink = abstractClass(sinkScope, (_) => ({
   constructor(weakParents) {
-    k(this).setParents(weakParents);
-    k(this).children = new ShrinkingList();
-    k(this).priority =
+    _(this).setParents(weakParents);
+    _(this).children = new ShrinkingList();
+    _(this).priority =
       Math.max(
         -1,
-        ...derefMany(weakParents).map((parent) => k(parent).getPriority())
+        ...derefMany(weakParents).map((parent) => _(parent).getPriority())
       ) + 1;
   },
   methods: {
     setParents(weakParents) {
-      k(this).weakParents = weakParents;
-      k(this).weakParentsChildRemovers = derefMany(weakParents).map(
-        (parent) => new WeakRef(k(parent).children.add(this))
+      _(this).weakParents = weakParents;
+      _(this).weakParentsChildRemovers = derefMany(weakParents).map(
+        (parent) => new WeakRef(_(parent).children.add(this))
       );
     },
     // Removes [this] from the [children] of [weakParents].
     removeParents() {
-      for (const weakChildRemover of k(this).weakParentsChildRemovers) {
+      for (const weakChildRemover of _(this).weakParentsChildRemovers) {
         weakChildRemover.deref()?.removeOnce();
       }
       // Left out as an optimization because [setParents] and GC make this redundant:
-      // k(this).weakParents = [];
-      // k(this).weakParentsChildRemovers = [];
+      // _(this).weakParents = [];
+      // _(this).weakParentsChildRemovers = [];
     },
     mapWeakParents(f) {
-      return k(this).weakParents.map(f);
+      return _(this).weakParents.map(f);
     },
     readEventParents(context) {
-      return k(this).weakParents.map((weakParent) =>
+      return _(this).weakParents.map((weakParent) =>
         context.readEvent(weakParent.deref())
       );
     },
     forEachParent(f) {
-      derefMany(k(this).weakParents).forEach(f);
+      derefMany(_(this).weakParents).forEach(f);
     },
     getPriority() {
-      return k(this).priority;
+      return _(this).priority;
     },
     // Used for early exits from [switch].
     isFirstParent(weakParent) {
-      return weakParent.deref() === k(this).weakParents[0]?.deref();
+      return weakParent.deref() === _(this).weakParents[0]?.deref();
     },
     switchParent(weakParent) {
-      assert(k(this).weakParents.length <= 1);
-      k(this).removeParents();
-      k(this).setParents([weakParent]);
-      k(weakParent.deref())?.switchPriority(k(this).priority);
+      assert(_(this).weakParents.length <= 1);
+      _(this).removeParents();
+      _(this).setParents([weakParent]);
+      _(weakParent.deref())?.switchPriority(_(this).priority);
     },
     // TODO custom error message for infinite recursion
     switchPriority(childPriority) {
-      if (childPriority <= k(this).priority) {
-        k(this).priority = childPriority - 1;
-        k(this).forEachParent((parent) =>
-          k(parent).switchPriority(k(this).priority)
+      if (childPriority <= _(this).priority) {
+        _(this).priority = childPriority - 1;
+        _(this).forEachParent((parent) =>
+          _(parent).switchPriority(_(this).priority)
         );
       }
     },
@@ -122,65 +122,65 @@ const sink = abstractClass(sinkScope, (k) => ({
   },
 }));
 
-const eventSinkWaiters = sink.abstractSubclass(eventSinkWaitersScope, (k) => ({
+const eventSinkWaiters = sink.abstractSubclass(eventSinkWaitersScope, (_) => ({
   constructor(weakParents) {
     return [
       [weakParents],
       () => {
-        k(this).waitingChildren = new ShrinkingList();
-        k(this).weakParentsWaitingChildRemovers = [];
+        _(this).waitingChildren = new ShrinkingList();
+        _(this).weakParentsWaitingChildRemovers = [];
       },
     ];
   },
   methods: {
     *iterateWaitingChildren() {
-      for (const sink of k(this).waitingChildren) {
+      for (const sink of _(this).waitingChildren) {
         assertLazy();
-        yield { priority: k(sink).getPriority(), sink };
+        yield { priority: _(sink).getPriority(), sink };
       }
     },
     recursivelyWait() {
       assertConstructing();
-      if (k(this).isWaiting()) {
+      if (_(this).isWaiting()) {
         return;
       }
-      k(this).forEachParent((parent) => {
-        k(parent).recursivelyWait();
-        k(this).weakParentsWaitingChildRemovers.push(
-          new WeakRef(k(parent).waitingChildren.add(this))
+      _(this).forEachParent((parent) => {
+        _(parent).recursivelyWait();
+        _(this).weakParentsWaitingChildRemovers.push(
+          new WeakRef(_(parent).waitingChildren.add(this))
         );
       });
     },
     recursivelyUnwait() {
       assertConstructing();
-      for (const weakChildToPushRemover of k(this)
+      for (const weakChildToPushRemover of _(this)
         .weakParentsWaitingChildRemovers) {
         weakChildToPushRemover.deref()?.removeOnce();
       }
-      k(this).weakParentsWaitingChildRemovers = [];
-      k(this).forEachParent((parent) => {
-        if (k(parent).waitingChildren.isEmpty()) {
+      _(this).weakParentsWaitingChildRemovers = [];
+      _(this).forEachParent((parent) => {
+        if (_(parent).waitingChildren.isEmpty()) {
           // From one to zero children.
-          k(parent).recursivelyUnwait();
+          _(parent).recursivelyUnwait();
         }
       });
     },
     isWaiting() {
-      return k(this).weakParentsWaitingChildRemovers.length !== 0;
+      return _(this).weakParentsWaitingChildRemovers.length !== 0;
     },
     switch(parentSource) {
       assertConstructing();
       const weakParent = parentSource.getWeakSink();
       // This early exit is an O(# of nested parents) optimization.
-      if (k(this).isFirstParent(weakParent)) {
+      if (_(this).isFirstParent(weakParent)) {
         return;
       }
-      k(this).recursivelyUnwait();
-      k(this).switchParent(weakParent);
-      // Setting the value of [k(this).isWaiting()].
-      const isWaiting = !k(this).waitingChildren.isEmpty();
+      _(this).recursivelyUnwait();
+      _(this).switchParent(weakParent);
+      // Setting the value of [_(this).isWaiting()].
+      const isWaiting = !_(this).waitingChildren.isEmpty();
       if (isWaiting) {
-        k(this).recursivelyWait();
+        _(this).recursivelyWait();
       }
     },
   },
@@ -191,18 +191,18 @@ const eventSinkWaiters = sink.abstractSubclass(eventSinkWaitersScope, (k) => ({
   },
 }));
 
-const neverSink = eventSinkWaiters.finalSubclass(neverSinkScope, (k) => ({
+const neverSink = eventSinkWaiters.finalSubclass(neverSinkScope, (_) => ({
   constructor() {
     return [[[]], () => {}];
   },
 }));
 
-const inputSink = eventSinkWaiters.finalSubclass(inputSinkScope, (k) => ({
+const inputSink = eventSinkWaiters.finalSubclass(inputSinkScope, (_) => ({
   constructor(unsubscribe) {
     return [
       [[]],
       () => {
-        k(this).unsubscribe = unsubscribe;
+        _(this).unsubscribe = unsubscribe;
       },
     ];
   },
@@ -210,61 +210,61 @@ const inputSink = eventSinkWaiters.finalSubclass(inputSinkScope, (k) => ({
     *pushValue(context, value) {
       assertLazy();
       context.writeEvent(this, value);
-      yield* k(this).iterateWaitingChildren();
+      yield* _(this).iterateWaitingChildren();
     },
     destroy() {
-      k(this).unsubscribe();
+      _(this).unsubscribe();
     },
   },
 }));
 
-const mapEventSink = eventSinkWaiters.finalSubclass(mapEventSinkScope, (k) => ({
+const mapEventSink = eventSinkWaiters.finalSubclass(mapEventSinkScope, (_) => ({
   constructor(weakParent, f) {
     return [
       [[weakParent]],
       () => {
-        k(this).f = f;
+        _(this).f = f;
       },
     ];
   },
   methods: {
     *push(context) {
       assertLazy();
-      const [parentValue] = k(this).readEventParents(context);
-      // TODO remove [k(this)] access from [f].
-      context.writeEvent(this, k(this).f(parentValue));
-      yield* k(this).iterateWaitingChildren();
+      const [parentValue] = _(this).readEventParents(context);
+      // TODO remove [_(this)] access from [f].
+      context.writeEvent(this, _(this).f(parentValue));
+      yield* _(this).iterateWaitingChildren();
     },
     destroy() {
-      k(this).deactivate();
-      k(this).removeParents();
+      _(this).deactivate();
+      _(this).removeParents();
     },
   },
 }));
 
 const filterEventSink = eventSinkWaiters.finalSubclass(
   filterEventSinkScope,
-  (k) => ({
+  (_) => ({
     constructor(weakParent, predicate) {
       return [
         [[weakParent]],
         () => {
-          k(this).predicate = predicate;
+          _(this).predicate = predicate;
         },
       ];
     },
     methods: {
       *push(context) {
         assertLazy();
-        const [parentValue] = k(this).readEventParents(context);
-        if (k(this).predicate(parentValue)) {
+        const [parentValue] = _(this).readEventParents(context);
+        if (_(this).predicate(parentValue)) {
           context.writeEvent(this, parentValue);
-          yield* k(this).iterateWaitingChildren();
+          yield* _(this).iterateWaitingChildren();
         }
       },
       destroy() {
-        k(this).deactivate();
-        k(this).removeParents();
+        _(this).deactivate();
+        _(this).removeParents();
       },
     },
   })
@@ -272,14 +272,14 @@ const filterEventSink = eventSinkWaiters.finalSubclass(
 
 const mergeEventSink = eventSinkWaiters.finalSubclass(
   mergeEventSinkScope,
-  (k) => ({
+  (_) => ({
     constructor(weakParentA, weakParentB, fAB, fA, fB) {
       return [
         [[weakParentA, weakParentB]],
         () => {
-          k(this).fAB = fAB;
-          k(this).fA = fA;
-          k(this).fB = fB;
+          _(this).fAB = fAB;
+          _(this).fA = fA;
+          _(this).fB = fB;
         },
       ];
     },
@@ -290,19 +290,19 @@ const mergeEventSink = eventSinkWaiters.finalSubclass(
           // We need this guard because there's more than one parent.
           return;
         }
-        const [parentAValue, parentBValue] = k(this).readEventParents(context);
+        const [parentAValue, parentBValue] = _(this).readEventParents(context);
         const value =
           parentAValue === nothing
-            ? k(this).fB(parentBValue)
+            ? _(this).fB(parentBValue)
             : parentBValue === nothing
-            ? k(this).fA(parentAValue)
-            : k(this).fAB(parentAValue, parentBValue);
+            ? _(this).fA(parentAValue)
+            : _(this).fAB(parentAValue, parentBValue);
         context.writeEvent(this, value);
-        yield* k(this).iterateWaitingChildren();
+        yield* _(this).iterateWaitingChildren();
       },
       destroy() {
-        k(this).deactivate();
-        k(this).removeParents();
+        _(this).deactivate();
+        _(this).removeParents();
       },
     },
   })
@@ -310,24 +310,24 @@ const mergeEventSink = eventSinkWaiters.finalSubclass(
 
 const outputEventSink = eventSinkWaiters.finalSubsclass(
   outputEventSinkScope,
-  (k) => ({
+  (_) => ({
     constructor(weakParent, handle) {
       return [
         [[weakParent]],
         () => {
-          k(this).handle = handle;
+          _(this).handle = handle;
         },
       ];
     },
     methods: {
       *push(context) {
         assertLazy();
-        const [parentValue] = k(this).readEventParents(context);
-        lazyConstructor(() => k(this).handle(parentValue));
+        const [parentValue] = _(this).readEventParents(context);
+        lazyConstructor(() => _(this).handle(parentValue));
       },
       destroy() {
-        assert(!k(this).isWaiting());
-        k(this).removeParents();
+        assert(!_(this).isWaiting());
+        _(this).removeParents();
       },
     },
   })
@@ -335,20 +335,20 @@ const outputEventSink = eventSinkWaiters.finalSubsclass(
 
 const switchEventModulateeSink = eventSinkWaiters.finalSubclass(
   switchEventModulateeSinkScope,
-  (k) => ({
+  (_) => ({
     constructor() {
       return [[[]], () => {}];
     },
     methods: {
       *push(context) {
         assertLazy();
-        const [parentValue] = k(this).readEventParents(context);
+        const [parentValue] = _(this).readEventParents(context);
         context.writeEvent(this, parentValue);
-        yield* k(this).iterateWaitingChildren();
+        yield* _(this).iterateWaitingChildren();
       },
       destroy() {
-        k(this).deactivate();
-        k(this).removeParents();
+        _(this).deactivate();
+        _(this).removeParents();
       },
     },
   })
@@ -356,22 +356,22 @@ const switchEventModulateeSink = eventSinkWaiters.finalSubclass(
 
 const switchEventModulatorSink = eventSinkWaiters.finalSubclass(
   switchEventModulatorSinkScope,
-  (k) => ({
+  (_) => ({
     constructor(weakParent, weakModulateeSource, modulatee) {
       return [
         [[weakParent]],
         () => {
           // Weakness prevents memory leaks of unpullable but pushable [source]s.
-          k(this).weakModulateeSource = weakModulateeSource;
-          k(this).modulatee = modulatee;
+          _(this).weakModulateeSource = weakModulateeSource;
+          _(this).modulatee = modulatee;
         },
       ];
     },
     methods: {
       *push(context) {
         assertLazy();
-        const [newModulateeParent] = k(this).readEventParents(context);
-        const modulateeSource = k(this).weakModulateeSource.deref();
+        const [newModulateeParent] = _(this).readEventParents(context);
+        const modulateeSource = _(this).weakModulateeSource.deref();
         if (modulateeSource !== undefined) {
           // It's important to call [lazyConstructor] within the [if] statement
           // because we want to avoid unneeded evaluations of [newModulateeParentSource].
@@ -380,13 +380,13 @@ const switchEventModulatorSink = eventSinkWaiters.finalSubclass(
             // If [newModulateeParentSource] is unpushable or [modulateeSource] is unpullable,
             // garbage collection still continues in its normal course.
             modulateeSource.switch(newModulateeParentSource);
-            k(this).modulatee.switch(newModulateeParentSource);
+            _(this).modulatee.switch(newModulateeParentSource);
           }, newModulateeParent);
         }
       },
       destroy() {
-        k(this).deactivate();
-        k(this).removeParents();
+        _(this).deactivate();
+        _(this).removeParents();
       },
     },
   })
@@ -394,30 +394,30 @@ const switchEventModulatorSink = eventSinkWaiters.finalSubclass(
 
 const stepperBehaviorModulatorSink = eventSinkWaiters.finalSubclass(
   stepperBehaviorModulatorSinkScope,
-  (k) => ({
+  (_) => ({
     constructor(weakParent, modulatee) {
       return [
         [[weakParent]],
         () => {
-          k(this).modulatee = modulatee;
+          _(this).modulatee = modulatee;
         },
       ];
     },
     methods: {
       *push(context) {
         assertLazy();
-        const [modulateeValue] = k(this).readEventParents(context);
-        context.enqueueBehaviorValue(k(this).modulatee, modulateeValue);
+        const [modulateeValue] = _(this).readEventParents(context);
+        context.enqueueBehaviorValue(_(this).modulatee, modulateeValue);
       },
       destroy() {
-        k(this).deactivate();
-        k(this).removeParents();
+        _(this).deactivate();
+        _(this).removeParents();
       },
     },
   })
 );
 
-const eventSink = eventSinkWaiters.finalSubclass(eventSinkScope, (k) => ({
+const eventSink = eventSinkWaiters.finalSubclass(eventSinkScope, (_) => ({
   constructor(
     weakParents,
     push,
@@ -426,9 +426,9 @@ const eventSink = eventSinkWaiters.finalSubclass(eventSinkScope, (k) => ({
     return [
       [weakParents],
       () => {
-        k(this).enforceManualDeactivation = enforceManualDeactivation; // Only used for output events.
-        k(this).push = push;
-        k(this).unsubscribe = unsubscribe; // Only used for input events.
+        _(this).enforceManualDeactivation = enforceManualDeactivation; // Only used for output events.
+        _(this).push = push;
+        _(this).unsubscribe = unsubscribe; // Only used for input events.
       },
     ];
   },
@@ -441,65 +441,65 @@ const eventSink = eventSinkWaiters.finalSubclass(eventSinkScope, (k) => ({
         // because [EventSink]s have at most 2 parents.
         return;
       }
-      const action = k(this).push(
-        ...k(this).mapWeakParents((weakParent) =>
+      const action = _(this).push(
+        ..._(this).mapWeakParents((weakParent) =>
           context.readEvent(weakParent.deref())
         )
       );
       const value = context.doAction(action);
       context.writeEvent(this, value);
       if (value !== nothing) {
-        yield* k(this).iterateWaitingChildren();
+        yield* _(this).iterateWaitingChildren();
       }
     },
     // TODO update
     destroy() {
-      if (k(this).enforceManualDeactivation) {
-        assert(!k(this).isWaiting());
+      if (_(this).enforceManualDeactivation) {
+        assert(!_(this).isWaiting());
       } else {
-        k(this).deactivate();
+        _(this).deactivate();
       }
-      k(this).unsubscribe();
-      k(this).removeParents();
+      _(this).unsubscribe();
+      _(this).removeParents();
     },
   },
 }));
 
 const behaviorSinkWaiters = sink.abstractSubclass(
   behaviorSinkWaitersScope,
-  (k) => ({
+  (_) => ({
     constructor(weakParents) {
       return [
         [weakParents],
         () => {
-          k(this).waitingChildren = new ShrinkingList();
-          k(this).weakParentsWaitingChildRemovers = [];
+          _(this).waitingChildren = new ShrinkingList();
+          _(this).weakParentsWaitingChildRemovers = [];
         },
       ];
     },
     methods: {
       *dequeueWaitingChildren() {
-        for (const sink of k(this).waitingChildren) {
+        for (const sink of _(this).waitingChildren) {
           assertLazy();
-          // Mutating [k(this).waitingChildren] while iterating over it.
+          // Mutating [_(this).waitingChildren] while iterating over it.
           // Prevents any [sink] from being yielded twice.
-          k(sink).unwait();
-          yield { priority: k(sink).getPriority(), sink };
+          _(sink).unwait();
+          yield { priority: _(sink).getPriority(), sink };
         }
       },
       wait() {
-        k(this).forEachParent((parent) => {
-          k(this).weakParentsWaitingChildRemovers.push(
-            new WeakRef(k(parent).waitingChildren.add(this))
+        _(this).forEachParent((parent) => {
+          _(this).weakParentsWaitingChildRemovers.push(
+            new WeakRef(_(parent).waitingChildren.add(this))
           );
         });
       },
       unwait() {
-        for (const weakChildToPushRemover of k(this)
+        for (const weakChildToPushRemover of _(this)
           .weakParentsWaitingChildRemovers) {
           weakChildToPushRemover.deref()?.removeOnce();
         }
-        k(this).weakParentsWaitingChildRemovers = [];
+        _(this).weakParentsWaitingChildRemovers = [];
       },
     },
     friends: {
@@ -508,31 +508,31 @@ const behaviorSinkWaiters = sink.abstractSubclass(
   })
 );
 
-const behaviorSink = behaviorSinkWaiters.abstractSubclass((k) => ({
+const behaviorSink = behaviorSinkWaiters.abstractSubclass((_) => ({
   constructor(parentSources) {
     return [
       [parentSources.map((parentSource) => parentSource.getWeakSink())],
       () => {
         // The strong references are from [BehaviorSource], uncomputed children, and children with more than one pushable parent,
         // which will need to access the value in the future.
-        k(this).weakVariable = new WeakRef({});
+        _(this).weakVariable = new WeakRef({});
       },
     ];
   },
   methods: {
     getWeakVariable() {
-      return k(this).weakVariable;
+      return _(this).weakVariable;
     },
   },
   friends: {},
 }));
 
-const stepperSink = behaviorSink.finalSubclass((k) => ({
+const stepperSink = behaviorSink.finalSubclass((_) => ({
   constructor(initialValue) {
     return [
       [[]],
       () => {
-        k(this).initializeValue(initialValue);
+        _(this).initializeValue(initialValue);
       },
     ];
   },
@@ -540,57 +540,57 @@ const stepperSink = behaviorSink.finalSubclass((k) => ({
     // Must only be called once per [Push.push], but idk of any clean ways to assert this.
     *pushValue(value) {
       assertLazy();
-      if (k(this).weakVariable.deref() === undefined) {
-        k(this).weakVariable = new WeakRef({});
+      if (_(this).weakVariable.deref() === undefined) {
+        _(this).weakVariable = new WeakRef({});
       }
-      k(this).initializeValue(value);
-      yield* k(this).dequeueWaitingChildren();
+      _(this).initializeValue(value);
+      yield* _(this).dequeueWaitingChildren();
     },
     initializeValue(value) {
       // Assign to instead of replacing [weakVariable] because we want to
       // propagate the changes to any uncomputed children and to the source.
-      k(this).weakVariable.deref().thunk = () => value;
+      _(this).weakVariable.deref().thunk = () => value;
     },
     // We don't need a [destroy] method because the only strong reference to [this] is from a modulator,
     // but the unpullability of [this] implies the unpullability of the modulator.
   },
 }));
 
-const nonStepperBehaviorSink = behaviorSink.finalSubclass((k) => ({
+const nonStepperBehaviorSink = behaviorSink.finalSubclass((_) => ({
   constructor(parentSources, evaluate) {
     return [
       [parentSources],
       () => {
         assert(parentSources.length === 1 || parentSources.length === 2);
-        k(this).rememberedParentVariables =
+        _(this).rememberedParentVariables =
           1 < parentSources.length
             ? parentSources.map((parentSource) => parentSource.getVariable())
             : Array(parentSources.length);
-        k(this).evaluate = evaluate;
-        k(this).initializeThunk();
+        _(this).evaluate = evaluate;
+        _(this).initializeThunk();
       },
     ];
   },
   methods: {
     *push() {
       assertLazy();
-      if (k(this).weakVariable.deref() === undefined) {
-        k(this).weakVariable = new WeakRef({});
+      if (_(this).weakVariable.deref() === undefined) {
+        _(this).weakVariable = new WeakRef({});
       } else {
-        assert(k(this).weakVariable.deref().thunk.computed);
+        assert(_(this).weakVariable.deref().thunk.computed);
       }
-      k(this).initializeThunk();
-      yield* k(this).dequeueWaitingChildren();
+      _(this).initializeThunk();
+      yield* _(this).dequeueWaitingChildren();
     },
     forgetLeftParentVariable() {
-      assert(k(this).rememberedParentVariables.length === 2);
-      assert(k(this).rememberedParentVariables[0]);
-      k(this).rememberedParentVariables[0] = null;
+      assert(_(this).rememberedParentVariables.length === 2);
+      assert(_(this).rememberedParentVariables[0]);
+      _(this).rememberedParentVariables[0] = null;
     },
     forgetRightParentVariable() {
-      assert(k(this).rememberedParentVariables.length === 2);
-      assert(k(this).rememberedParentVariables[1]);
-      k(this).rememberedParentVariables[1] = null;
+      assert(_(this).rememberedParentVariables.length === 2);
+      assert(_(this).rememberedParentVariables[1]);
+      _(this).rememberedParentVariables[1] = null;
     },
     // Removes all strong references to [this].
     // [removeParents] and [removeFromComputedChildren] take care of the strong references from parents.
@@ -599,20 +599,20 @@ const nonStepperBehaviorSink = behaviorSink.finalSubclass((k) => ({
     // It doesn't matter how long you wait to call this method
     // because pushing an unpullable sink has no side effects.
     destroy() {
-      k(this).removeFromComputedChildren();
-      k(this).removeParents();
+      _(this).removeFromComputedChildren();
+      _(this).removeParents();
     },
     initializeThunk() {
-      assert(k(this).childToPushRemovers.length === 0);
-      assert(k(this).rememberedParentVariables.length !== 0);
-      assert(k(this).evaluate !== undefined);
-      const parentVariables = k(this).getParentVariables();
+      assert(_(this).childToPushRemovers.length === 0);
+      assert(_(this).rememberedParentVariables.length !== 0);
+      assert(_(this).evaluate !== undefined);
+      const parentVariables = _(this).getParentVariables();
       // The point of these 2 lines is to avoid capturing [this] in the closure.
-      const evaluate = k(this).evaluate;
-      const weakThisK = new WeakRef(k(this));
+      const evaluate = _(this).evaluate;
+      const weakThisK = new WeakRef(_(this));
       // Assign to instead of replacing [weakVariable] because we want to
       // propagate the changes to any uncomputed children and to the source.
-      k(this).weakVariable.deref().thunk = memoize(() => {
+      _(this).weakVariable.deref().thunk = memoize(() => {
         weakThisK.deref()?.addToComputedChildren();
         return evaluate(
           ...parentVariables.map((parentVariable) => parentVariable.thunk())
@@ -622,10 +622,10 @@ const nonStepperBehaviorSink = behaviorSink.finalSubclass((k) => ({
     // We can be sure that the [deref]s work because the non-remembered [weakParent]s were just pushed.
     // This is a separate method because we need to avoid accidentally capturing [this] in neighboring closures.
     getParentVariables() {
-      return k(this).mapWeakParents(
+      return _(this).mapWeakParents(
         (weakParent, i) =>
-          k(this).rememberedParentVariables[i] ??
-          k(weakParent.deref()).weakVariable.deref()
+          _(this).rememberedParentVariables[i] ??
+          _(weakParent.deref()).weakVariable.deref()
       );
     },
   },
