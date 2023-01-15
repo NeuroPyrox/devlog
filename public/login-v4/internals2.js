@@ -410,54 +410,6 @@ const stepperBehaviorModulatorSink = eventSinkWaiters.finalSubclass(
   })
 );
 
-const eventSink = eventSinkWaiters.finalSubclass(eventSinkScope, (_) => ({
-  constructor(
-    weakParents,
-    push,
-    { unsubscribe = () => {}, enforceManualDeactivation = false }
-  ) {
-    return [
-      [weakParents],
-      () => {
-        _(this).enforceManualDeactivation = enforceManualDeactivation; // Only used for output events.
-        _(this).push = push;
-        _(this).unsubscribe = unsubscribe; // Only used for input events.
-      },
-    ];
-  },
-  methods: {
-    *push(context) {
-      assertLazy();
-      if (context.isWritten(this)) {
-        // Guards against being called more than once.
-        // We don't need any fancy algorithmic optimizations
-        // because [EventSink]s have at most 2 parents.
-        return;
-      }
-      const action = _(this).push(
-        ..._(this).mapWeakParents((weakParent) =>
-          context.readEvent(weakParent.deref())
-        )
-      );
-      const value = context.doAction(action);
-      context.writeEvent(this, value);
-      if (value !== nothing) {
-        yield* _(this).iterateWaitingChildren();
-      }
-    },
-    // TODO update
-    destroy() {
-      if (_(this).enforceManualDeactivation) {
-        assert(!_(this).isWaiting());
-      } else {
-        _(this).deactivate();
-      }
-      _(this).unsubscribe();
-      _(this).removeParents();
-    },
-  },
-}));
-
 const behaviorSinkWaiters = sink.abstractSubclass(
   behaviorSinkWaitersScope,
   (_) => ({
