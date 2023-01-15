@@ -77,6 +77,7 @@ const sink = abstractClass(sinkScope, (_) => ({
       return _(this).weakParents.map(f);
     },
     readEventParents(context) {
+      assertLazy();
       return _(this).weakParents.map((weakParent) =>
         context.readEvent(weakParent.deref())
       );
@@ -208,7 +209,6 @@ const inputSink = eventSinkWaiters.finalSubclass(inputSinkScope, (_) => ({
   },
   methods: {
     *pushValue(context, value) {
-      assertLazy();
       context.writeEvent(this, value);
       yield* _(this).iterateWaitingChildren();
     },
@@ -229,7 +229,6 @@ const mapEventSink = eventSinkWaiters.finalSubclass(mapEventSinkScope, (_) => ({
   },
   methods: {
     *push(context) {
-      assertLazy();
       const [parentValue] = _(this).readEventParents(context);
       // TODO remove [_(this)] access from [f].
       context.writeEvent(this, _(this).f(parentValue));
@@ -255,7 +254,6 @@ const filterEventSink = eventSinkWaiters.finalSubclass(
     },
     methods: {
       *push(context) {
-        assertLazy();
         const [parentValue] = _(this).readEventParents(context);
         if (_(this).predicate(parentValue)) {
           context.writeEvent(this, parentValue);
@@ -285,7 +283,6 @@ const mergeEventSink = eventSinkWaiters.finalSubclass(
     },
     methods: {
       *push(context) {
-        assertLazy();
         if (context.isWritten(this)) {
           // We need this guard because there's more than one parent.
           return;
@@ -321,7 +318,6 @@ const outputEventSink = eventSinkWaiters.finalSubsclass(
     },
     methods: {
       *push(context) {
-        assertLazy();
         const [parentValue] = _(this).readEventParents(context);
         lazyConstructor(() => _(this).handle(parentValue));
       },
@@ -341,7 +337,6 @@ const switchEventModulateeSink = eventSinkWaiters.finalSubclass(
     },
     methods: {
       *push(context) {
-        assertLazy();
         const [parentValue] = _(this).readEventParents(context);
         context.writeEvent(this, parentValue);
         yield* _(this).iterateWaitingChildren();
@@ -369,7 +364,6 @@ const switchEventModulatorSink = eventSinkWaiters.finalSubclass(
     },
     methods: {
       *push(context) {
-        assertLazy();
         const [newModulateeParent] = _(this).readEventParents(context);
         const modulateeSource = _(this).weakModulateeSource.deref();
         if (modulateeSource !== undefined) {
@@ -405,7 +399,6 @@ const stepperBehaviorModulatorSink = eventSinkWaiters.finalSubclass(
     },
     methods: {
       *push(context) {
-        assertLazy();
         const [modulateeValue] = _(this).readEventParents(context);
         context.enqueueBehaviorValue(_(this).modulatee, modulateeValue);
       },
