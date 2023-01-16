@@ -19,7 +19,7 @@ import {
 // To get the benefits of both worlds, I reimplemented C++'s feature of friends.
 // This is probably overengineering, but it satisfies my itch for encapsulation.
 
-// [eventSinkWaiters] is a different class from [behaviorSinkWaiters] because
+// [eventSink] is a different class from [behaviorSinkWaiters] because
 // even though they have the same variables and semantics, they don't share any methods.
 
 const abstractClass = undefined;
@@ -28,7 +28,7 @@ const globalScope = undefined;
 
 const [
   sinkScope,
-  eventSinkWaitersScope,
+  eventSinkScope,
   neverSinkScope,
   inputSinkScope,
   mapEventSinkScope,
@@ -38,7 +38,6 @@ const [
   switchEventModulateeSinkScope,
   switchEventModulatorSinkScope,
   stepperBehaviorModulatorSinkScope,
-  eventSinkScope,
   behaviorSinkWaitersScope,
   behaviorSinkScope,
   stepperSinkScope,
@@ -116,14 +115,14 @@ const sink = abstractClass(sinkScope, (_) => ({
       filterEventSinkScope,
       mergeEventSinkScope,
     ],
-    forEachParent: [eventSinkWaitersScope, behaviorSinkWaitersScope],
-    getPriority: [eventSinkWaitersScope, behaviorSinkWaitersScope],
-    isFirstParent: [eventSinkWaitersScope],
-    switchParent: [eventSinkWaitersScope],
+    forEachParent: [eventSinkScope, behaviorSinkWaitersScope],
+    getPriority: [eventSinkScope, behaviorSinkWaitersScope],
+    isFirstParent: [eventSinkScope],
+    switchParent: [eventSinkScope],
   },
 }));
 
-const eventSinkWaiters = sink.abstractSubclass(eventSinkWaitersScope, (_) => ({
+const eventSink = sink.abstractSubclass(eventSinkScope, (_) => ({
   constructor(weakParents) {
     return [
       [weakParents],
@@ -192,13 +191,13 @@ const eventSinkWaiters = sink.abstractSubclass(eventSinkWaitersScope, (_) => ({
   },
 }));
 
-const neverSink = eventSinkWaiters.finalSubclass(neverSinkScope, (_) => ({
+const neverSink = eventSink.finalSubclass(neverSinkScope, (_) => ({
   constructor() {
     return [[[]], () => {}];
   },
 }));
 
-const inputSink = eventSinkWaiters.finalSubclass(inputSinkScope, (_) => ({
+const inputSink = eventSink.finalSubclass(inputSinkScope, (_) => ({
   constructor(unsubscribe) {
     return [
       [[]],
@@ -218,7 +217,7 @@ const inputSink = eventSinkWaiters.finalSubclass(inputSinkScope, (_) => ({
   },
 }));
 
-const mapEventSink = eventSinkWaiters.finalSubclass(mapEventSinkScope, (_) => ({
+const mapEventSink = eventSink.finalSubclass(mapEventSinkScope, (_) => ({
   constructor(weakParent, f) {
     return [
       [[weakParent]],
@@ -241,7 +240,7 @@ const mapEventSink = eventSinkWaiters.finalSubclass(mapEventSinkScope, (_) => ({
   },
 }));
 
-const filterEventSink = eventSinkWaiters.finalSubclass(
+const filterEventSink = eventSink.finalSubclass(
   filterEventSinkScope,
   (_) => ({
     constructor(weakParent, predicate) {
@@ -268,7 +267,7 @@ const filterEventSink = eventSinkWaiters.finalSubclass(
   })
 );
 
-const mergeEventSink = eventSinkWaiters.finalSubclass(
+const mergeEventSink = eventSink.finalSubclass(
   mergeEventSinkScope,
   (_) => ({
     constructor(weakParentA, weakParentB, fAB, fA, fB) {
@@ -305,7 +304,7 @@ const mergeEventSink = eventSinkWaiters.finalSubclass(
   })
 );
 
-const outputEventSink = eventSinkWaiters.finalSubsclass(
+const outputEventSink = eventSink.finalSubsclass(
   outputEventSinkScope,
   (_) => ({
     constructor(weakParent, handle) {
@@ -329,7 +328,7 @@ const outputEventSink = eventSinkWaiters.finalSubsclass(
   })
 );
 
-const switchEventModulateeSink = eventSinkWaiters.finalSubclass(
+const switchEventModulateeSink = eventSink.finalSubclass(
   switchEventModulateeSinkScope,
   (_) => ({
     constructor() {
@@ -349,7 +348,7 @@ const switchEventModulateeSink = eventSinkWaiters.finalSubclass(
   })
 );
 
-const switchEventModulatorSink = eventSinkWaiters.finalSubclass(
+const switchEventModulatorSink = eventSink.finalSubclass(
   switchEventModulatorSinkScope,
   (_) => ({
     constructor(weakParent, weakModulateeSource, modulatee) {
@@ -386,7 +385,7 @@ const switchEventModulatorSink = eventSinkWaiters.finalSubclass(
   })
 );
 
-const stepperBehaviorModulatorSink = eventSinkWaiters.finalSubclass(
+const stepperBehaviorModulatorSink = eventSink.finalSubclass(
   stepperBehaviorModulatorSinkScope,
   (_) => ({
     constructor(weakParent, modulatee) {
