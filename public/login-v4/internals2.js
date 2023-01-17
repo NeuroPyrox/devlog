@@ -38,6 +38,7 @@ const [
   switchEventModulateeSinkScope,
   switchEventModulatorSinkScope,
   stepperBehaviorModulatorSinkScope,
+  demuxEventSinkScope,
   behaviorSinkWaitersScope,
   behaviorSinkScope,
   stepperSinkScope,
@@ -408,6 +409,31 @@ const stepperBehaviorModulatorSink = eventSink.finalSubclass(
     },
   })
 );
+// TODO
+const demuxEventSink = eventSink.finalSubclass(demuxEventSinkScope, (_) => ({
+  constructor(weakParent) {
+    return [
+      [[weakParent]],
+      () => {
+        _(this).children = {};
+      },
+    ];
+  },
+  methods: {
+    *push(context) {
+      const [object] = _(this).readEventParents(context);
+      context.writeEvent(this, object);
+      for(const key in object) {
+        const sink = _(this).children[key];
+        yield { priority: _(sink).getPriority(), sink };
+      }
+    },
+    destroy() {
+      _(this).deactivate();
+      _(this).removeParents();
+    },
+  },
+}))
 
 const behaviorSinkWaiters = sink.abstractSubclass(
   behaviorSinkWaitersScope,
