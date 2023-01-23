@@ -1,18 +1,24 @@
 import { assert, ShrinkingList, derefMany, memoize, nothing } from "./util.js";
 import * as Push from "./push.js";
 
+// Event interfaces:
 // Never                                                               getPriority                        recursivelyWait recursivelyUnwait
 // Input                                                               getPriority iterateWaitingChildren recursivelyWait recursivelyUnwait destroy
-// Output           setParents removeParents readParents forEachParent getPriority iterateWaitingChildren recursivelyWait recursivelyUnwait destroy push
-// Map              setParents removeParents readParents forEachParent getPriority iterateWaitingChildren recursivelyWait recursivelyUnwait destroy push
-// Filter           setParents removeParents readParents forEachParent getPriority iterateWaitingChildren recursivelyWait recursivelyUnwait destroy push
-// Merge            setParents removeParents readParents forEachParent getPriority iterateWaitingChildren recursivelyWait recursivelyUnwait destroy push
-// SwitchModulator  setParents removeParents readParents forEachParent getPriority                        recursivelyWait recursivelyUnwait destroy push
-// StepperModulator setParents removeParents readParents forEachParent getPriority                        recursivelyWait recursivelyUnwait destroy push
-// SwitchModulatee  setParents removeParents readParents forEachParent getPriority iterateWaitingChildren recursivelyWait recursivelyUnwait destroy push switchPriority
-// DemuxParent      setParents removeParents readParents forEachParent getPriority                        recursivelyWait recursivelyUnwait destroy push
+// Output           addParents removeParents readParents forEachParent getPriority iterateWaitingChildren recursivelyWait recursivelyUnwait destroy push
+// Map              addParents removeParents readParents forEachParent getPriority iterateWaitingChildren recursivelyWait recursivelyUnwait destroy push
+// Filter           addParents removeParents readParents forEachParent getPriority iterateWaitingChildren recursivelyWait recursivelyUnwait destroy push
+// Merge            addParents removeParents readParents forEachParent getPriority iterateWaitingChildren recursivelyWait recursivelyUnwait destroy push
+// SwitchModulator  addParents removeParents readParents forEachParent getPriority                        recursivelyWait recursivelyUnwait destroy push
+// StepperModulator addParents removeParents readParents forEachParent getPriority                        recursivelyWait recursivelyUnwait destroy push
+// SwitchModulatee  addParents removeParents readParents forEachParent getPriority iterateWaitingChildren recursivelyWait recursivelyUnwait destroy push switchPriority
+// MuxParent        addParents removeParents readParents forEachParent getPriority iterateWaitingChildren recursivelyWait recursitelyUnwait destroy push
+// MuxChild         addParents removeParents             forEachParent getPriority iterateWaitingChildren recursivelyWait recursivelyUnwait destroy push
+// DemuxParent      addParents removeParents readParents forEachParent getPriority                        recursivelyWait recursivelyUnwait destroy push
 // DemuxChild                                                          getPriority iterateWaitingChildren recursivelyWait recursivelyUnwait destroy
-// TODO behavior interfaces
+// Behavior interfaces:
+// StepperModulatee                                                    getPriority iterateWaitingChildren
+// Map              addParents removeParents readParents forEachParent getPriority iterateWaitingChildren            wait            unwait destroy push
+// Apply            addParents removeParents readParents forEachParent getPriority iterateWaitingChildren            wait            unwait destroy push
 
 class Never {
   getPriority() {
