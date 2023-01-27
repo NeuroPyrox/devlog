@@ -1,6 +1,9 @@
 import { assert, ShrinkingList, derefMany, memoize, nothing } from "./util.js";
 import * as Push from "./push.js";
 
+// This is an unused file with some ideas on how to refactor and optimize muxes and demuxes.
+// I've decided to leave this file alone until performance problems become visible.
+
 // Event interfaces:
 // Never                                                               getPriority                        recursivelyWait recursivelyUnwait
 // Input                                                               getPriority iterateWaitingChildren recursivelyWait recursivelyUnwait destroy
