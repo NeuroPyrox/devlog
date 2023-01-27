@@ -20,6 +20,8 @@ import * as Push from "./push.js";
 // Map              addParents removeParents readParents forEachParent getPriority iterateWaitingChildren            wait            unwait destroy push
 // Apply            addParents removeParents readParents forEachParent getPriority iterateWaitingChildren            wait            unwait destroy push
 
+const finalizers = new FinalizationRegistry(f => f());
+
 class Sink {
   // These 3 variables interact with each other a lot.
   #parents;
@@ -30,9 +32,9 @@ class Sink {
   #priority;
   
   constructor(weakParents) {
-    this.#parentInfo = {};
+    this.#parentInfo = new ShrinkingList();
+    this.#childInfo = new ShrinkingList();
     this.#weakParentLinks = [];
-    this.#children = new ShrinkingList();
     this.#priority =
       Math.max(
         -1,
@@ -41,14 +43,14 @@ class Sink {
     this.addWeakParents(weakParents);
   }
 
+  // TODO how to handle merges?
   addWeakParents(weakParents) {
-    for (const key in weakParents) {
+    for (const weakParent in weakParents) {
       if (weakParent.deref() !== undefined) {
-        assert(!(key in this.#parentInfo));
-        this.#parentInfo[key] = {
-          weakRef: weakParents[key],
-          childRemover: parent.#children.add(this);
-        }
+        const parentInfo = this.#parentInfo.add({weakRef: weakParent});
+        const childInfo = parent.#childInfo.add({ref: this});
+        parentInfo.get().remover = childInfo;
+        childInfo.get().remover = parentInfo;
         // TODO finalizer
       }
     }
