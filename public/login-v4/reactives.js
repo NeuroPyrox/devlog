@@ -115,9 +115,23 @@ const wrapEvent = (event) =>
     },
   });
 
-const lazyEventConstructor = (...args) => wrapEvent(lazyConstructor(...args));
+const wrapBehavior = (behavior) =>
+  Object.assign(behavior, {
+    map(f) {
+      return mapB(this, f);
+    },
+    apply(other, f) {
+      return apply(this, other, f);
+    },
+    mapTag(event, f) {
+      return mapTag(event, this, f);
+    },
+    tag(event) {
+      return tag(event, this);
+    },
+  });
 
-// TODO wrapBehavior
+const lazyEventConstructor = (...args) => wrapEvent(lazyConstructor(...args));
 
 export const input = (subscribe) =>
   lazyEventConstructor(() => {
@@ -176,17 +190,22 @@ export const merge = (
   );
 
 export const mapB = (parent, f) =>
-  lazyConstructor(
-    (parentSource) => newBehaviorPair([parentSource], { evaluate: f })[1],
-    parent
+  wrapBehavior(
+    lazyConstructor(
+      (parentSource) => newBehaviorPair([parentSource], { evaluate: f })[1],
+      parent
+    )
   );
 
+// TODO rename
 export const apply = (parentA, parentB, f) =>
-  lazyConstructor(
-    (parentASource, parentBSource) =>
-      newBehaviorPair([parentASource, parentBSource], { evaluate: f })[1],
-    parentA,
-    parentB
+  wrapBehavior(
+    lazyConstructor(
+      (parentASource, parentBSource) =>
+        newBehaviorPair([parentASource, parentBSource], { evaluate: f })[1],
+      parentA,
+      parentB
+    )
   );
 
 export const mapTag = (event, behavior, combine) =>
@@ -253,7 +272,7 @@ function* modulate(targetSource, parent, handle) {
     (modulatorSource) => targetSource.addParent(modulatorSource),
     modulator
   );
-  return wrapEvent(constConstructor(targetSource));
+  return constConstructor(targetSource);
 }
 
 export function* switchE(newParents) {
@@ -263,29 +282,33 @@ export function* switchE(newParents) {
   const weakSource = new WeakRef(source);
   // Weakly references [source] because we can't access it from [sink],
   // and it's weak because pushability doesn't imply pullability.
-  return yield* modulate(source, newParents, (newParent) => {
-    const source = weakSource.deref(); // Weakness prevents memory leaks of unpullable but pushable [source]s.
-    if (source !== undefined) {
-      // It's important to call [lazyConstructor] within the [if] statement
-      // because we want to avoid unneeded evaluations of [newParentSource].
-      lazyConstructor((newParentSource) => {
-        // It's not possible to switch to an unpullable [newParentSource].
-        // If [newParentSource] is unpushable or [source] is unpullable,
-        // garbage collection still continues in its normal course.
-        source.switch(newParentSource);
-        sink.switch(newParentSource);
-      }, newParent);
-    }
-    return Push.pure(nothing);
-  });
+  return wrapEvent(
+    yield* modulate(source, newParents, (newParent) => {
+      const source = weakSource.deref(); // Weakness prevents memory leaks of unpullable but pushable [source]s.
+      if (source !== undefined) {
+        // It's important to call [lazyConstructor] within the [if] statement
+        // because we want to avoid unneeded evaluations of [newParentSource].
+        lazyConstructor((newParentSource) => {
+          // It's not possible to switch to an unpullable [newParentSource].
+          // If [newParentSource] is unpushable or [source] is unpullable,
+          // garbage collection still continues in its normal course.
+          source.switch(newParentSource);
+          sink.switch(newParentSource);
+        }, newParent);
+      }
+      return Push.pure(nothing);
+    })
+  );
 }
 
 export function* stepper(initialValue, newValues) {
   // We're safe evaluating the behavior pair eagerly instead of using [lazyConstructor]
   // because there are no parents yet.
   const [sink, source] = newBehaviorPair([], { initialValue });
-  return yield* modulate(source, newValues, (value) =>
-    Push.enqueueBehaviorValue(sink, value)
+  return wrapBehavior(
+    yield* modulate(source, newValues, (value) =>
+      Push.enqueueBehaviorValue(sink, value)
+    )
   );
 }
 
