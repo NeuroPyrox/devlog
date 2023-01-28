@@ -74,8 +74,53 @@ import { newEventPair, newBehaviorPair } from "./internals.js";
 //   so why not restrict its interface by treating it as time-dependent?
 // [input]'s time-independence is contractual. I'm trusting the library user to ensure it.
 
+const wrapEvent = (event) =>
+  Object.assign(event, {
+    map(f) {
+      return mapE(this, f);
+    },
+    filter(predicate) {
+      return filter(this, predicate);
+    },
+    merge(
+      other,
+      ABtoC = () => {
+        throw "Shouldn't be simultaneous!";
+      },
+      AtoC = (a) => a,
+      BtoC = (b) => b
+    ) {
+      return merge(this, other, ABtoC, AtoC, BtoC);
+    },
+    mapTag(behavior, combine) {
+      return mapTag(this, behavior, combine);
+    },
+    tag(behavior) {
+      return tag(this, behavior);
+    },
+    observe() {
+      return observeE(this);
+    },
+    output(handle) {
+      return output(this, handle);
+    },
+    switch() {
+      return switchE(this);
+    },
+    stepper(initialValue) {
+      return stepper(this, initialValue);
+    },
+    mergeBind(f) {
+      return mergeBind(this, f);
+    },
+  });
+
+const lazyEventConstructor = (...args) => wrapEvent(lazyConstructor(...args));
+
+// TODO wrapBehavior
+
 export const input = (subscribe) =>
-  lazyConstructor(() => {
+  lazyEventConstructor(() => {
     let sink, source;
     // Memory leak if [unsubscribe] doesn't remove all strong references to [push].
     // Error if [push] is called before [subscribe] ends.
@@ -94,7 +139,7 @@ export const input = (subscribe) =>
 export const never = input(() => () => {});
 
 export const mapE = (parent, f) =>
-  lazyConstructor(
+  lazyEventConstructor(
     (parentSource) =>
       newEventPair([parentSource], (value) => Push.pure(f(value)))[1],
     parent
@@ -112,7 +157,7 @@ export const merge = (
   AtoC = (a) => a,
   BtoC = (b) => b
 ) =>
-  lazyConstructor(
+  lazyEventConstructor(
     (parentASource, parentBSource) =>
       newEventPair(
         [parentASource, parentBSource],
@@ -145,7 +190,7 @@ export const apply = (parentA, parentB, f) =>
   );
 
 export const mapTag = (event, behavior, combine) =>
-  lazyConstructor(
+  lazyEventConstructor(
     (eventSource, behaviorSource) =>
       newEventPair([eventSource], (value) =>
         Push.pure(combine(value, behaviorSource.getCurrentValue()))
@@ -156,8 +201,9 @@ export const mapTag = (event, behavior, combine) =>
 
 export const tag = (event, behavior) => mapTag(event, behavior, (e, b) => b);
 
+// TODO rename
 export const observeE = (parent) =>
-  lazyConstructor(
+  lazyEventConstructor(
     (parentSource) =>
       newEventPair([parentSource], (x) => Push.pure(pull(x)))[1],
     parent
@@ -171,7 +217,7 @@ const outputs = [];
 // TODO does the deactivation need to be in a [lazyConstructor]?
 function* eagerOutput(parent, handle, enforceManualDeactivation) {
   yield* assertPullMonad();
-  return lazyConstructor((parentSource) => {
+  return lazyEventConstructor((parentSource) => {
     const [sink, source] = newEventPair([parentSource], handle, {
       enforceManualDeactivation,
     });
@@ -181,6 +227,7 @@ function* eagerOutput(parent, handle, enforceManualDeactivation) {
   }, parent);
 }
 
+// TODO remove generator syntax
 // TODO deactivateability.
 export function* output(parent, handle) {
   yield* eagerOutput(
@@ -206,7 +253,7 @@ function* modulate(targetSource, parent, handle) {
     (modulatorSource) => targetSource.addParent(modulatorSource),
     modulator
   );
-  return constConstructor(targetSource);
+  return wrapEvent(constConstructor(targetSource));
 }
 
 export function* switchE(newParents) {
@@ -242,6 +289,7 @@ export function* stepper(initialValue, newValues) {
   );
 }
 
+// TODO rename
 // TODO optimize with binary tree
 export function* mergeBind(eventOfEvent, f) {
   let current = never;

@@ -26,6 +26,7 @@ export const delayConstructionDuring = unnestable((f) => {
   return result;
 });
 
+// TODO is this necessary?
 export const constConstructor = (x) => ({
   [construct]: () => x,
 });
