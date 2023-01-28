@@ -57,26 +57,23 @@
       const findUsername = (table, username) =>
         protoFindUsername(table, 0, table.length, username);
 
-      const signups = filter(
-        mapTag(signupAttempts, internalTableB, (user, table) => {
+      const signups = signupAttempts
+        .mapTag(internalTableB, (user, table) => {
           const index = findUsername(table, user.username);
           const foundUser = table[index];
           if (foundUser === undefined || foundUser.username !== user.username) {
             return [index, user];
           }
           return null;
-        }),
-        (x) => x !== null
-      );
-      let tableTransform = mapE(
-        signups,
+        })
+        .filter((x) => x !== null);
+      let tableTransform = signups.map(
         ([index, user]) =>
           (table) =>
             table.splice(index, 0, user)
       );
 
-      insertions = mapTag(
-        insertions,
+      insertions = insertions.mapTag(
         internalTableB,
         ({ username, password }, table) => {
           const index = findUsername(table, username);
@@ -90,26 +87,23 @@
           return [];
         }
       );
-      const createUserInsertions = mapE(
-        filter(insertions, (x) => x[0] === "createUser"),
-        ([, index, user]) => [index, user]
-      );
-      tableTransform = merge(
-        tableTransform,
-        mapE(
-          createUserInsertions,
+
+      const createUserInsertions = insertions
+        .filter((x) => x[0] === "createUser")
+        .map(([, index, user]) => [index, user]);
+      tableTransform = tableTransform.merge(
+        createUserInsertions.map(
           ([index, user]) =>
             (table) =>
               table.splice(index, 0, user)
         )
       );
-      const createdUsers = merge(createUserInsertions, signups);
-      const changePasswordInsertions = filter(
-        insertions,
+      const createdUsers = createUserInsertions.merge(signups);
+
+      const changePasswordInsertions = insertions.filter(
         (x) => x[0] === "changePassword"
       );
-      const passwordChanges = mapTag(
-        changePasswordInsertions,
+      const passwordChanges = changePasswordInsertions.mapTag(
         internalTableB,
         ([, index, password], table) => ({
           index,
@@ -117,47 +111,39 @@
           password,
         })
       );
-
-      tableTransform = merge(
-        tableTransform,
-        mapE(
-          passwordChanges,
+      tableTransform = tableTransform.merge(
+        passwordChanges.map(
           ({ index, password }) =>
             (table) =>
               (table[index].password = password)
         )
       );
-      const removedUsers = mapTag(
-        usernamesToRemove,
+
+      const removedUsers = usernamesToRemove.mapTag(
         internalTableB,
         (username, table) => ({
           index: findUsername(table, username),
           username,
         })
       );
-      tableTransform = merge(
-        tableTransform,
-        mapE(
-          removedUsers,
+      tableTransform = tableTransform.merge(
+        removedUsers.map(
           ({ index }) =>
             (table) =>
               table.splice(index, 1)
         )
       );
-      const tableLengthOnClear = mapE(
-        tag(clears, internalTableB),
-        (table) => table.length
-      );
-      clears = filter(tableLengthOnClear, (length) => length !== 0);
-      tableTransform = merge(
-        tableTransform,
-        mapE(clears, () => (table) => (table.length = 0))
+      const tableLengthOnClear = clears
+        .tag(internalTableB)
+        .map((table) => table.length);
+      clears = tableLengthOnClear.filter((length) => length !== 0);
+      tableTransform = tableTransform.merge(
+        clears.map(() => (table) => (table.length = 0))
       );
 
       // TODO make a combinator for this use case.
       // The copy prevents side-effects if we want to access internalTableB arbitrarily.
-      const newInternalTables = mapTag(
-        tableTransform,
+      const newInternalTables = tableTransform.mapTag(
         internalTableB,
         (transform, table) => {
           const copy = [...table];
@@ -165,10 +151,10 @@
           return copy;
         }
       );
-      internalTableB.loop(yield* stepper([], newInternalTables));
+      internalTableB.loop(yield* newInternalTables.stepper([]));
 
       const tryLogins = (event) =>
-        mapTag(event, internalTableB, ({ username, password }, table) => {
+        event.mapTag(internalTableB, ({ username, password }, table) => {
           const foundUser = table[findUsername(table, username)];
           return (
             foundUser !== undefined &&

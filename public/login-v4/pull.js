@@ -14,7 +14,7 @@ const context = {
 };
 
 const [runPullMonad, monadicMethod] = createGeneratorMonad();
-export const loop = monadicMethod("loop")();
+export const loop = monadicMethod("loop")(); // TODO [assertPullMonad] when you call this
 const getKey = monadicMethod("getKey")();
 
 export function* assertPullMonad() {
