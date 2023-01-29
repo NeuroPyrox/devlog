@@ -74,6 +74,7 @@ import { newEventPair, newBehaviorPair } from "./internals.js";
 //   so why not restrict its interface by treating it as time-dependent?
 // [input]'s time-independence is contractual. I'm trusting the library user to ensure it.
 
+// TODO use classes
 const wrapEvent = (event) =>
   Object.assign(event, {
     map(f) {
@@ -108,7 +109,7 @@ const wrapEvent = (event) =>
       return switchE(this);
     },
     stepper(initialValue) {
-      return stepper(this, initialValue);
+      return stepper(initialValue, this);
     },
     mergeBind(f) {
       return mergeBind(this, f);
@@ -343,3 +344,5 @@ export const inputValues = (domNode) =>
 export function* loopEvent() {
   return wrapEvent(yield loop);
 }
+
+// TODO loopBehavior
