@@ -1,6 +1,6 @@
 import { nothing } from "./util.js";
 import { constConstructor, lazyConstructor } from "./lazyConstructors.js";
-import { assertPullMonad } from "./pull.js";
+import { assertPullMonad, loop } from "./pull.js";
 import * as Push from "./push.js";
 import { pull } from "./pull.js";
 import { newEventPair, newBehaviorPair } from "./internals.js";
@@ -339,3 +339,7 @@ export const inputValues = (domNode) =>
       })
     );
   });
+
+export function* loopEvent() {
+  return wrapEvent(yield loop);
+}
