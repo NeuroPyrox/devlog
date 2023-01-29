@@ -32,6 +32,7 @@
       mergeBind,
       getClicks,
       inputValues,
+      loopEvent
     } from "./chronomancy.js";
     const k = (x) => () => x;
 
@@ -239,12 +240,12 @@
 
       const [insertions, model] = yield* html.pull(function* () {
         return [
-          yield loop,
+          yield* loopEvent(),
           {
-            createdUsers: yield loop,
-            passwordChanges: yield loop,
-            removedUsers: yield loop,
-            clears: yield loop,
+            createdUsers: yield* loopEvent(),
+            passwordChanges: yield* loopEvent(),
+            removedUsers: yield* loopEvent(),
+            clears: yield* loopEvent(),
           },
         ];
       });
@@ -368,7 +369,7 @@
         ({ username, password }) => username !== "" && password !== ""
       );
 
-      const usernamesToRemove = yield loop;
+      const usernamesToRemove = yield* loopEvent();
 
       const { createdUsers, passwordChanges, removedUsers, clears, tryLogins } =
         yield* userDatabase({
@@ -419,7 +420,7 @@
 
     // Pull monad
     function* main() {
-      const signupAttempts = yield loop;
+      const signupAttempts = yield* loopEvent();
 
       //div(yield* userTable(signupAttempts).var("userTable"), slot(loginDiv))
       const { userTableDiv, passwordChanges, removedUsers, clears, tryLogins } =
@@ -578,7 +579,7 @@
       });
       const publishLoginDiv = (_) => publishStartPage(createLoginDiv);
 
-      const authPages = yield loop;
+      const authPages = yield* loopEvent();
       const appPages = observeE(merge(authPages, startPage));
 
       yield* output(appPages, ([appDiv, ,]) => {
