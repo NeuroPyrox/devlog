@@ -342,7 +342,11 @@ export const inputValues = (domNode) =>
   });
 
 export function* loopEvent() {
+  yield* assertPullMonad();
   return wrapEvent(yield loop);
 }
 
-// TODO loopBehavior
+export function* loopBehavior() {
+  yield* assertPullMonad();
+  return wrapBehavior(yield loop);
+}
