@@ -409,7 +409,6 @@
     function* main() {
       const signupAttempts = yield* loopEvent();
 
-      //div(yield* userTable(signupAttempts).var("userTable"), slot(loginDiv))
       const { userTableDiv, passwordChanges, removedUsers, clears, tryLogins } =
         yield* userTable(signupAttempts);
       document.body.appendChild(userTableDiv);
@@ -433,48 +432,39 @@
           button.var("signupButton").textContent("Signup")
         ).build();
 
-        let loginAttempts = mapTag(
-          tag(getClicks(loginButton), inputValues(usernameInput)),
-          inputValues(passwordInput),
-          (username, password) => ({
+        let loginAttempts = getClicks(loginButton)
+          .tag(inputValues(usernameInput))
+          .mapTag(inputValues(passwordInput), (username, password) => ({
             username,
             password,
-          })
-        );
-        yield* output(
-          filter(loginAttempts, ({ username }) => username === ""),
-          () => (statusText.textContent = "Username required!")
-        );
-        yield* output(
-          filter(
-            loginAttempts,
+          }));
+        yield* loginAttempts
+          .filter(({ username }) => username === "")
+          .output(() => (statusText.textContent = "Username required!"));
+        yield* loginAttempts
+          .filter(
             ({ username, password }) => username !== "" && password === ""
-          ),
-          () => (statusText.textContent = "Password required!")
-        );
+          )
+          .output(() => (statusText.textContent = "Password required!"));
         loginAttempts = tryLogins(
-          filter(
-            loginAttempts,
+          loginAttempts.filter(
             ({ username, password }) => username !== "" && password !== ""
           )
         );
-        yield* output(
-          filter(loginAttempts, (success) => !success),
-          () => (statusText.textContent = `Invalid login!`)
-        );
+        yield* loginAttempts
+          .filter((success) => !success)
+          .output(() => (statusText.textContent = `Invalid login!`));
 
         return [
           root,
-          merge(
-            mapE(getClicks(signupButton), k(createSignupDiv)),
-            mapE(
-              tag(
-                filter(loginAttempts, (success) => success),
-                inputValues(usernameInput)
-              ),
-              (username) => () => createLoggedInDiv(username)
-            )
-          ),
+          getClicks(signupButton)
+            .map(k(createSignupDiv))
+            .merge(
+              loginAttempts
+                .filter((success) => success)
+                .tag(inputValues(usernameInput))
+                .map((username) => () => createLoggedInDiv(username))
+            ),
           never,
         ];
       }
@@ -498,41 +488,35 @@
           button.var("loginButton").textContent("Login")
         ).build();
 
-        let signupAttempts = mapTag(
-          tag(getClicks(signupButton), inputValues(usernameInput)),
-          inputValues(passwordInput),
-          (username, password) => ({
+        let signupAttempts = getClicks(signupButton)
+          .tag(inputValues(usernameInput))
+          .mapTag(inputValues(passwordInput), (username, password) => ({
             username,
             password,
-          })
-        );
-        yield* output(
-          filter(signupAttempts, ({ username }) => username === ""),
-          () => (statusText.textContent = "Username required!")
-        );
-        yield* output(
-          filter(
-            signupAttempts,
+          }));
+        yield* signupAttempts
+          .filter(({ username }) => username === "")
+          .output(() => (statusText.textContent = "Username required!"));
+        yield* signupAttempts
+          .filter(
             ({ username, password }) => username !== "" && password === ""
-          ),
-          () => (statusText.textContent = "Password required!")
-        );
-        signupAttempts = filter(
-          signupAttempts,
+          )
+          .output(() => (statusText.textContent = "Password required!"));
+        signupAttempts = signupAttempts.filter(
           ({ username, password }) => username !== "" && password !== ""
         );
 
         return [
           root,
-          merge(
-            mapE(getClicks(loginButton), k(createLoginDiv)),
-            mapE(
-              signupAttempts,
-              ({ username }) =>
-                () =>
-                  createLoggedInDiv(username)
-            )
-          ),
+          getClicks(loginButton)
+            .map(k(createLoginDiv))
+            .merge(
+              signupAttempts.map(
+                ({ username }) =>
+                  () =>
+                    createLoggedInDiv(username)
+              )
+            ),
           signupAttempts,
         ];
       }
@@ -545,16 +529,12 @@
 
         return [
           loggedInDiv,
-          mapE(
-            merge(
-              filter(
-                merge(passwordChanges, removedUsers),
-                (x) => x.username === username
-              ),
-              merge(getClicks(logoutButton), clears)
-            ),
-            k(createLoginDiv)
-          ),
+          passwordChanges
+            .merge(removedUsers)
+            .filter(({ username: u }) => u === username)
+            .merge(getClicks(logoutButton))
+            .merge(clears)
+            .map(k(createLoginDiv)),
           never,
         ];
       }
@@ -567,19 +547,19 @@
       const publishLoginDiv = (_) => publishStartPage(createLoginDiv);
 
       const authPages = yield* loopEvent();
-      const appPages = observeE(merge(authPages, startPage));
+      const appPages = authPages.merge(startPage).observe();
 
-      yield* output(appPages, ([appDiv, ,]) => {
+      yield* appPages.output(([appDiv, ,]) => {
         document.getElementById("appPage")?.remove();
         appDiv.id = "appPage";
         document.body.appendChild(appDiv);
       });
 
       signupAttempts.loop(
-        yield* switchE(mapE(appPages, ([, , signupAttempts]) => signupAttempts))
+        yield* appPages.map(([, , signupAttempts]) => signupAttempts).switch()
       );
       authPages.loop(
-        yield* switchE(mapE(appPages, ([, nextAuthPage]) => nextAuthPage))
+        yield* appPages.map(([, nextAuthPage]) => nextAuthPage).switch()
       );
 
       return publishLoginDiv;
