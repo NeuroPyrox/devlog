@@ -19,16 +19,6 @@
       start,
       never,
       input,
-      mapE,
-      filter,
-      merge,
-      mapTag,
-      tag,
-      observeE,
-      output,
-      switchE,
-      stepper,
-      mergeBind,
       getClicks,
       inputValues,
       loopEvent,
@@ -260,12 +250,12 @@
           yield* html.tr(function* () {
             yield* html.td(function* () {
               usernameInsertInput = yield* html.textInput({
-                setValue: map(insertions, () => ""),
+                setValue: insertions.map(() => ""),
               });
             });
             yield* html.td(function* () {
               passwordInsertInput = yield* html.textInput({
-                setValue: map(insertions, () => ""),
+                setValue: insertions.map(() => ""),
               });
             });
             yield* html.td(function* () {
@@ -274,44 +264,45 @@
           });
         });
         const tbody = yield* html.tbody({
-          insertChild: map(
-            model.createdUsers,
+          insertChild: model.createdUsers.map(
             ({ index, username, password }) => [
               index,
               function* () {
                 let xButton;
                 yield* html.td(username);
                 yield* html.td(
-                  { setTextContent: model.passwordChanges(username) },
+                  {
+                    setTextContent: model.passwordChanges
+                      .filter(({ username: u }) => u === username)
+                      .map(({ password }) => password),
+                  },
                   password
                 );
                 yield* html.td(function* () {
                   xButton = yield* html.button("X");
                 });
-                return mapE(getClicks(xButton), () => username);
+                return getClicks(xButton).map(() => username);
               },
             ]
           ),
-          removeChild: map(model.removedUsers, ({ index }) => index),
-          setInnerHtml: map(model.clears, () => function* () {}),
+          removeChild: model.removedUsers.map(({ index }) => index),
+          setInnerHtml: model.clears.map(() => function* () {}),
         });
         usernamesToRemove = yield* html.pull(() =>
-          mergeBind(tbody.afterInsertChild(), (usernameUponX) => usernameUponX)
+          tbody.afterInsertChild().mergeBind((usernameUponX) => usernameUponX)
         );
       });
 
       insertions.loop(
-        filter(
-          mapTag(
-            tag(getClicks(insertButton), inputValues(usernameInsertInput)),
-            inputValues(passwordInsertInput),
-            (username, password) => ({
-              username,
-              password,
-            })
-          ),
-          ({ username, password }) => username !== "" && password !== ""
-        )
+        getClicks(insertButton)
+          .tag(inputValues(usernameInsertInput))
+          .mapTag(inputValues(passwordInsertInput), (username, password) => ({
+            username,
+            password,
+          }))
+          .filter(
+            ({ username, password }) => username !== "" && password !== ""
+          )
       );
 
       html.pull(function* () {

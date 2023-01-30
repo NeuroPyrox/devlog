@@ -341,6 +341,7 @@ export const inputValues = (domNode) =>
     );
   });
 
+// TODO rename
 export function* loopEvent() {
   yield* assertPullMonad();
   return wrapEvent(yield loop);
