@@ -348,17 +348,13 @@
         )
       ).build();
 
-      const insertions = filter(
-        mapTag(
-          tag(getClicks(insertButton), inputValues(usernameInsertInput)),
-          inputValues(passwordInsertInput),
-          (username, password) => ({
-            username,
-            password,
-          })
-        ),
-        ({ username, password }) => username !== "" && password !== ""
-      );
+      const insertions = getClicks(insertButton)
+        .tag(inputValues(usernameInsertInput))
+        .mapTag(inputValues(passwordInsertInput), (username, password) => ({
+          username,
+          password,
+        }))
+        .filter(({ username, password }) => username !== "" && password !== "");
 
       const usernamesToRemove = yield* loopEvent();
 
@@ -370,14 +366,14 @@
           signupAttempts,
         });
 
-      yield* output(insertions, () => {
+      yield* insertions.output(() => {
         usernameInsertInput.value = "";
         passwordInsertInput.value = "";
       });
 
       // TODO make pure
       usernamesToRemove.loop(
-        yield* mergeBind(createdUsers, ([index, user]) => {
+        yield* createdUsers.mergeBind(([index, user]) => {
           const { root: rowElement, xButton } = tr(
             td.textContent(user.username),
             td.textContent(user.password),
@@ -391,20 +387,20 @@
               userTableBody.children[index]
             );
           }
-          return mapE(getClicks(xButton), (_) => user.username);
+          return getClicks(xButton).map(() => user.username);
         })
       );
 
-      yield* output(passwordChanges, ({ index, password }) => {
+      yield* passwordChanges.output(({ index, password }) => {
         const rowElement = userTableBody.children[index];
         rowElement.children[1].textContent = password;
       });
 
-      yield* output(removedUsers, ({ index }) =>
+      yield* removedUsers.output(({ index }) =>
         userTableBody.children[index].remove()
       );
 
-      yield* output(clears, (_) => (userTableBody.innerHTML = ""));
+      yield* clears.output(() => (userTableBody.innerHTML = ""));
 
       return { userTableDiv, passwordChanges, removedUsers, clears, tryLogins };
     }
