@@ -281,7 +281,7 @@
                 yield* html.td(function* () {
                   xButton = yield* html.button("X");
                 });
-                return getClicks(xButton).map(() => username);
+                return xButton.onClick().map(() => username);
               },
             ]
           ),
@@ -294,9 +294,9 @@
       });
 
       insertions.loop(
-        getClicks(insertButton)
-          .tag(inputValues(usernameInsertInput))
-          .mapTag(inputValues(passwordInsertInput), (username, password) => ({
+        insertButton.onClick()
+          .tag(usernameInsertInput.inputValues())
+          .mapTag(passwordInsertInput.inputValues(), (username, password) => ({
             username,
             password,
           }))
@@ -315,7 +315,7 @@
         } = yield* userDatabase({
           insertions,
           usernamesToRemove,
-          clears: getClicks(clearButton),
+          clears: clearButton.onClick(),
           signupAttempts,
         });
         model.createdUsers.loop(createdUsers);
