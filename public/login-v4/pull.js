@@ -9,7 +9,7 @@ import {
 const key = Symbol();
 
 const context = {
-  loop: lazyLoop,
+  loop: lazyLoop, // TODO remove
   getKey: () => key,
 };
 
@@ -21,6 +21,7 @@ export function* assertPullMonad() {
   assert((yield getKey) === key);
 }
 
+// TODO rename [monadicValue]
 export const pull = (monadicValue) => runPullMonad(context, monadicValue());
 export const start = once((monadicValue) =>
   delayConstructionDuring(() => pull(monadicValue))
