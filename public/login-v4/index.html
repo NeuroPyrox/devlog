@@ -264,23 +264,25 @@
           });
         });
         const tbody = yield* html.tbody({
-          insertChild: model.createdUsers.map(
+          insertChildren: model.createdUsers.map(
             ({ index, username, password }) => [
               index,
               function* () {
                 let xButton;
-                yield* html.td(username);
-                yield* html.td(
-                  {
-                    setTextContent: model.passwordChanges
-                      .filter(({ username: u }) => u === username)
-                      .map(({ password }) => password),
-                  },
-                  password
-                );
-                yield* html.td(function* () {
-                  xButton = yield* html.button("X");
-                });
+                yield* html.tr(function*() {
+                  yield* html.td(username);
+                  yield* html.td(
+                    {
+                      setTextContent: model.passwordChanges
+                        .filter(({ username: u }) => u === username)
+                        .map(({ password }) => password),
+                    },
+                    password
+                  );
+                  yield* html.td(function* () {
+                    xButton = yield* html.button("X");
+                  });
+                })
                 return xButton.onClick().map(() => username);
               },
             ]
@@ -289,7 +291,7 @@
           setInnerHtml: model.clears.map(() => function* () {}),
         });
         usernamesToRemove = yield* html.pull(() =>
-          tbody.afterInsertChild().mergeBind((usernameUponX) => usernameUponX)
+          tbody.afterInsertChildren().mergeBind((usernameUponX) => usernameUponX)
         );
       });
 
