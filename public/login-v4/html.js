@@ -1,7 +1,9 @@
 import { createGeneratorMonad } from "./util.js";
 import * as Pull from "./pull.js";
+import { inputValues } from "./reactives.js";
 
 // TODO GC outputs.
+// TODO exports.
 
 class Context {
   constructor() {
@@ -17,8 +19,12 @@ class Context {
     node.type = "text";
     Pull.pull(() => setValue.output((value) => (node.value = value)));
     this.nodes.push(node);
+    return {
+      inputValues: () => inputValues(node),
+    };
   }
 
+  // TODO use splice.
   // TODO use objects instead of arrays to pass arguments.
   // TODO synchronize outputs.
   tbody({ insertChildren, removeChild, setInnerHtml }) {
