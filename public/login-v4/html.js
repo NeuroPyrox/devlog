@@ -1,6 +1,6 @@
 import { createGeneratorMonad } from "./util.js";
 import * as Pull from "./pull.js";
-import { inputValues } from "./reactives.js";
+import { inputValues, getClicks } from "./reactives.js";
 
 // TODO GC outputs.
 // TODO exports.
@@ -19,9 +19,19 @@ class Context {
     node.type = "text";
     Pull.pull(() => setValue.output((value) => (node.value = value)));
     this.nodes.push(node);
+    // TODO construct the [stepper] manually.
     return {
       inputValues: () => inputValues(node),
     };
+  }
+  
+  button(textContent) {
+    const node = document.createElement("button");
+    node.textContent = textContent;
+    // TODO inline [getClicks].
+    return {
+      onClick: () => getClicks(node)
+    }
   }
 
   // TODO use splice.
