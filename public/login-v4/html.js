@@ -16,22 +16,23 @@ class Context {
 
   textInput({ setValue }) {
     const node = document.createElement("input");
+    this.nodes.push(node);
     node.type = "text";
     Pull.pull(() => setValue.output((value) => (node.value = value)));
-    this.nodes.push(node);
     // TODO construct the [stepper] manually.
     return {
       inputValues: () => inputValues(node),
     };
   }
-  
+
   button(textContent) {
     const node = document.createElement("button");
+    this.nodes.push(node);
     node.textContent = textContent;
     // TODO inline [getClicks].
     return {
-      onClick: () => getClicks(node)
-    }
+      onClick: () => getClicks(node),
+    };
   }
 
   // TODO use splice.
@@ -39,6 +40,7 @@ class Context {
   // TODO synchronize outputs.
   tbody({ insertChildren, removeChild, setInnerHtml }) {
     const node = document.createElement("tbody");
+    this.nodes.push(node);
     let afterInsertChildren;
     Pull.pull(function* () {
       const observedInsertedChildren = yield* observeHtml(
@@ -74,6 +76,25 @@ class Context {
     return {
       afterInsertChildren: () => afterInsertChildren,
     };
+  }
+
+  td(a, b) {
+    const [properties, monadicChildren] =
+      b === undefined ? [{}, a ?? function* () {}] : [a, b];
+    const childContext = new Context();
+    runHtmlMonad(childContext, monadicChildren());
+    const node = document.createElement("td");
+    this.nodes.push(node);
+    for (const child of childContext.nodes) {
+      node.appendChild(child);
+    }
+    if (properties.setTextContent) {
+      Pull.pull(() =>
+        properties.setTextContent.output(
+          (textContent) => (node.textContent = textContent)
+        )
+      );
+    }
   }
 }
 
