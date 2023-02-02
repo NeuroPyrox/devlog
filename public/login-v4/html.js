@@ -19,17 +19,20 @@ class Context {
     this.nodes.push(node);
   }
 
+  // TODO use objects instead of arrays to pass arguments.
   // TODO synchronize outputs.
   tbody({ insertChildren, removeChild, setInnerHtml }) {
     const node = document.createElement("tbody");
     let afterInsertChildren;
     Pull.pull(function* () {
-      insertChildren = insertChildren.map(([index, monadicHtmlValue]) => {
-        const nestedContext = new Context();
-        const result = runHtmlMonad(nestedContext, monadicHtmlValue());
-        return [result, index, nestedContext.nodes];
-      });
-      insertChildren.output(([, index, children]) => {
+      const observedInsertedChildren = yield* observeHtml(
+        insertChildren.map(([, monadicHtmlValue]) => monadicHtmlValue)
+      );
+      insertChildren = insertChildren.merge(
+        observedInsertedChildren,
+        ([index], [result, children]) => [result, index, children]
+      );
+      yield* insertChildren.output(([, index, children]) => {
         if (index === node.children.length) {
           for (const child of children) {
             node.appendChild(child);
@@ -42,9 +45,24 @@ class Context {
         }
       });
       afterInsertChildren = insertChildren.map(([result]) => result);
+
+      yield* removeChild.output((index) => node.children[index].remove());
+
+      yield* (yield* observeHtml(setInnerHtml)).output(([, children]) => {
+        node.innerHTML = "";
+        for (const child of children) {
+          node.appendChild(child);
+        }
+      });
     });
+    return {
+      afterInsertChildren: () => afterInsertChildren,
+    };
   }
 }
+
 const [runHtmlMonad, monadicMethod] = createGeneratorMonad();
 export const pull = monadicMethod("pull");
 export const textInput = monadicMethod("textInput");
+
+const observeHtml = undefined;
