@@ -7,16 +7,21 @@ import { inputValues, getClicks } from "./reactives.js";
 
 class Context {
   constructor() {
-    this.nodes = [];
+    this.elements = [];
   }
 
   pull(monadicPullValue) {
     Pull.pull(monadicPullValue);
   }
+  
+  createElement(type) {
+    const element = document.createElement(type);
+    this.push(element);
+    return element;
+  }
 
   textInput({ setValue }) {
-    const node = document.createElement("input");
-    this.nodes.push(node);
+    const node = this.createElement("input");
     node.type = "text";
     Pull.pull(() => setValue.output((value) => (node.value = value)));
     // TODO construct the [stepper] manually.
@@ -26,8 +31,7 @@ class Context {
   }
 
   button(textContent) {
-    const node = document.createElement("button");
-    this.nodes.push(node);
+    const node = this.createElement("button");
     node.textContent = textContent;
     // TODO inline [getClicks].
     return {
@@ -39,8 +43,7 @@ class Context {
   // TODO use objects instead of arrays to pass arguments.
   // TODO synchronize outputs.
   tbody({ insertChildren, removeChild, setInnerHtml }) {
-    const node = document.createElement("tbody");
-    this.nodes.push(node);
+    const node = this.createElement("tbody");
     let afterInsertChildren;
     Pull.pull(function* () {
       const observedInsertedChildren = yield* observeHtml(
@@ -79,12 +82,11 @@ class Context {
   }
 
   td(a, b) {
+    const node = this.createElement("td");
     const [properties, monadicChildren] =
       b === undefined ? [{}, a ?? function* () {}] : [a, b];
     const childContext = new Context();
     runHtmlMonad(childContext, monadicChildren());
-    const node = document.createElement("td");
-    this.nodes.push(node);
     for (const child of childContext.nodes) {
       node.appendChild(child);
     }
