@@ -111,4 +111,15 @@ export function* td(a, b) {
   }
 }
 
-const observeHtml = undefined;
+// TODO th
+ 
+const container = type => function*(childHtmlGenerator) {
+  const node = yield createElement(type);
+  for (const child of runHtmlMonad(childHtmlGenerator)[1]) {
+    node.appendChild(child);
+  }
+}
+
+export const table = container("table");
+export const thead = container("thead");
+export const tr = container("tr");
