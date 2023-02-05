@@ -83,12 +83,16 @@ class Context {
 
   td(a, b) {
     const node = this.createElement("td");
-    const [properties, monadicChildren] =
+    const [properties, children] =
       b === undefined ? [{}, a ?? function* () {}] : [a, b];
-    const childContext = new Context();
-    runHtmlMonad(childContext, monadicChildren());
-    for (const child of childContext.nodes) {
-      node.appendChild(child);
+    if (typeof children === "string") {
+      node.textContent = children;
+    } else {
+      const childContext = new Context();
+      runHtmlMonad(childContext, children());
+      for (const child of childContext.nodes) {
+        node.appendChild(child);
+      }
     }
     if (properties.setTextContent) {
       Pull.pull(() =>
