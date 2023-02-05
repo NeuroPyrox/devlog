@@ -21,9 +21,16 @@ class Context {
   }
 }
 
-const [runHtmlMonad, monadicMethod] = createGeneratorMonad();
+const [runHtmlMonadWithContext, monadicMethod] = createGeneratorMonad();
 export const pull = monadicMethod("pull");
 const createElement = monadicMethod("createElement");
+
+// TODO restrict callsites with an assertion
+const runHtmlMonad = (htmlGenerator) => {
+  const context = new Context();
+  const result = runHtmlMonadWithContext(context, htmlGenerator());
+  return [result, context.elements];
+};
 
 export function* textInput({ setValue }) {
   const node = yield createElement("input");
@@ -48,17 +55,15 @@ export function* button(textContent) {
 // TODO use objects instead of arrays to pass arguments.
 // TODO synchronize outputs.
 export function* tbody({ insertChildren, removeChild, setInnerHtml }) {
-  const node = this.createElement("tbody");
+  const node = yield createElement("tbody");
   let afterInsertChildren;
   Pull.pull(function* () {
-    const observedInsertedChildren = yield* observeHtml(
-      insertChildren.map(([, monadicHtmlValue]) => monadicHtmlValue)
-    );
-    insertChildren = insertChildren.merge(
-      observedInsertedChildren,
-      ([index], [result, children]) => [result, index, children]
-    );
-    yield* insertChildren.output(([, index, children]) => {
+    // It's important to call [runHtmlMonad] within a [map] instead of an [output]. TODO why?
+    insertChildren = insertChildren.map(([index, htmlGenerator]) => [
+      ...runHtmlMonad(htmlGenerator),
+      index,
+    ]);
+    yield* insertChildren.output(([, children, index]) => {
       if (index === node.children.length) {
         for (const child of children) {
           node.appendChild(child);
@@ -87,15 +92,13 @@ export function* tbody({ insertChildren, removeChild, setInnerHtml }) {
 }
 
 export function* td(a, b) {
-  const node = this.createElement("td");
+  const node = yield createElement("td");
   const [properties, children] =
     b === undefined ? [{}, a ?? function* () {}] : [a, b];
   if (typeof children === "string") {
     node.textContent = children;
   } else {
-    const childContext = new Context();
-    runHtmlMonad(childContext, children());
-    for (const child of childContext.nodes) {
+    for (const child of runHtmlMonad(children)[1]) {
       node.appendChild(child);
     }
   }
