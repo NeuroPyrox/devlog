@@ -163,66 +163,7 @@
       };
     }
 
-    const nodeBuilder = (constructor, modifiers) => {
-      const fromImpureBuilder = (impureBuild) => {
-        const builder = (...children) =>
-          fromImpureBuilder((varsOut) => {
-            const node = impureBuild(varsOut);
-            // Use append instead of appendChild because we need to handle text nodes
-            node.append(
-              ...children.map((child) => child._impureBuild(varsOut))
-            );
-            return node;
-          });
-        for (const [key, modifier] of Object.entries(modifiers)) {
-          builder[key] = (...args) =>
-            fromImpureBuilder((varsOut) => {
-              const node = impureBuild(varsOut);
-              modifier(...args)(node);
-              return node;
-            });
-        }
-        builder._impureBuild = impureBuild;
-        builder.build = (_) => {
-          const varsOut = {};
-          varsOut.root = impureBuild(varsOut);
-          return varsOut;
-        };
-        builder.var = (name) =>
-          fromImpureBuilder((varsOut) => {
-            const node = impureBuild(varsOut);
-            varsOut[name] = node;
-            return node;
-          });
-        return builder;
-      };
-      return fromImpureBuilder(constructor);
-    };
-    const div = nodeBuilder((_) => document.createElement("div"), {});
-    const button = nodeBuilder((_) => document.createElement("button"), {
-      textContent: (textContent) => (node) => (node.textContent = textContent),
-    });
-    const textInput = nodeBuilder((_) => {
-      const node = document.createElement("input");
-      node.type = "text";
-      return node;
-    }, {});
-    const p = nodeBuilder((_) => document.createElement("p"), {});
-    const table = nodeBuilder((_) => document.createElement("table"), {});
-    const thead = nodeBuilder((_) => document.createElement("thead"), {});
-    const tbody = nodeBuilder((_) => document.createElement("tbody"), {});
-    const tr = nodeBuilder((_) => document.createElement("tr"), {});
-    const th = nodeBuilder((_) => document.createElement("th"), {
-      textContent: (textContent) => (node) => (node.textContent = textContent),
-    });
-    const td = nodeBuilder((_) => document.createElement("td"), {
-      textContent: (textContent) => (node) => (node.textContent = textContent),
-    });
-    const text = (string) => ({
-      _impureBuild: (_) => string,
-    });
-
-    function* userTable2(signupAttempts) {
+    function* userTable(signupAttempts) {
       let usernameInsertInput,
         passwordInsertInput,
         insertButton,
@@ -327,86 +268,7 @@
       });
     }
 
-    function* userTable(signupAttempts) {
-      const {
-        root: userTableDiv,
-        clearButton,
-        usernameInsertInput,
-        passwordInsertInput,
-        insertButton,
-        userTableBody,
-      } = div(
-        button.var("clearButton").textContent("Clear"),
-        table(
-          thead(
-            tr(th.textContent("Username"), th.textContent("Password")),
-            tr(
-              td(textInput.var("usernameInsertInput")),
-              td(textInput.var("passwordInsertInput")),
-              td(button.var("insertButton").textContent("Insert"))
-            )
-          ),
-          tbody.var("userTableBody")
-        )
-      ).build();
-
-      const insertions = getClicks(insertButton)
-        .tag(inputValues(usernameInsertInput))
-        .mapTag(inputValues(passwordInsertInput), (username, password) => ({
-          username,
-          password,
-        }))
-        .filter(({ username, password }) => username !== "" && password !== "");
-
-      const usernamesToRemove = yield* loopEvent();
-
-      const { createdUsers, passwordChanges, removedUsers, clears, tryLogins } =
-        yield* userDatabase({
-          insertions,
-          usernamesToRemove,
-          clears: getClicks(clearButton),
-          signupAttempts,
-        });
-
-      yield* insertions.output(() => {
-        usernameInsertInput.value = "";
-        passwordInsertInput.value = "";
-      });
-
-      // TODO make pure
-      usernamesToRemove.loop(
-        yield* createdUsers.mergeBind(([index, user]) => {
-          const { root: rowElement, xButton } = tr(
-            td.textContent(user.username),
-            td.textContent(user.password),
-            td(button.var("xButton").textContent("X"))
-          ).build();
-          if (index === userTableBody.children.length) {
-            userTableBody.appendChild(rowElement);
-          } else {
-            userTableBody.insertBefore(
-              rowElement,
-              userTableBody.children[index]
-            );
-          }
-          return getClicks(xButton).map(() => user.username);
-        })
-      );
-
-      yield* passwordChanges.output(({ index, password }) => {
-        const rowElement = userTableBody.children[index];
-        rowElement.children[1].textContent = password;
-      });
-
-      yield* removedUsers.output(({ index }) =>
-        userTableBody.children[index].remove()
-      );
-
-      yield* clears.output(() => (userTableBody.innerHTML = ""));
-
-      return { userTableDiv, passwordChanges, removedUsers, clears, tryLogins };
-    }
-
+    // TODO translate to Html monad.
     // Pull monad
     function* main() {
       const signupAttempts = yield* loopEvent();
