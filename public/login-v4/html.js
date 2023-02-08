@@ -3,7 +3,7 @@ import * as Pull from "./pull.js";
 import { inputValues, getClicks } from "./reactives.js";
 
 // TODO GC outputs.
-// TODO exports.
+// TODO encapsulation by turning [yield*] into [yield].
 
 class Context {
   constructor() {
@@ -25,12 +25,19 @@ const [runHtmlMonadWithContext, monadicMethod] = createGeneratorMonad();
 export const pull = monadicMethod("pull");
 const createElement = monadicMethod("createElement");
 
-// TODO restrict callsites with an assertion
+// TODO restrict callsites with an assertion.
 const runHtmlMonad = (htmlGenerator) => {
   const context = new Context();
   const result = runHtmlMonadWithContext(context, htmlGenerator());
   return [result, context.elements];
 };
+
+export const startHtml = (root, childHtmlGenerator) =>
+  Pull.start(function* () {
+    for (const child of runHtmlMonad(childHtmlGenerator)[1]) {
+      root.appendChild(child);
+    }
+  });
 
 export function* textInput({ setValue }) {
   const node = yield createElement("input");
@@ -79,7 +86,7 @@ export function* tbody({ insertChildren, removeChild, setInnerHtml }) {
 
     yield* removeChild.output((index) => node.children[index].remove());
 
-    yield* (yield* observeHtml(setInnerHtml)).output(([, children]) => {
+    yield* setInnerHtml.map(runHtmlMonad).output(([, children]) => {
       node.innerHTML = "";
       for (const child of children) {
         node.appendChild(child);
@@ -103,6 +110,7 @@ export function* td(a, b) {
     }
   }
   if (properties.setTextContent) {
+    // TODO assert monadic context.
     Pull.pull(() =>
       properties.setTextContent.output(
         (textContent) => (node.textContent = textContent)
@@ -115,13 +123,14 @@ export function* th(textContent) {
   const node = yield createElement("th");
   node.textContent = textContent;
 }
- 
-const container = type => function*(childHtmlGenerator) {
-  const node = yield createElement(type);
-  for (const child of runHtmlMonad(childHtmlGenerator)[1]) {
-    node.appendChild(child);
-  }
-}
+
+const container = (type) =>
+  function* (childHtmlGenerator) {
+    const node = yield createElement(type);
+    for (const child of runHtmlMonad(childHtmlGenerator)[1]) {
+      node.appendChild(child);
+    }
+  };
 
 export const table = container("table");
 export const thead = container("thead");

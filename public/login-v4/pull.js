@@ -21,7 +21,8 @@ export function* assertPullMonad() {
   assert((yield getKey) === key);
 }
 
-// TODO rename [monadicValue]
+// TODO assert lazy.
+// TODO rename [monadicValue].
 export const pull = (monadicValue) => runPullMonad(context, monadicValue());
 export const start = once((monadicValue) =>
   delayConstructionDuring(() => pull(monadicValue))
