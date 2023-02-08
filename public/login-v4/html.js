@@ -111,7 +111,10 @@ export function* td(a, b) {
   }
 }
 
-// TODO th
+export function* th(textContent) {
+  const node = yield createElement("th");
+  node.textContent = textContent;
+}
  
 const container = type => function*(childHtmlGenerator) {
   const node = yield createElement(type);
