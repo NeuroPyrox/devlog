@@ -334,7 +334,7 @@
             .merge(
               loginSuccesses
                 .filter((success) => success)
-                .tag(inputValues(usernameInput))
+                .tag(usernameInput.inputValues())
                 .map((username) => () => createLoggedInDiv(username))
             ),
           never,
@@ -399,16 +399,13 @@
       }
 
       function* createLoggedInDiv(username) {
-        const { root: loggedInDiv, logoutButton } = div(
-          text(`Hello ${username}`),
-          button.var("logoutButton").textContent("Logout")
-        ).build();
+        yield html.text(`Hello ${username}`);
+        const logoutButton = yield* html.button("Logout");
 
         return [
-          loggedInDiv,
           usernamesToLogout
             .filter((u) => u === username)
-            .merge(getClicks(logoutButton))
+            .merge(logoutButton.onClick())
             .merge(clears)
             .map(k(createLoginDiv)),
           never,
