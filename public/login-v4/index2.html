@@ -286,7 +286,6 @@
       );
 
       function* createLoginDiv() {
-        // TODO update html.js accordingly.
         const loginAttempts = yield html.pull(loopEvent);
         const loginSuccesses = tryLogins(
           loginAttempts.filter(
@@ -294,9 +293,9 @@
           )
         );
 
-        yield* html.text("Username:");
+        yield html.text("Username:");
         const usernameInput = yield* html.textInput();
-        yield* html.text("Password:");
+        yield html.text("Password:");
         const passwordInput = yield* html.textInput();
         const loginButton = yield* html.button("Login");
         const statusText = yield* html.p({
@@ -316,7 +315,7 @@
                 .map(() => "Password required!")
             ),
         });
-        yield* html.text("Don't have an account yet?");
+        yield html.text("Don't have an account yet?");
         const signupButton = yield* html.button("Signup");
 
         loginAttempts.loop(
