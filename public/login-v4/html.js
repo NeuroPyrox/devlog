@@ -19,6 +19,8 @@ class Context {
     this.push(element);
     return element;
   }
+  
+  
 }
 
 const [runHtmlMonadWithContext, monadicMethod] = createGeneratorMonad();
@@ -35,6 +37,7 @@ const runHtmlMonad = (htmlGenerator) => {
 export const startHtml = (root, childHtmlGenerator) =>
   Pull.start(function* () {
     for (const child of runHtmlMonad(childHtmlGenerator)[1]) {
+      // TODO refactor
       root.appendChild(child);
     }
   });
