@@ -278,59 +278,62 @@
     // TODO translate to Html monad.
     // Pull monad
     function* main() {
-      const signupAttempts = yield* loopEvent();
+      const signupAttempts = yield html.pull(loopEvent);
 
-      const { usernamesToLogout, clears, tryLogins } =
-        yield* userTable(signupAttempts);
+      // TODO should we wrap this in a div?
+      const { usernamesToLogout, clears, tryLogins } = yield* userTable(
+        signupAttempts
+      );
 
       function* createLoginDiv() {
-        const {
-          root,
-          usernameInput,
-          passwordInput,
-          loginButton,
-          statusText,
-          signupButton,
-        } = div(
-          text("Username:"),
-          textInput.var("usernameInput"),
-          text("Password:"),
-          textInput.var("passwordInput"),
-          button.var("loginButton").textContent("Login"),
-          p.var("statusText"),
-          text("Don't have an account yet?"),
-          button.var("signupButton").textContent("Signup")
-        ).build();
-
-        let loginAttempts = getClicks(loginButton)
-          .tag(inputValues(usernameInput))
-          .mapTag(inputValues(passwordInput), (username, password) => ({
-            username,
-            password,
-          }));
-        yield* loginAttempts
-          .filter(({ username }) => username === "")
-          .output(() => (statusText.textContent = "Username required!"));
-        yield* loginAttempts
-          .filter(
-            ({ username, password }) => username !== "" && password === ""
-          )
-          .output(() => (statusText.textContent = "Password required!"));
-        loginAttempts = tryLogins(
+        // TODO update html.js accordingly.
+        const loginAttempts = yield html.pull(loopEvent);
+        const loginSuccesses = tryLogins(
           loginAttempts.filter(
             ({ username, password }) => username !== "" && password !== ""
           )
         );
-        yield* loginAttempts
-          .filter((success) => !success)
-          .output(() => (statusText.textContent = `Invalid login!`));
+
+        yield* html.text("Username:");
+        const usernameInput = yield* html.textInput();
+        yield* html.text("Password:");
+        const passwordInput = yield* html.textInput();
+        const loginButton = yield* html.button("Login");
+        const statusText = yield* html.p({
+          setTextContent: loginAttempts
+            .filter((success) => !success)
+            .map(() => "Invalid login!")
+            .merge(
+              loginAttempts
+                .filter(({ username }) => username === "")
+                .map(() => "Username required!")
+            )
+            .merge(
+              loginAttempts
+                .filter(
+                  ({ username, password }) => username !== "" && password === ""
+                )
+                .map(() => "Password required!")
+            ),
+        });
+        yield* html.text("Don't have an account yet?");
+        const signupButton = yield* html.button("Signup");
+
+        loginAttempts.loop(
+          loginButton
+            .onClick()
+            .tag(usernameInput.inputValues())
+            .mapTag(passwordInput.inputValues(), (username, password) => ({
+              username,
+              password,
+            }))
+        );
 
         return [
-          root,
           getClicks(signupButton)
             .map(k(createSignupDiv))
             .merge(
-              loginAttempts
+              loginSuccesses
                 .filter((success) => success)
                 .tag(inputValues(usernameInput))
                 .map((username) => () => createLoggedInDiv(username))
