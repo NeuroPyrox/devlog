@@ -299,7 +299,7 @@
         const passwordInput = yield* html.textInput();
         const loginButton = yield* html.button("Login");
         const statusText = yield* html.p({
-          setTextContent: loginAttempts
+          setTextContent: loginSuccesses
             .filter((success) => !success)
             .map(() => "Invalid login!")
             .merge(
@@ -342,45 +342,49 @@
       }
 
       function* createSignupDiv() {
-        const {
-          root,
-          usernameInput,
-          passwordInput,
-          signupButton,
-          statusText,
-          loginButton,
-        } = div(
-          text("Username:"),
-          textInput.var("usernameInput"),
-          text("Password:"),
-          textInput.var("passwordInput"),
-          button.var("signupButton").textContent("Signup"),
-          p.var("statusText"),
-          text("Already have an account?"),
-          button.var("loginButton").textContent("Login")
-        ).build();
+        const signupAttempts = yield html.pull(loopEvent);
+        // TODO
+        const signupSuccesses = never;
 
-        let signupAttempts = getClicks(signupButton)
-          .tag(inputValues(usernameInput))
-          .mapTag(inputValues(passwordInput), (username, password) => ({
-            username,
-            password,
-          }));
-        yield* signupAttempts
-          .filter(({ username }) => username === "")
-          .output(() => (statusText.textContent = "Username required!"));
-        yield* signupAttempts
-          .filter(
-            ({ username, password }) => username !== "" && password === ""
-          )
-          .output(() => (statusText.textContent = "Password required!"));
+        yield html.text("Username:");
+        const usernameInput = yield* html.textInput();
+        yield html.text("Password:");
+        const passwordInput = yield* html.textInput();
+        const signupButton = yield* html.button("Signup");
+        const statusText = yield* html.p({
+          setTextContent: signupSuccesses
+            .filter((success) => !success)
+            .map(() => "Username already exists!")
+            .merge(
+              signupAttempts
+                .filter(({ username }) => username === "")
+                .map(() => "Username required!")
+            )
+            .merge(
+              signupAttempts
+                .filter(
+                  ({ username, password }) => username !== "" && password === ""
+                )
+                .map(() => "Password required!")
+            ),
+        });
+        yield html.text("Already have an account?");
+        const loginButton = yield* html.button("Login");
+
+        signupAttempts.loop(
+          getClicks(signupButton)
+            .tag(inputValues(usernameInput))
+            .mapTag(inputValues(passwordInput), (username, password) => ({
+              username,
+              password,
+            }))
+        );
         signupAttempts = signupAttempts.filter(
           ({ username, password }) => username !== "" && password !== ""
         );
 
         // TODO check if signup was successful.
         return [
-          root,
           getClicks(loginButton)
             .map(k(createLoginDiv))
             .merge(
