@@ -10,20 +10,25 @@ class Context {
     this.elements = [];
   }
 
-  pull(monadicPullValue) {
-    return Pull.pull(monadicPullValue);
-  }
-
   createElement(type) {
     const element = document.createElement(type);
     this.push(element);
     return element;
   }
+
+  pull(monadicPullValue) {
+    return Pull.pull(monadicPullValue);
+  }
+
+  text(string) {
+    this.elements.push(string);
+  }
 }
 
 const [runHtmlMonadWithContext, monadicMethod] = createGeneratorMonad();
-export const pull = monadicMethod("pull");
 const createElement = monadicMethod("createElement");
+export const pull = monadicMethod("pull");
+export const text = monadicMethod("text");
 
 // TODO restrict callsites more directly with an assertion.
 // lazyConstructors.js will throw an error if we call this function within an [output] because
@@ -43,10 +48,20 @@ export const startHtml = (root, htmlGenerator) =>
     appendHtml(root, htmlGenerator);
   });
 
-export function* textInput({ setValue }) {
+export function* p({ setTextContent }) {
+  const node = yield createElement("p");
+  // TODO assert monadic context.
+  Pull.pull(() =>
+    setTextContent.output((textContent) => (node.textContent = textContent))
+  );
+}
+
+export function* textInput(params) {
   const node = yield createElement("input");
   node.type = "text";
-  Pull.pull(() => setValue.output((value) => (node.value = value)));
+  if (params) {
+    Pull.pull(() => params.setValue.output((value) => (node.value = value)));
+  }
   // TODO construct the [stepper] manually.
   return {
     inputValues: () => inputValues(node),
