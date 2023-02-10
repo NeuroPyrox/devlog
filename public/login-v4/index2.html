@@ -265,6 +265,14 @@
         model.clears.loop(clears);
         return tryLogins;
       });
+
+      return {
+        usernamesToLogout: model.passwordChanges
+          .merge(model.removedUsers)
+          .map(({ username }) => username),
+        clears: model.clears,
+        tryLogins,
+      };
     }
 
     // TODO translate to Html monad.
@@ -272,9 +280,8 @@
     function* main() {
       const signupAttempts = yield* loopEvent();
 
-      const { userTableDiv, passwordChanges, removedUsers, clears, tryLogins } =
+      const { usernamesToLogout, clears, tryLogins } =
         yield* userTable(signupAttempts);
-      document.body.appendChild(userTableDiv);
 
       function* createLoginDiv() {
         const {
@@ -393,9 +400,8 @@
 
         return [
           loggedInDiv,
-          passwordChanges
-            .merge(removedUsers)
-            .filter(({ username: u }) => u === username)
+          usernamesToLogout
+            .filter((u) => u === username)
             .merge(getClicks(logoutButton))
             .merge(clears)
             .map(k(createLoginDiv)),

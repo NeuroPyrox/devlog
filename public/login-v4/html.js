@@ -11,7 +11,7 @@ class Context {
   }
 
   pull(monadicPullValue) {
-    Pull.pull(monadicPullValue);
+    return Pull.pull(monadicPullValue);
   }
 
   createElement(type) {
