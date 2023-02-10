@@ -1,4 +1,4 @@
-import { createGeneratorMonad } from "./util.js";
+import { assert, createGeneratorMonad } from "./util.js";
 import * as Pull from "./pull.js";
 import { inputValues, getClicks } from "./reactives.js";
 
@@ -19,27 +19,28 @@ class Context {
     this.push(element);
     return element;
   }
-  
-  
 }
 
 const [runHtmlMonadWithContext, monadicMethod] = createGeneratorMonad();
 export const pull = monadicMethod("pull");
 const createElement = monadicMethod("createElement");
 
-// TODO restrict callsites with an assertion.
+// TODO restrict callsites more directly with an assertion.
+// lazyConstructors.js will throw an error if we call this function within an [output] because
+// this prevents lazy constructors from becoming monadic and complicating things.
 const runHtmlMonad = (htmlGenerator) => {
   const context = new Context();
   const result = runHtmlMonadWithContext(context, htmlGenerator());
   return [result, context.elements];
 };
 
-export const startHtml = (root, childHtmlGenerator) =>
+const appendHtml = (root, htmlGenerator) => {
+  root.append(...runHtmlMonad(htmlGenerator)[1]);
+};
+
+export const startHtml = (root, htmlGenerator) =>
   Pull.start(function* () {
-    for (const child of runHtmlMonad(childHtmlGenerator)[1]) {
-      // TODO refactor
-      root.appendChild(child);
-    }
+    appendHtml(root, htmlGenerator);
   });
 
 export function* textInput({ setValue }) {
@@ -68,16 +69,14 @@ export function* tbody({ insertChildren, removeChild, setInnerHtml }) {
   const node = yield createElement("tbody");
   let afterInsertChildren;
   Pull.pull(function* () {
-    // It's important to call [runHtmlMonad] within a [map] instead of an [output]. TODO why?
     insertChildren = insertChildren.map(([index, htmlGenerator]) => [
       ...runHtmlMonad(htmlGenerator),
       index,
     ]);
     yield* insertChildren.output(([, children, index]) => {
       if (index === node.children.length) {
-        for (const child of children) {
-          node.appendChild(child);
-        }
+        assert(children.length === 1);
+        node.appendChild(...children);
       } else {
         const end = node.children[index];
         for (const child of children) {
@@ -91,9 +90,7 @@ export function* tbody({ insertChildren, removeChild, setInnerHtml }) {
 
     yield* setInnerHtml.map(runHtmlMonad).output(([, children]) => {
       node.innerHTML = "";
-      for (const child of children) {
-        node.appendChild(child);
-      }
+      node.append(...children);
     });
   });
   return {
@@ -108,9 +105,7 @@ export function* td(a, b) {
   if (typeof children === "string") {
     node.textContent = children;
   } else {
-    for (const child of runHtmlMonad(children)[1]) {
-      node.appendChild(child);
-    }
+    appendHtml(node, children);
   }
   if (properties.setTextContent) {
     // TODO assert monadic context.
@@ -130,9 +125,7 @@ export function* th(textContent) {
 const container = (type) =>
   function* (childHtmlGenerator) {
     const node = yield createElement(type);
-    for (const child of runHtmlMonad(childHtmlGenerator)[1]) {
-      node.appendChild(child);
-    }
+    appendHtml(node, childHtmlGenerator);
   };
 
 export const table = container("table");
