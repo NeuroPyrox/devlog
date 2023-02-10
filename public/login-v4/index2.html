@@ -27,10 +27,10 @@
     const k = (x) => () => x;
 
     function* userDatabase({
+      signupAttempts,
       insertions,
       usernamesToRemove,
       clears,
-      signupAttempts,
     }) {
       const internalTableB = yield* loopBehavior();
 
@@ -52,19 +52,19 @@
         protoFindUsername(table, 0, table.length, username);
 
       const signups = signupAttempts
-        .mapTag(internalTableB, (user, table) => {
-          const index = findUsername(table, user.username);
+        .mapTag(internalTableB, ({ username, password }, table) => {
+          const index = findUsername(table, username);
           const foundUser = table[index];
-          if (foundUser === undefined || foundUser.username !== user.username) {
-            return [index, user];
+          if (foundUser === undefined || foundUser.username !== username) {
+            return { index, username, password };
           }
           return null;
         })
         .filter((x) => x !== null);
       let tableTransform = signups.map(
-        ([index, user]) =>
+        ({ index, username, password }) =>
           (table) =>
-            table.splice(index, 0, user)
+            table.splice(index, 0, { username, password })
       );
 
       insertions = insertions.mapTag(
@@ -73,38 +73,30 @@
           const index = findUsername(table, username);
           const foundUser = table[index];
           if (foundUser === undefined || foundUser.username !== username) {
-            return ["createUser", index, { username, password }];
+            return { type: "createUser", index, username, password };
           }
           if (foundUser.password !== password) {
-            return ["changePassword", index, password];
+            return { type: "changePassword", index, username, password };
           }
-          return [];
+          return {};
         }
       );
 
       const createUserInsertions = insertions
-        .filter((x) => x[0] === "createUser")
-        .map(([, index, user]) => [index, user]);
+        .filter(({ type }) => type === "createUser")
+        .map(({ type, ...rest }) => rest);
       tableTransform = tableTransform.merge(
         createUserInsertions.map(
-          ([index, user]) =>
+          ({ index, username, password }) =>
             (table) =>
-              table.splice(index, 0, user)
+              table.splice(index, 0, { username, password })
         )
       );
       const createdUsers = createUserInsertions.merge(signups);
 
-      const changePasswordInsertions = insertions.filter(
-        (x) => x[0] === "changePassword"
-      );
-      const passwordChanges = changePasswordInsertions.mapTag(
-        internalTableB,
-        ([, index, password], table) => ({
-          index,
-          username: table[index].username,
-          password,
-        })
-      );
+      const passwordChanges = insertions
+        .filter(({ type }) => type === "changePassword")
+        .map(({ type, ...rest }) => rest);
       tableTransform = tableTransform.merge(
         passwordChanges.map(
           ({ index, password }) =>
@@ -127,9 +119,10 @@
               table.splice(index, 1)
         )
       );
+
       const tableLengthOnClear = clears
         .tag(internalTableB)
-        .map((table) => table.length);
+        .map(({ length }) => length);
       clears = tableLengthOnClear.filter((length) => length !== 0);
       tableTransform = tableTransform.merge(
         clears.map(() => (table) => (table.length = 0))
@@ -162,7 +155,6 @@
         removedUsers,
         clears,
         tryLogins,
-        signups,
       };
     }
 
@@ -172,7 +164,7 @@
         insertButton,
         usernamesToRemove;
 
-      const [insertions, model] = yield* html.pull(function* () {
+      const [insertions, model] = yield html.pull(function* () {
         return [
           yield* loopEvent(),
           {
@@ -213,7 +205,7 @@
               index,
               function* () {
                 let xButton;
-                yield* html.tr(function*() {
+                yield* html.tr(function* () {
                   yield* html.td(username);
                   yield* html.td(
                     {
@@ -226,7 +218,7 @@
                   yield* html.td(function* () {
                     xButton = yield* html.button("X");
                   });
-                })
+                });
                 return xButton.onClick().map(() => username);
               },
             ]
@@ -234,13 +226,16 @@
           removeChild: model.removedUsers.map(({ index }) => index),
           setInnerHtml: model.clears.map(() => function* () {}),
         });
-        usernamesToRemove = yield* html.pull(() =>
-          tbody.afterInsertChildren().mergeBind((usernameUponX) => usernameUponX)
+        usernamesToRemove = yield html.pull(() =>
+          tbody
+            .afterInsertChildren()
+            .mergeBind((usernameUponX) => usernameUponX)
         );
       });
 
       insertions.loop(
-        insertButton.onClick()
+        insertButton
+          .onClick()
           .tag(usernameInsertInput.inputValues())
           .mapTag(passwordInsertInput.inputValues(), (username, password) => ({
             username,
@@ -251,7 +246,7 @@
           )
       );
 
-      html.pull(function* () {
+      const tryLogins = yield html.pull(function* () {
         const {
           createdUsers,
           passwordChanges,
@@ -259,15 +254,16 @@
           clears,
           tryLogins,
         } = yield* userDatabase({
+          signupAttempts,
           insertions,
           usernamesToRemove,
           clears: clearButton.onClick(),
-          signupAttempts,
         });
         model.createdUsers.loop(createdUsers);
         model.passwordChanges.loop(passwordChanges);
         model.removedUsers.loop(removedUsers);
         model.clears.loop(clears);
+        return tryLogins;
       });
     }
 
@@ -373,6 +369,7 @@
           ({ username, password }) => username !== "" && password !== ""
         );
 
+        // TODO check if signup was successful.
         return [
           root,
           getClicks(loginButton)
