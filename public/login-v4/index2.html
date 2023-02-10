@@ -34,6 +34,9 @@
     }) {
       const internalTableB = yield* loopBehavior();
 
+      // [start] is the lowest output and [end] is the highest output.
+      // It's important to note that [end] is in the range of outputs.
+      // Either returns the found index or if none is found, the insertion index.
       const protoFindUsername = (table, start, end, username) => {
         if (start === end) {
           return start;
