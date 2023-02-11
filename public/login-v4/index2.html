@@ -285,7 +285,7 @@
         signupAttempts
       );
 
-      function* createLoginDiv() {
+      function* loginHtml() {
         const loginAttempts = yield html.pull(loopEvent);
         const loginSuccesses = tryLogins(
           loginAttempts.filter(
@@ -330,18 +330,18 @@
 
         return [
           getClicks(signupButton)
-            .map(k(createSignupDiv))
+            .map(k(signupHtml))
             .merge(
               loginSuccesses
                 .filter((success) => success)
                 .tag(usernameInput.inputValues())
-                .map((username) => () => createLoggedInDiv(username))
+                .map((username) => () => loggedInHtml(username))
             ),
           never,
         ];
       }
 
-      function* createSignupDiv() {
+      function* signupHtml() {
         const signupAttempts = yield html.pull(loopEvent);
         // TODO
         const signupSuccesses = never;
@@ -386,19 +386,19 @@
         // TODO check if signup was successful.
         return [
           getClicks(loginButton)
-            .map(k(createLoginDiv))
+            .map(k(loginHtml))
             .merge(
               signupAttempts.map(
                 ({ username }) =>
                   () =>
-                    createLoggedInDiv(username)
+                    loggedInHtml(username)
               )
             ),
           signupAttempts,
         ];
       }
 
-      function* createLoggedInDiv(username) {
+      function* loggedInHtml(username) {
         yield html.text(`Hello ${username}`);
         const logoutButton = yield* html.button("Logout");
 
@@ -407,7 +407,7 @@
             .filter((u) => u === username)
             .merge(logoutButton.onClick())
             .merge(clears)
-            .map(k(createLoginDiv)),
+            .map(k(loginHtml)),
           never,
         ];
       }
@@ -417,7 +417,7 @@
         publishStartPage = p;
         return () => {};
       });
-      const publishLoginDiv = (_) => publishStartPage(createLoginDiv);
+      const publishLoginDiv = (_) => publishStartPage(loginHtml);
 
       const authPages = yield* loopEvent();
       const appPages = authPages.merge(startPage).observe();
