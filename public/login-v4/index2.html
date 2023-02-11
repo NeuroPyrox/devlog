@@ -277,8 +277,6 @@
       };
     }
 
-    // TODO translate to Html monad.
-    // Pull monad
     function* main() {
       const signupAttempts = yield html.pull(loopEvent);
 
@@ -421,12 +419,14 @@
         .afterSetInnerHtml();
 
       onAppPage.loop(
-        yield* afterSetAppPage.map(([nextAppPage]) => nextAppPage).switch()
+        yield* html.pull(() =>
+          afterSetAppPage.map(([nextAppPage]) => nextAppPage).switch()
+        )
       );
       signupAttempts.loop(
-        yield* afterSetAppPage
-          .map(([, signupAttempts]) => signupAttempts)
-          .switch()
+        yield* html.pull(() =>
+          afterSetAppPage.map(([, signupAttempts]) => signupAttempts).switch()
+        )
       );
     }
 
