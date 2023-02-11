@@ -24,6 +24,8 @@
       loopEvent,
       loopBehavior,
     } from "./chronomancy.js";
+    import * as html from "./html.js";
+    // TODO remove
     const k = (x) => () => x;
 
     function* userDatabase({
@@ -412,32 +414,22 @@
         ];
       }
 
-      let publishStartPage;
-      const startPage = input((p) => {
-        publishStartPage = p;
-        return () => {};
-      });
-      const publishLoginDiv = (_) => publishStartPage(loginHtml);
+      const onAppPage = yield* html.pull(loopEvent);
 
-      const authPages = yield* loopEvent();
-      const appPages = authPages.merge(startPage).observe();
+      const afterSetAppPage = yield* html
+        .div({ setInnerHtml: onAppPage }, loginHtml)
+        .afterSetInnerHtml();
 
-      yield* appPages.output(([appDiv, ,]) => {
-        document.getElementById("appPage")?.remove();
-        appDiv.id = "appPage";
-        document.body.appendChild(appDiv);
-      });
-
+      onAppPage.loop(
+        yield* afterSetAppPage.map(([nextAppPage]) => nextAppPage).switch()
+      );
       signupAttempts.loop(
-        yield* appPages.map(([, , signupAttempts]) => signupAttempts).switch()
+        yield* afterSetAppPage
+          .map(([, signupAttempts]) => signupAttempts)
+          .switch()
       );
-      authPages.loop(
-        yield* appPages.map(([, nextAuthPage]) => nextAuthPage).switch()
-      );
-
-      return publishLoginDiv;
     }
 
-    start(main)();
+    html.startHtml(main);
   </script>
 </html>
