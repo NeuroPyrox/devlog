@@ -43,30 +43,16 @@ const appendHtml = (root, htmlGenerator) => {
   root.append(...runHtmlMonad(htmlGenerator)[1]);
 };
 
+const container = (type) =>
+  function* (childHtmlGenerator) {
+    const node = yield createElement(type);
+    appendHtml(node, childHtmlGenerator);
+  };
+
 export const startHtml = (root, htmlGenerator) =>
   Pull.start(function* () {
     appendHtml(root, htmlGenerator);
   });
-
-export function* p({ setTextContent }) {
-  const node = yield createElement("p");
-  // TODO assert monadic context.
-  Pull.pull(() =>
-    setTextContent.output((textContent) => (node.textContent = textContent))
-  );
-}
-
-export function* textInput(params) {
-  const node = yield createElement("input");
-  node.type = "text";
-  if (params) {
-    Pull.pull(() => params.setValue.output((value) => (node.value = value)));
-  }
-  // TODO construct the [stepper] manually.
-  return {
-    inputValues: () => inputValues(node),
-  };
-}
 
 export function* button(textContent) {
   const node = yield createElement("button");
@@ -77,7 +63,16 @@ export function* button(textContent) {
   };
 }
 
-// TODO use splice.
+export function* p({ setTextContent }) {
+  const node = yield createElement("p");
+  // TODO assert monadic context.
+  Pull.pull(() =>
+    setTextContent.output((textContent) => (node.textContent = textContent))
+  );
+}
+
+export const table = container("table");
+
 // TODO use objects instead of arrays to pass arguments.
 // TODO synchronize outputs.
 export function* tbody({ insertChildren, removeChild, setInnerHtml }) {
@@ -132,17 +127,22 @@ export function* td(a, b) {
   }
 }
 
+export function* textInput(params) {
+  const node = yield createElement("input");
+  node.type = "text";
+  if (params) {
+    Pull.pull(() => params.setValue.output((value) => (node.value = value)));
+  }
+  // TODO construct the [stepper] manually.
+  return {
+    inputValues: () => inputValues(node),
+  };
+}
+
 export function* th(textContent) {
   const node = yield createElement("th");
   node.textContent = textContent;
 }
-
-const container = (type) =>
-  function* (childHtmlGenerator) {
-    const node = yield createElement(type);
-    appendHtml(node, childHtmlGenerator);
-  };
-
-export const table = container("table");
 export const thead = container("thead");
+
 export const tr = container("tr");
