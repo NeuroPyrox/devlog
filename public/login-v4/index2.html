@@ -25,8 +25,6 @@
       loopBehavior,
     } from "./chronomancy.js";
     import * as html from "./html.js";
-    // TODO remove
-    const k = (x) => () => x;
 
     function* userDatabase({
       signupAttempts,
@@ -330,7 +328,7 @@
 
         return [
           getClicks(signupButton)
-            .map(k(signupHtml))
+            .map(() => signupHtml)
             .merge(
               loginSuccesses
                 .filter((success) => success)
@@ -386,7 +384,7 @@
         // TODO check if signup was successful.
         return [
           getClicks(loginButton)
-            .map(k(loginHtml))
+            .map(() => loginHtml)
             .merge(
               signupAttempts.map(
                 ({ username }) =>
@@ -407,7 +405,7 @@
             .filter((u) => u === username)
             .merge(logoutButton.onClick())
             .merge(clears)
-            .map(k(loginHtml)),
+            .map(() => loginHtml),
           never,
         ];
       }
