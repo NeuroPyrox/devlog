@@ -24,10 +24,11 @@ module.exports = P.end
     res.end();
   })
   .or(P.endIn("/").map(() => htmlHandler(`${__dirname}/index.html`)))
-  .or(moduleHandler("util"))
+  .or(moduleHandler("chronomancy"))
+  .or(moduleHandler("html"))
+  .or(moduleHandler("internals"))
   .or(moduleHandler("lazyConstructors"))
   .or(moduleHandler("pull"))
   .or(moduleHandler("push"))
-  .or(moduleHandler("internals"))
-  .or(moduleHandler("chronomancy")
-  .or(moduleHandler("reactives")));
+  .or(moduleHandler("reactives"))
+  .or(moduleHandler("util"));
