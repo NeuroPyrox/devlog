@@ -412,20 +412,24 @@
 
       const onAppPage = yield html.pull(loopEvent);
 
+      let onFirstAppPage, firstSignupAttempts;
+
       const afterSetAppPage = (yield* html.div(
         { setInnerHtml: onAppPage },
-        loginHtml
+        function* () {
+          [onFirstAppPage, firstSignupAttempts] = yield* loginHtml();
+        }
       )).afterSetInnerHtml();
 
       onAppPage.loop(
-        yield html.pull(() =>
+        (yield html.pull(() =>
           afterSetAppPage.map(([nextAppPage]) => nextAppPage).switch()
-        )
+        )).merge(onFirstAppPage)
       );
       signupAttempts.loop(
-        yield html.pull(() =>
+        (yield html.pull(() =>
           afterSetAppPage.map(([, signupAttempts]) => signupAttempts).switch()
-        )
+        )).merge(firstSignupAttempts)
       );
     }
 
