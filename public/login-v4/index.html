@@ -339,7 +339,7 @@
       }
 
       function* signupHtml() {
-        const signupAttempts = yield html.pull(loopEvent);
+        let signupAttempts = yield html.pull(loopEvent);
         // TODO
         const signupSuccesses = never;
 
