@@ -369,9 +369,9 @@
         const loginButton = yield* html.button("Login");
 
         signupAttempts.loop(
-          getClicks(signupButton)
-            .tag(inputValues(usernameInput))
-            .mapTag(inputValues(passwordInput), (username, password) => ({
+          signupButton.onClick()
+            .tag(usernameInput.inputValues())
+            .mapTag(passwordInput.inputValues(), (username, password) => ({
               username,
               password,
             }))
