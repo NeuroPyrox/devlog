@@ -19,8 +19,6 @@
       start,
       never,
       input,
-      getClicks,
-      inputValues,
       loopEvent,
       loopBehavior,
     } from "./chronomancy.js";
@@ -327,7 +325,8 @@
         );
 
         return [
-          getClicks(signupButton)
+          signupButton
+            .onClick()
             .map(() => signupHtml)
             .merge(
               loginSuccesses
@@ -383,7 +382,8 @@
 
         // TODO check if signup was successful.
         return [
-          getClicks(loginButton)
+          loginButton
+            .onClick()
             .map(() => loginHtml)
             .merge(
               signupAttempts.map(
