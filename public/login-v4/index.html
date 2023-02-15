@@ -19,8 +19,6 @@
       start,
       never,
       input,
-      getClicks,
-      inputValues,
       loopEvent,
       loopBehavior,
     } from "./chronomancy.js";
@@ -327,7 +325,8 @@
         );
 
         return [
-          getClicks(signupButton)
+          signupButton
+            .onClick()
             .map(() => signupHtml)
             .merge(
               loginSuccesses
@@ -383,7 +382,8 @@
 
         // TODO check if signup was successful.
         return [
-          getClicks(loginButton)
+          loginButton
+            .onClick()
             .map(() => loginHtml)
             .merge(
               signupAttempts.map(
@@ -412,20 +412,24 @@
 
       const onAppPage = yield html.pull(loopEvent);
 
+      let onFirstAppPage, firstSignupAttempts;
+
       const afterSetAppPage = (yield* html.div(
         { setInnerHtml: onAppPage },
-        loginHtml
+        function* () {
+          [onFirstAppPage, firstSignupAttempts] = yield* loginHtml();
+        }
       )).afterSetInnerHtml();
 
       onAppPage.loop(
-        yield html.pull(() =>
+        (yield html.pull(() =>
           afterSetAppPage.map(([nextAppPage]) => nextAppPage).switch()
-        )
+        )).merge(onFirstAppPage)
       );
       signupAttempts.loop(
-        yield html.pull(() =>
+        (yield html.pull(() =>
           afterSetAppPage.map(([, signupAttempts]) => signupAttempts).switch()
-        )
+        )).merge(firstSignupAttempts)
       );
     }
 
