@@ -12,7 +12,7 @@ class Context {
 
   createElement(type) {
     const element = document.createElement(type);
-    this.push(element);
+    this.elements.push(element);
     return element;
   }
 
