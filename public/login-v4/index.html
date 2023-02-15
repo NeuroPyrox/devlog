@@ -410,7 +410,7 @@
         ];
       }
 
-      const onAppPage = yield* html.pull(loopEvent);
+      const onAppPage = yield html.pull(loopEvent);
 
       const afterSetAppPage = yield* html
         .div({ setInnerHtml: onAppPage }, loginHtml)
