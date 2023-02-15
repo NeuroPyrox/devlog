@@ -63,6 +63,23 @@ export function* button(textContent) {
   };
 }
 
+export function* div({ setInnerHtml }, childHtmlGenerator) {
+  const node = yield createElement("div");
+  appendHtml(node, childHtmlGenerator);
+  let afterSetInnerHtml;
+  Pull.pull(function* () {
+    setInnerHtml = setInnerHtml.map(runHtmlMonad);
+    yield* setInnerHtml.output(([, children]) => {
+      node.innerHTML = "";
+      node.append(...children);
+    });
+    afterSetInnerHtml = setInnerHtml.map(([result]) => result);
+  });
+  return {
+    afterSetInnerHtml: () => afterSetInnerHtml,
+  };
+}
+
 export function* p({ setTextContent }) {
   const node = yield createElement("p");
   // TODO assert monadic context.
