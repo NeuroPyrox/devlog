@@ -153,6 +153,7 @@
         removedUsers,
         clears,
         tryLogins,
+        signups,
       };
     }
 
@@ -244,13 +245,14 @@
           )
       );
 
-      const tryLogins = yield html.pull(function* () {
+      const [tryLogins, signups] = yield html.pull(function* () {
         const {
           createdUsers,
           passwordChanges,
           removedUsers,
           clears,
           tryLogins,
+          signups,
         } = yield* userDatabase({
           signupAttempts,
           insertions,
@@ -261,7 +263,7 @@
         model.passwordChanges.loop(passwordChanges);
         model.removedUsers.loop(removedUsers);
         model.clears.loop(clears);
-        return tryLogins;
+        return [tryLogins, signups];
       });
 
       return {
@@ -270,16 +272,15 @@
           .map(({ username }) => username),
         clears: model.clears,
         tryLogins,
+        signups,
       };
     }
 
     function* main() {
       const signupAttempts = yield html.pull(loopEvent);
 
-      // TODO should we wrap this in a div?
-      const { usernamesToLogout, clears, tryLogins } = yield* userTable(
-        signupAttempts
-      );
+      const { usernamesToLogout, clears, tryLogins, signups } =
+        yield* userTable(signupAttempts);
 
       function* loginHtml() {
         const loginAttempts = yield html.pull(loopEvent);
@@ -340,8 +341,13 @@
 
       function* signupHtml() {
         let signupAttempts = yield html.pull(loopEvent);
-        // TODO
-        const signupSuccesses = never;
+        const signupFailures = signupAttempts
+          .merge(
+            signups,
+            (a, b) => false,
+            (a) => true
+          )
+          .filter((x) => x === true);
 
         yield html.text("Username:");
         const usernameInput = yield* html.textInput();
@@ -349,8 +355,7 @@
         const passwordInput = yield* html.textInput();
         const signupButton = yield* html.button("Signup");
         const statusText = yield* html.p({
-          setTextContent: signupSuccesses
-            .filter((success) => !success)
+          setTextContent: signupFailures
             .map(() => "Username already exists!")
             .merge(
               signupAttempts
@@ -369,7 +374,8 @@
         const loginButton = yield* html.button("Login");
 
         signupAttempts.loop(
-          signupButton.onClick()
+          signupButton
+            .onClick()
             .tag(usernameInput.inputValues())
             .mapTag(passwordInput.inputValues(), (username, password) => ({
               username,
@@ -380,13 +386,12 @@
           ({ username, password }) => username !== "" && password !== ""
         );
 
-        // TODO check if signup was successful.
         return [
           loginButton
             .onClick()
             .map(() => loginHtml)
             .merge(
-              signupAttempts.map(
+              signups.map(
                 ({ username }) =>
                   () =>
                     loggedInHtml(username)
