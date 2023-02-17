@@ -83,14 +83,15 @@ const wrapEvent = (event) =>
     filter(predicate) {
       return filter(this, predicate);
     },
-    merge(
-      other,
-      ABtoC = () => {
-        throw "Shouldn't be simultaneous!";
-      },
-      AtoC = (a) => a,
-      BtoC = (b) => b
-    ) {
+    merge(other, ABtoC, AtoC = (a) => a, BtoC = (b) => b) {
+      if (!ABtoC) {
+        const stackTrace = new Error("Creation of reactive");
+        ABtoC = () => {
+          // TODO show both errors.
+          throw stackTrace;
+          throw new Error("Shouldn't be simultaneous");
+        };
+      }
       return merge(this, other, ABtoC, AtoC, BtoC);
     },
     mapTag(behavior, combine) {

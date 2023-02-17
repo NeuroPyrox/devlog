@@ -340,8 +340,11 @@
       }
 
       function* signupHtml() {
-        let signupAttempts = yield html.pull(loopEvent);
-        const signupFailures = signupAttempts
+        const signupAttempts = yield html.pull(loopEvent);
+        const nonEmptySignupAttempts = signupAttempts.filter(
+          ({ username, password }) => username !== "" && password !== ""
+        );
+        const signupFailures = nonEmptySignupAttempts
           .merge(
             signups,
             (a, b) => false,
@@ -354,6 +357,7 @@
         yield html.text("Password:");
         const passwordInput = yield* html.textInput();
         const signupButton = yield* html.button("Signup");
+
         const statusText = yield* html.p({
           setTextContent: signupFailures
             .map(() => "Username already exists!")
@@ -373,6 +377,7 @@
         yield html.text("Already have an account?");
         const loginButton = yield* html.button("Login");
 
+        // TODO don't use loop.
         signupAttempts.loop(
           signupButton
             .onClick()
@@ -381,9 +386,6 @@
               username,
               password,
             }))
-        );
-        signupAttempts = signupAttempts.filter(
-          ({ username, password }) => username !== "" && password !== ""
         );
 
         return [
@@ -397,7 +399,7 @@
                     loggedInHtml(username)
               )
             ),
-          signupAttempts,
+          nonEmptySignupAttempts,
         ];
       }
 
