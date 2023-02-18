@@ -126,7 +126,6 @@
         clears.map(() => (table) => (table.length = 0))
       );
 
-      // TODO make a combinator for this use case.
       // The copy prevents side-effects if we want to access internalTableB arbitrarily.
       const newInternalTables = tableTransform.mapTag(
         internalTableB,
@@ -340,7 +339,19 @@
       }
 
       function* signupHtml() {
-        const signupAttempts = yield html.pull(loopEvent);
+        yield html.text("Username:");
+        const usernameInput = yield* html.textInput();
+        yield html.text("Password:");
+        const passwordInput = yield* html.textInput();
+        const signupButton = yield* html.button("Signup");
+        
+        const signupAttempts = signupButton
+            .onClick()
+            .tag(usernameInput.inputValues())
+            .mapTag(passwordInput.inputValues(), (username, password) => ({
+              username,
+              password,
+            }));
         const nonEmptySignupAttempts = signupAttempts.filter(
           ({ username, password }) => username !== "" && password !== ""
         );
@@ -351,12 +362,6 @@
             (a) => true
           )
           .filter((x) => x === true);
-
-        yield html.text("Username:");
-        const usernameInput = yield* html.textInput();
-        yield html.text("Password:");
-        const passwordInput = yield* html.textInput();
-        const signupButton = yield* html.button("Signup");
 
         const statusText = yield* html.p({
           setTextContent: signupFailures
@@ -376,17 +381,6 @@
         });
         yield html.text("Already have an account?");
         const loginButton = yield* html.button("Login");
-
-        // TODO don't use loop.
-        signupAttempts.loop(
-          signupButton
-            .onClick()
-            .tag(usernameInput.inputValues())
-            .mapTag(passwordInput.inputValues(), (username, password) => ({
-              username,
-              password,
-            }))
-        );
 
         return [
           loginButton
