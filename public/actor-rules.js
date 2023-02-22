@@ -78,7 +78,7 @@ const genBehaviorRules = (numSelfRefs, numBehaviors, getNumBehaviorRefs) => {
   });
 }
 
-module.exports = () => {
+export default () => {
   const numBehaviors = genNumBehaviors();
   const numBehaviorRefs = Array.from({length: numBehaviors}, genNumBehaviorRefs);
   const getNumBehaviorRefs = behaviorIndex => numBehaviorRefs[behaviorIndex];

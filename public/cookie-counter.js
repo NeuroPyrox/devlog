@@ -2,13 +2,13 @@
 
 // TODO make the parser deal with several cookies in the header
 
-const P = require("../parsers.js");
+import * as P from "../parsers.js";
 
 const cookieParser = P.string("__Secure-counter=")
   .skipLeft(P.any)
   .map(parseInt);
 
-module.exports = P.end.map(_ => (req, res) => {
+export default P.end.map(_ => (req, res) => {
   const counter =
     req.headers.cookie === undefined
       ? 0

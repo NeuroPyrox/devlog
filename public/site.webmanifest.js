@@ -1,6 +1,6 @@
 "use strict";
 
-module.exports = () => ({
+export default () => ({
   name: "NeuroPyrox",
   short_name: "NeuroPyrox",
   icons: [

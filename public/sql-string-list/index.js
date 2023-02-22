@@ -2,7 +2,11 @@
 
 // TODO remove SQL injection vulnerabilities
 
-const P = require("../../parsers.js");
+import * as P from "../../parsers.js";
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // I prefer this promisifier because I've had past issues with util.promisify and bluebird
 const promisify = async executor => {
@@ -23,8 +27,8 @@ const promisify = async executor => {
 
 const createDatabase = async filename => {
   let database;
+  const sqlite3 = (await import("sqlite3")).default;
   await promisify(callback => {
-    const sqlite3 = require("sqlite3");
     database = new sqlite3.Database(filename, callback);
   });
   return database;
@@ -58,7 +62,7 @@ const tableExists = async () => {
   throw err;
 };
 
-const fs = require("fs");
+import * as fs from "fs";
 
 const paths = {
   "": async (req, res) => {
@@ -99,7 +103,7 @@ const paths = {
   }
 };
 
-module.exports = Object.entries(paths).reduce(
+export default Object.entries(paths).reduce(
   (total, [key, value]) =>
     P.endIn(key)
       .map(_ => value)
