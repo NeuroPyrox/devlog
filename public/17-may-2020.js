@@ -1,6 +1,6 @@
 "use strict";
 
-const P = require("../parsers.js");
+import * as P from "../parsers.js";
 
 const writeString = string => (req, res) => {
   res.writeHead(200, {
@@ -19,7 +19,7 @@ const homeHtml = `
 <a href="pills">Pills</a><br>
 `;
 
-module.exports = P.end
+export default P.end
   .map(_ => homeHtml)
   .or(P.endIn("/page1").map(_ => "This is page 1"))
   .or(P.endIn("/page2").map(_ => "This is page 2"))

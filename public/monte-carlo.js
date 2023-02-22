@@ -19,4 +19,4 @@ const model = () => {
   return workRoi ** (lifeExpectancy * productivity);
 };
 
-module.exports = () => [...Array(100)].map(() => model());
+export default () => [...Array(100)].map(() => model());

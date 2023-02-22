@@ -2,11 +2,11 @@
 
 // TODO single source of truth
 
-module.exports = () => [
+export default () => [
   {
     date: "14 June 2020",
     title: "didnt-solve-agi",
-    href: "/didnt-solve-agi"
+    href: "/didnt-solve-agi",
   },
   { date: "15 June 2020", title: "post-locations", href: "/post-locations" },
   { date: "22 June 2020", title: "get-june-days", href: "/get-june-days" },
@@ -16,5 +16,5 @@ module.exports = () => [
   { date: "27 June 2020", title: "homepage-v2", href: "/homepage-v2" },
   { date: "28 June 2020", title: "actor-rules", href: "/actor-rules" },
   { date: "29 June 2020", title: "multi-page", href: "/multi-page" },
-  { date: "29 June 2020", title: "url-tail", href: "/url-tail" }
+  { date: "29 June 2020", title: "url-tail", href: "/url-tail" },
 ];

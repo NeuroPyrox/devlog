@@ -1,7 +1,8 @@
+// TODO remove strict mode declarations
 "use strict";
 
-const P = require("../../parsers.js");
-const htmlHandler = require("../../lib/html-handler.js");
+import * as P from "../../parsers.js";
+import * as htmlHandler from "../../lib/html-handler.js";
 
 const textHandler = text => (req, res) => {
   res.writeHead(200, {
@@ -11,7 +12,7 @@ const textHandler = text => (req, res) => {
   res.end();
 };
 
-module.exports = P.end
+export default P.end
   .map(_ => htmlHandler(`${__dirname}/index.html`))
   .or(
     P.endIn("/").map(_ => (req, res) => {

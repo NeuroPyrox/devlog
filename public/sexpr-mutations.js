@@ -30,7 +30,7 @@ const allMutations = sexpr => {
     .concat(allMutations(b).map(mb => [a, mb]));
 };
 
-module.exports = () => {
+export default () => {
   let sexprs = initialSexprs.slice();
   for (let i = 0; i < 100; i++) {
     const sexpr = sexprs.shift();

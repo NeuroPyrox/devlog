@@ -2,7 +2,7 @@
 
 // TODO single source of truth
 
-module.exports = () => [
+export default () => [
   { day: 14, href: "hello-world" },
   { day: 15, href: "get-may-days" },
   { day: 16, href: "homepage-v0" },

@@ -2,7 +2,7 @@
 
 // TODO single source of truth
 
-const getJunePosts = require("./get-june-posts.js");
+import * as getJunePosts from "./get-june-posts.js";
 
 // HARDCODED
 const oldBlog = [
@@ -38,7 +38,7 @@ const oldBlog = [
   }
 ];
 
-module.exports = async () => {
+export default async () => {
   const mayPosts = await require("./homepage-v1/get-post-locations.js")();
   return getJunePosts()
     .reverse()

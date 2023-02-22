@@ -1,5 +1,6 @@
 "use strict";
 
+// TODO ES modules
 // TODO upload libraries to github instead of making a monorepo
 // TODO google discoverability
 // TODO move parts of server.lisp to homepage.lisp
@@ -14,34 +15,35 @@
 //  post-finder
 //  post-locations
 
-const fs = require("fs");
-const P = require("./parsers.js");
-const htmlHandler = require("./lib/html-handler.js");
+import * as fs from "fs";
+import * as P from "./parsers.js";
+import { htmlHandler } from "./lib/html-handler.js";
+import { createServer } from "http";
 
 // Each value maps a file path to a parser of url tails to handlers
 const handlerTypes = {
-  html: filePath => P.end.map(_ => htmlHandler(filePath)),
-  htmlBuilder: filePath => {
-    const htmlBuilder = require(filePath);
-    return P.end.map(_ => async (req, res) => {
+  html: (filePath) => P.end.map((_) => htmlHandler(filePath)),
+  htmlBuilder: (filePath) => {
+    const htmlBuilder = import(filePath);
+    return P.end.map((_) => async (req, res) => {
       res.writeHead(200, {
-        "Content-Type": "text/html"
+        "Content-Type": "text/html",
       });
       res.write(await htmlBuilder());
       res.end();
     });
   },
-  json: filePath => {
-    const jsonBuilder = require(filePath);
-    return P.end.map(_ => async (req, res) => {
+  json: (filePath) => {
+    const jsonBuilder = import(filePath);
+    return P.end.map((_) => async (req, res) => {
       res.writeHead(200, {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       });
       res.write(JSON.stringify(await jsonBuilder()));
       res.end();
     });
   },
-  router: require
+  router: (x) => import(x),
 };
 
 const handle404error = (req, res) => {
@@ -57,19 +59,19 @@ const typeParser = P.string("htmlBuilder")
 
 const handlerParser = P.inParentheses(
   typeParser
-    .map(type => path => suffix => [
+    .map((type) => (path) => (suffix) => [
       path,
-      handlerTypes[type](`./public${path}${suffix}`)
+      handlerTypes[type](`./public${path}${suffix}`),
     ])
     .or(
-      P.string("redirect").map(_ => from => to => [
+      P.string("redirect").map((_) => (from) => (to) => [
         from,
-        P.end.map(_ => (req, res) => {
+        P.end.map((_) => (req, res) => {
           res.writeHead(301, {
-            Location: to
+            Location: to,
           });
           res.end();
-        })
+        }),
       ])
     )
     .skipRight(P.spaces1)
@@ -84,19 +86,16 @@ const handlersParser = P.inParentheses(
   P.string("server").skipLeft(P.many(P.string("\n  ").skipLeft(handlerParser)))
 )
   .skipRight(P.end)
-  .map(handlers =>
+  .map((handlers) =>
     handlers.reduce(
-      (total, [key, value]) =>
-        P.string(key)
-          .skipLeft(value)
-          .or(total),
+      (total, [key, value]) => P.string(key).skipLeft(value).or(total),
       P.constant(handle404error)
     )
   );
 
 const handlersPromise = fs.promises
   .readFile("server.lisp", "utf8")
-  .then(string => handlersParser.parseWhole(string));
+  .then((string) => handlersParser.parseWhole(string));
 
 const secureHeaders = (req, res, next) => {
   // This can be done with helmet.js, but I wanted to minimize dependencies for the learning experience
@@ -135,20 +134,18 @@ const errorMiddleware = async (req, res, next) => {
 };
 
 const composeMiddleware = (a, b) => (req, res, next) =>
-  a(req, res, _ => b(req, res, next));
+  a(req, res, (_) => b(req, res, next));
 
-require("http")
-  .createServer(
+createServer(
+  composeMiddleware(
+    errorMiddleware,
     composeMiddleware(
-      errorMiddleware,
-      composeMiddleware(
-        redirectHttpToHttps,
-        composeMiddleware(secureHeaders, async (req, res) =>
-          (await handlersPromise).parseWhole(req.url)(req, res)
-        )
+      redirectHttpToHttps,
+      composeMiddleware(secureHeaders, async (req, res) =>
+        (await handlersPromise).parseWhole(req.url)(req, res)
       )
     )
   )
-  .listen(process.env.PORT, () =>
-    console.log(`Your app is listening on port ${process.env.PORT}`)
-  );
+).listen(process.env.PORT, () =>
+  console.log(`Your app is listening on port ${process.env.PORT}`)
+);

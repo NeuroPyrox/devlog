@@ -50,7 +50,7 @@ const oldBlog = [
   }
 ];
 
-module.exports = async () => {
+export default async () => {
   const mayPosts = await require("./homepage-v1/get-post-locations.js")();
   const posts = getNewPosts()
     .concat(mayPosts)

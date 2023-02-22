@@ -1,6 +1,6 @@
 "use strict";
 
-const P = require("../parsers.js");
+import * as P from "../parsers.js";
 
 const xml = `<?xml version="1.0" encoding="utf-8"?>
 <browserconfig>
@@ -11,11 +11,11 @@ const xml = `<?xml version="1.0" encoding="utf-8"?>
         </tile>
     </msapplication>
 </browserconfig>
-`
+`;
 
-module.exports = P.end.map(_ => (req, res) => {
+export default P.end.map((_) => (req, res) => {
   res.writeHead(200, {
-    "Content-Type": "text/xml"
+    "Content-Type": "text/xml",
   });
   res.write(xml);
   res.end();

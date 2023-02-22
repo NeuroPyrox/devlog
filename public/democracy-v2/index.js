@@ -1,9 +1,13 @@
 "use strict";
 
-const fs = require("fs");
+import { promises } from "fs";
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const title = "Democracy V2: Proposals";
-const style = fs.promises.readFile(`${__dirname}/style.css`, "utf8");
+const style = promises.readFile(`${__dirname}/style.css`, "utf8");
 const body = `
   <h1>
     Rules
@@ -17,11 +21,11 @@ const body = `
     Proposals
   </h1>
   <div id="proposals"></div>`;
-const script = fs.promises.readFile(`${__dirname}/script.js`, "utf8");
+const script = promises.readFile(`${__dirname}/script.js`, "utf8");
 
-const html = style.then(style =>
+const html = style.then((style) =>
   script.then(
-    script => `
+    (script) => `
       <!DOCTYPE html>
       <html lang="en">
         <head>
@@ -51,4 +55,4 @@ const html = style.then(style =>
   )
 );
 
-module.exports = _ => html;
+export default () => html;

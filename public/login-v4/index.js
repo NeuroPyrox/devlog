@@ -1,8 +1,8 @@
 "use strict";
 
-const fs = require("fs");
-const P = require("../../parsers.js");
-const htmlHandler = require("../../lib/html-handler.js");
+import "fs";
+import * as P from "../../parsers.js";
+import * as htmlHandler from "../../lib/html-handler.js";
 
 const moduleHandler = (moduleName) =>
   P.endIn(`/${moduleName}.js`).map(() => async (req, res) => {
@@ -15,7 +15,7 @@ const moduleHandler = (moduleName) =>
     fs.createReadStream(fileName).pipe(res);
   });
 
-module.exports = P.end
+export default P.end
   .map(() => (req, res) => {
     console.log(req);
     res.writeHead(307, {

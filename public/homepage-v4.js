@@ -1,6 +1,6 @@
 "use strict";
 
-const homepage = require("../homepage.js");
+const homepage = import("../homepage.js");
 
 const renderHtml = listHtml => `
   <!DOCTYPE html>
@@ -72,7 +72,7 @@ const renderHtml = listHtml => `
 
 let html;
 
-module.exports = async () => {
+export default async () => {
   if (html === undefined) {
     html = renderHtml(await homepage());
   }

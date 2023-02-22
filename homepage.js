@@ -1,7 +1,7 @@
 "use strict";
 
-const fs = require("fs");
-const P = require("./parsers.js");
+import * as fs from "fs";
+import * as P from "./parsers.js";
 
 const renderPost = title => date => href => `
   <a href="${href}">
@@ -36,7 +36,7 @@ const homepageParser = P.inParentheses(
 
 let homepage;
 
-module.exports = async () => {
+export default async () => {
   if (homepage === undefined) {
     homepage = homepageParser.parseWhole(
       await fs.promises.readFile("./homepage.lisp", "utf8")

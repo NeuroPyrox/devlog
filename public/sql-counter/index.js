@@ -1,5 +1,10 @@
 "use strict";
 
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
 // I prefer this promisifier because I've had past issues with util.promisify and bluebird
 const promisify = async executor => {
   const [err, result] = await new Promise((resolve, reject) => {
@@ -19,8 +24,8 @@ const promisify = async executor => {
 
 const createDatabase = async filename => {
   let database;
+  const sqlite3 = (await import("sqlite3")).default;
   await promisify(callback => {
-    const sqlite3 = require("sqlite3");
     database = new sqlite3.Database(filename, callback);
   });
   return database;
@@ -74,7 +79,7 @@ const getCount = async () => {
   return all[0].count;
 };
 
-module.exports = async () => {
+export default async () => {
   await ensureTableExists();
   const count = await getCount();
   await runSql(`UPDATE ${tableName} SET count=${count + 1}`);
