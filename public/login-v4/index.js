@@ -1,8 +1,8 @@
 "use strict";
 
-import "fs";
+import * as fs from "fs";
 import * as P from "../../parsers.js";
-import * as htmlHandler from "../../lib/html-handler.js";
+import htmlHandler from "../../lib/html-handler.js";
 
 const moduleHandler = (moduleName) =>
   P.endIn(`/${moduleName}.js`).map(() => async (req, res) => {

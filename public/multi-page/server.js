@@ -2,7 +2,7 @@
 "use strict";
 
 import * as P from "../../parsers.js";
-import * as htmlHandler from "../../lib/html-handler.js";
+import htmlHandler from "../../lib/html-handler.js";
 
 const textHandler = text => (req, res) => {
   res.writeHead(200, {

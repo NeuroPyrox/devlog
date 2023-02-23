@@ -51,6 +51,7 @@ const oldBlog = [
 ];
 
 export default async () => {
+  // TODO update
   const mayPosts = await require("./homepage-v1/get-post-locations.js")();
   const posts = getNewPosts()
     .concat(mayPosts)

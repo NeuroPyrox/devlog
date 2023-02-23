@@ -17,32 +17,33 @@
 
 import * as fs from "fs";
 import * as P from "./parsers.js";
-import { htmlHandler } from "./lib/html-handler.js";
+import htmlHandler from "./lib/html-handler.js";
 import { createServer } from "http";
 
 // Each value maps a file path to a parser of url tails to handlers
 const handlerTypes = {
-  html: (filePath) => P.end.map((_) => htmlHandler(filePath)),
+  html: (filePath) => P.end.map(() => htmlHandler(filePath)),
   htmlBuilder: (filePath) => {
     const htmlBuilder = import(filePath);
-    return P.end.map((_) => async (req, res) => {
+    return P.end.map(() => async (req, res) => {
       res.writeHead(200, {
         "Content-Type": "text/html",
       });
-      res.write(await htmlBuilder());
+      res.write(await (await htmlBuilder).default());
       res.end();
     });
   },
   json: (filePath) => {
     const jsonBuilder = import(filePath);
-    return P.end.map((_) => async (req, res) => {
+    return P.end.map(() => async (req, res) => {
       res.writeHead(200, {
         "Content-Type": "application/json",
       });
-      res.write(JSON.stringify(await jsonBuilder()));
+      res.write(JSON.stringify(await (await jsonBuilder).default()));
       res.end();
     });
   },
+  // TODO update
   router: (x) => import(x),
 };
 
