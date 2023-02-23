@@ -2,7 +2,7 @@
 
 // TODO single source of truth
 
-import * as getJunePosts from "./get-june-posts.js";
+import getJunePosts from "./get-june-posts.js";
 
 // HARDCODED
 const oldBlog = [

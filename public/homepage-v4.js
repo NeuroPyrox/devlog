@@ -1,6 +1,6 @@
 "use strict";
 
-const homepage = import("../homepage.js");
+import homepage from "../homepage.js";
 
 const renderHtml = listHtml => `
   <!DOCTYPE html>

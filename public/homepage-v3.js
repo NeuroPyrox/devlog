@@ -1,6 +1,6 @@
 "use strict";
 
-import * as homepage from "../homepage.js";
+import homepage from "../homepage.js";
 
 const renderHtml = listHtml => `
   <!DOCTYPE html>

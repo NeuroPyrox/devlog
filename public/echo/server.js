@@ -1,7 +1,11 @@
 "use strict";
 
 import * as P from "../../parsers.js";
-import * as htmlHandler from "../../lib/html-handler.js";
+import htmlHandler from "../../lib/html-handler.js";
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default P.end
   .map(() => htmlHandler(`${__dirname}/index.html`))
