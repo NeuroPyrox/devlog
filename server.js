@@ -23,28 +23,27 @@ import { createServer } from "http";
 // Each value maps a file path to a parser of url tails to handlers
 const handlerTypes = {
   html: (filePath) => P.end.map(() => htmlHandler(filePath)),
-  htmlBuilder: (filePath) => {
-    const htmlBuilder = import(filePath);
+  htmlBuilder: async (filePath) => {
+    const htmlBuilder = (await import(filePath)).default;
     return P.end.map(() => async (req, res) => {
       res.writeHead(200, {
         "Content-Type": "text/html",
       });
-      res.write(await (await htmlBuilder).default());
+      res.write(await htmlBuilder());
       res.end();
     });
   },
-  json: (filePath) => {
-    const jsonBuilder = import(filePath);
+  json: async (filePath) => {
+    const jsonBuilder = (await import(filePath)).default;
     return P.end.map(() => async (req, res) => {
       res.writeHead(200, {
         "Content-Type": "application/json",
       });
-      res.write(JSON.stringify(await (await jsonBuilder).default()));
+      res.write(JSON.stringify(await jsonBuilder()));
       res.end();
     });
   },
-  // TODO update
-  router: (x) => import(x),
+  router: async (x) => (await import(x)).default,
 };
 
 const handle404error = (req, res) => {
@@ -65,9 +64,9 @@ const handlerParser = P.inParentheses(
       handlerTypes[type](`./public${path}${suffix}`),
     ])
     .or(
-      P.string("redirect").map((_) => (from) => (to) => [
+      P.string("redirect").map(() => (from) => (to) => [
         from,
-        P.end.map((_) => (req, res) => {
+        P.end.map(() => (req, res) => {
           res.writeHead(301, {
             Location: to,
           });
@@ -89,7 +88,7 @@ const handlersParser = P.inParentheses(
   .skipRight(P.end)
   .map((handlers) =>
     handlers.reduce(
-      (total, [key, value]) => P.string(key).skipLeft(value).or(total),
+      async (total, [key, value]) => P.string(key).skipLeft(await value).or(await total),
       P.constant(handle404error)
     )
   );
@@ -135,7 +134,7 @@ const errorMiddleware = async (req, res, next) => {
 };
 
 const composeMiddleware = (a, b) => (req, res, next) =>
-  a(req, res, (_) => b(req, res, next));
+  a(req, res, () => b(req, res, next));
 
 createServer(
   composeMiddleware(
