@@ -1,12 +1,10 @@
-"use strict";
-
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { dirname } from "path";
+import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // I prefer this promisifier because I've had past issues with util.promisify and bluebird
-const promisify = async executor => {
+const promisify = async (executor) => {
   const [err, result] = await new Promise((resolve, reject) => {
     try {
       executor((...args) => resolve(args));
@@ -22,10 +20,10 @@ const promisify = async executor => {
   return result;
 };
 
-const createDatabase = async filename => {
+const createDatabase = async (filename) => {
   let database;
   const sqlite3 = (await import("sqlite3")).default;
-  await promisify(callback => {
+  await promisify((callback) => {
     database = new sqlite3.Database(filename, callback);
   });
   return database;
@@ -34,12 +32,12 @@ const createDatabase = async filename => {
 const databasePromise = createDatabase(`${__dirname}/.sql`);
 const tableName = "counter";
 
-const runSql = async command => {
+const runSql = async (command) => {
   const database = await databasePromise;
-  await promisify(callback => database.run(command, {}, callback));
+  await promisify((callback) => database.run(command, {}, callback));
 };
 
-const getRejection = async promise => {
+const getRejection = async (promise) => {
   try {
     await promise;
   } catch (err) {
@@ -73,7 +71,7 @@ const ensureTableExists = async () => {
 
 const getCount = async () => {
   const database = await databasePromise;
-  const all = await promisify(callback =>
+  const all = await promisify((callback) =>
     database.all(`SELECT * FROM ${tableName}`, {}, callback)
   );
   return all[0].count;

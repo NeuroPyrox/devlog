@@ -1,5 +1,3 @@
-"use strict";
-
 // The input is a 95% confidence interval
 const gaussian = (low, high) => {
   const nSamples = 10;

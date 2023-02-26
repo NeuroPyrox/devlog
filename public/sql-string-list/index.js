@@ -1,15 +1,13 @@
-"use strict";
-
 // TODO remove SQL injection vulnerabilities
 
 import * as P from "../../parsers.js";
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { dirname } from "path";
+import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // I prefer this promisifier because I've had past issues with util.promisify and bluebird
-const promisify = async executor => {
+const promisify = async (executor) => {
   const [err, result] = await new Promise((resolve, reject) => {
     try {
       executor((...args) => resolve(args));
@@ -25,10 +23,10 @@ const promisify = async executor => {
   return result;
 };
 
-const createDatabase = async filename => {
+const createDatabase = async (filename) => {
   let database;
   const sqlite3 = (await import("sqlite3")).default;
-  await promisify(callback => {
+  await promisify((callback) => {
     database = new sqlite3.Database(filename, callback);
   });
   return database;
@@ -37,12 +35,12 @@ const createDatabase = async filename => {
 const databasePromise = createDatabase(`${__dirname}/.sql`);
 const tableName = "strings";
 
-const runSql = async command => {
+const runSql = async (command) => {
   const database = await databasePromise;
-  await promisify(callback => database.run(command, {}, callback));
+  await promisify((callback) => database.run(command, {}, callback));
 };
 
-const getRejection = async promise => {
+const getRejection = async (promise) => {
   try {
     await promise;
   } catch (err) {
@@ -69,7 +67,7 @@ const paths = {
     const stat = await fs.promises.stat(`${__dirname}/index.html`);
     res.writeHead(200, {
       "Content-Type": "text/html",
-      "Content-Length": stat.size
+      "Content-Length": stat.size,
     });
     fs.createReadStream(`${__dirname}/index.html`).pipe(res);
   },
@@ -83,30 +81,30 @@ const paths = {
   "/get-all": async (req, res) => {
     // TODO ensure table exists
     const database = await databasePromise;
-    const all = await promisify(callback =>
+    const all = await promisify((callback) =>
       database.all(`SELECT * FROM ${tableName}`, {}, callback)
     );
     res.writeHead(200, {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
     });
-    res.write(JSON.stringify(all.map(row => row.text)));
+    res.write(JSON.stringify(all.map((row) => row.text)));
     res.end();
   },
   "/add": async (req, res) => {
     // TODO ensure table exists
     let body = "";
-    req.on("data", chunk => (body += chunk.toString()));
+    req.on("data", (chunk) => (body += chunk.toString()));
     req.on("end", async () => {
       await runSql(`INSERT INTO ${tableName} VALUES (${JSON.stringify(body)})`);
       res.end();
     });
-  }
+  },
 };
 
 export default Object.entries(paths).reduce(
   (total, [key, value]) =>
     P.endIn(key)
-      .map(_ => value)
+      .map((_) => value)
       .or(total),
   P.fail
 );

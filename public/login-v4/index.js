@@ -1,5 +1,3 @@
-"use strict";
-
 import * as fs from "fs";
 import * as P from "../../parsers.js";
 import htmlHandler from "../../lib/html-handler.js";
