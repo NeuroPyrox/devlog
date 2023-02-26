@@ -1,10 +1,8 @@
-"use strict";
-
 import * as P from "../parsers.js";
 
-const writeString = string => (req, res) => {
+const writeString = (string) => (req, res) => {
   res.writeHead(200, {
-    "Content-Type": "text/html"
+    "Content-Type": "text/html",
   });
   res.write(string);
   res.end();
@@ -20,7 +18,7 @@ const homeHtml = `
 `;
 
 export default P.end
-  .map(_ => homeHtml)
-  .or(P.endIn("/page1").map(_ => "This is page 1"))
-  .or(P.endIn("/page2").map(_ => "This is page 2"))
+  .map(() => homeHtml)
+  .or(P.endIn("/page1").map(() => "This is page 1"))
+  .or(P.endIn("/page2").map(() => "This is page 2"))
   .map(writeString);

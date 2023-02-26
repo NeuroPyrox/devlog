@@ -1,6 +1,4 @@
-"use strict";
-
-const assert = condition => {
+const assert = (condition) => {
   if (!condition) {
     throw "Assertion Error!";
   }
@@ -8,10 +6,10 @@ const assert = condition => {
 
 const initialSexprs = ["S", "K"];
 
-const allMutations = sexpr => {
+const allMutations = (sexpr) => {
   const mutations = initialSexprs
-    .map(i => [i, sexpr])
-    .concat(initialSexprs.map(i => [sexpr, i]));
+    .map((i) => [i, sexpr])
+    .concat(initialSexprs.map((i) => [sexpr, i]));
   if (typeof sexpr === "string") {
     assert(initialSexprs.includes(sexpr));
     return mutations;
@@ -26,8 +24,8 @@ const allMutations = sexpr => {
     mutations.push(b);
   }
   return mutations
-    .concat(allMutations(a).map(ma => [ma, b]))
-    .concat(allMutations(b).map(mb => [a, mb]));
+    .concat(allMutations(a).map((ma) => [ma, b]))
+    .concat(allMutations(b).map((mb) => [a, mb]));
 };
 
 export default () => {
@@ -37,4 +35,4 @@ export default () => {
     sexprs = sexprs.concat(allMutations(sexpr));
   }
   return sexprs;
-}
+};

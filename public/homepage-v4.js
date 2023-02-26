@@ -1,8 +1,6 @@
-"use strict";
-
 import homepage from "../homepage.js";
 
-const renderHtml = listHtml => `
+const renderHtml = (listHtml) => `
   <!DOCTYPE html>
   <html lang="en">
     <head>

@@ -1,5 +1,3 @@
-"use strict";
-
 import * as P from "../parsers.js";
 
 const textHandler = (text) => (req, res) => {

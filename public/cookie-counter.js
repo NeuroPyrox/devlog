@@ -1,5 +1,3 @@
-"use strict";
-
 // TODO make the parser deal with several cookies in the header
 
 import * as P from "../parsers.js";
@@ -8,14 +6,14 @@ const cookieParser = P.string("__Secure-counter=")
   .skipLeft(P.any)
   .map(parseInt);
 
-export default P.end.map(_ => (req, res) => {
+export default P.end.map(() => (req, res) => {
   const counter =
     req.headers.cookie === undefined
       ? 0
       : cookieParser.parseWhole(req.headers.cookie) + 1;
   res.writeHead(200, {
     "Set-Cookie": `__Secure-counter=${counter}; path=/cookie-counter; HttpOnly; Secure; SameSite=Lax`,
-    "Content-Type": "application/json"
+    "Content-Type": "application/json",
   });
   res.write(JSON.stringify(counter));
   res.end();

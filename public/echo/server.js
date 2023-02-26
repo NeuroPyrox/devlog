@@ -1,9 +1,7 @@
-"use strict";
-
 import * as P from "../../parsers.js";
 import htmlHandler from "../../lib/html-handler.js";
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { dirname } from "path";
+import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 

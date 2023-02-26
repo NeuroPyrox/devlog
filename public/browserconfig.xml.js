@@ -1,5 +1,3 @@
-"use strict";
-
 import * as P from "../parsers.js";
 
 const xml = `<?xml version="1.0" encoding="utf-8"?>
@@ -13,7 +11,7 @@ const xml = `<?xml version="1.0" encoding="utf-8"?>
 </browserconfig>
 `;
 
-export default P.end.map((_) => (req, res) => {
+export default P.end.map(() => (req, res) => {
   res.writeHead(200, {
     "Content-Type": "text/xml",
   });

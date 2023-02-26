@@ -1,5 +1,3 @@
-"use strict";
-
 export const just = (x) => ({
   map: (f) => just(f(x)),
   chain: (f) => f(x),

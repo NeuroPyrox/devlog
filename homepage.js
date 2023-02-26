@@ -1,9 +1,8 @@
-"use strict";
-
 import * as fs from "fs";
 import * as P from "./parsers.js";
 
-const renderPost = title => date => href => `
+const renderPost = (title) => (date) => (href) =>
+  `
   <a href="${href}">
     <div class="post">
       <h2>
@@ -32,7 +31,7 @@ const homepageParser = P.inParentheses(
   )
 )
   .skipRight(P.end)
-  .map(list => list.join(""));
+  .map((list) => list.join(""));
 
 let homepage;
 

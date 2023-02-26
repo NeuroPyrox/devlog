@@ -1,6 +1,3 @@
-"use strict";
-
-// TODO ES modules
 // TODO upload libraries to github instead of making a monorepo
 // TODO google discoverability
 // TODO move parts of server.lisp to homepage.lisp
