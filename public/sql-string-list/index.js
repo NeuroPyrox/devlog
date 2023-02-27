@@ -104,7 +104,7 @@ const paths = {
 export default Object.entries(paths).reduce(
   (total, [key, value]) =>
     P.endIn(key)
-      .map((_) => value)
+      .map(() => value)
       .or(total),
   P.fail
 );
