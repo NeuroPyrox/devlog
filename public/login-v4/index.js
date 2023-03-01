@@ -1,6 +1,10 @@
 import * as fs from "fs";
 import * as P from "../../parsers.js";
 import htmlHandler from "../../lib/html-handler.js";
+import { dirname } from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const moduleHandler = (moduleName) =>
   P.endIn(`/${moduleName}.js`).map(() => async (req, res) => {
