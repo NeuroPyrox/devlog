@@ -344,14 +344,14 @@
         yield html.text("Password:");
         const passwordInput = yield* html.textInput();
         const signupButton = yield* html.button("Signup");
-        
+
         const signupAttempts = signupButton
-            .onClick()
-            .tag(usernameInput.inputValues())
-            .mapTag(passwordInput.inputValues(), (username, password) => ({
-              username,
-              password,
-            }));
+          .onClick()
+          .tag(usernameInput.inputValues())
+          .mapTag(passwordInput.inputValues(), (username, password) => ({
+            username,
+            password,
+          }));
         const nonEmptySignupAttempts = signupAttempts.filter(
           ({ username, password }) => username !== "" && password !== ""
         );
