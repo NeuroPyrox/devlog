@@ -48,11 +48,13 @@ class Sink {
     for (const weakParent in weakParents) {
       if (weakParent.deref() !== undefined) {
         const childInfo = parent.#childrenInfo.add({ ref: this });
+        // Weakness allows unpushability to propagate without keeping parents or siblings alive.
         const parentInfo = this.#parentsInfo.add({
           weakRef: weakParent,
           weakRemover: new WeakRef(childInfo),
         });
-        // TODO explain why some finalizers don't block other finalizers.
+        // This finalizer keeps alive [this.#parentsInfo] but not [this],
+        // allowing unpushability to propagate without finalizers getting in the way.
         finalizers.register(childInfo, () =>
           parentInfo.removeOnce()
         );
