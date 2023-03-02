@@ -23,21 +23,19 @@ import * as Push from "./push.js";
 // Map              addParents removeParents readParents forEachParent getPriority iterateWaitingChildren            wait            unwait destroy push
 // Apply            addParents removeParents readParents forEachParent getPriority iterateWaitingChildren            wait            unwait destroy push
 
-const finalizers = new FinalizationRegistry(f => f());
+const finalizers = new FinalizationRegistry((f) => f());
 
 class Sink {
   // These 3 variables interact with each other a lot.
-  #parents;
-  #weakParentLinks;
-  #children;
+  #parentsInfo;
+  #childrenInfo;
   // This variable is largely independent of the other ones,
   // but refactoring it into its own class would expose more methods.
   #priority;
-  
+
   constructor(weakParents) {
-    this.#parentInfo = new ShrinkingList();
-    this.#childInfo = new ShrinkingList();
-    this.#weakParentLinks = [];
+    this.#parentsInfo = new ShrinkingList();
+    this.#childrenInfo = new ShrinkingList();
     this.#priority =
       Math.max(
         -1,
@@ -46,19 +44,22 @@ class Sink {
     this.addWeakParents(weakParents);
   }
 
-  // TODO how to handle merges?
   addWeakParents(weakParents) {
     for (const weakParent in weakParents) {
       if (weakParent.deref() !== undefined) {
-        const parentInfo = this.#parentInfo.add({weakRef: weakParent});
-        const childInfo = parent.#childInfo.add({ref: this});
-        parentInfo.get().remover = childInfo;
-        childInfo.get().remover = parentInfo;
-        // TODO finalizer
+        const childInfo = parent.#childrenInfo.add({ ref: this });
+        const parentInfo = this.#parentsInfo.add({
+          weakRef: weakParent,
+          weakRemover: new WeakRef(childInfo),
+        });
+        // TODO explain why some finalizers don't block other finalizers.
+        finalizers.register(childInfo, () =>
+          parentInfo.removeOnce()
+        );
       }
     }
   }
-  
+
   getPriority() {
     return this.#priority;
   }
