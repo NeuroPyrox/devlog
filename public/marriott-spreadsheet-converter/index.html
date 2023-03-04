@@ -26,6 +26,8 @@
     import { just, nothing } from "./maybe.js";
     import * as P from "./parsers.js";
 
+    const digit = P.charClass((char) => "0" <= char && char <= "9");
+
     const mbv = undefined;
 
     const confo = undefined;
