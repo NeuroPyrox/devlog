@@ -27,15 +27,15 @@ const finalizers = new FinalizationRegistry((f) => f());
 
 class Sink {
   // These 3 variables interact with each other a lot.
-  #parentsInfo;
-  #childrenInfo;
+  #selfRefsFromParents;
+  #childRefs;
   // This variable is largely independent of the other ones,
   // but refactoring it into its own class would expose more methods.
   #priority;
 
   constructor(weakParents) {
-    this.#parentsInfo = new ShrinkingList();
-    this.#childrenInfo = new ShrinkingList();
+    this.#selfRefsFromParents = new ShrinkingList();
+    this.#childRefs = new ShrinkingList();
     this.#priority =
       Math.max(
         -1,
@@ -47,17 +47,14 @@ class Sink {
   addWeakParents(weakParents) {
     for (const weakParent in weakParents) {
       if (weakParent.deref() !== undefined) {
-        const childInfo = parent.#childrenInfo.add({ ref: this });
+        const childRef = parent.#childRefs.add(this);
         // Weakness allows unpushability to propagate without keeping parents or siblings alive.
-        const parentInfo = this.#parentsInfo.add({
-          weakRef: weakParent,
-          weakRemover: new WeakRef(childInfo),
-        });
-        // This finalizer keeps alive [this.#parentsInfo] but not [this],
-        // allowing unpushability to propagate without finalizers getting in the way.
-        finalizers.register(childInfo, () =>
-          parentInfo.removeOnce()
+        const selfRefFromParent = this.#selfRefsFromParents.add(
+          new WeakRef(childInfo)
         );
+        // This finalizer keeps alive [this.#selfRefsFromParents] but not [this],
+        // allowing unpushability to propagate without finalizers getting in the way.
+        finalizers.register(childRef, () => selfRefFromParent.removeOnce());
       }
     }
   }
