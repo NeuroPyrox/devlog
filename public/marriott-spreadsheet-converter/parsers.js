@@ -66,8 +66,15 @@ export const inParentheses = (p) =>
 
 export const many = (p) => many1(p).or(constant([]));
 
-const many1 = (p) =>
+export const many1 = (p) =>
   p.map((head) => (tail) => [head, ...tail]).apply(lazy(() => many(p)));
+
+export const repeat = (p, count) =>
+  count <= 0
+    ? constant([])
+    : p
+        .map((head) => (tail) => [head, ...tail])
+        .apply(lazy(() => repeat(p, count - 1)));
 
 export const spaces1 = many1(charClass((char) => char === " "));
 
