@@ -28,13 +28,13 @@
 
     const digit = P.charClass((char) => "0" <= char && char <= "9");
 
-    const mbv = undefined;
+    const mbv = P.repeat(digit, 9);
 
-    const confo = undefined;
+    const confo = P.repeat(digit, 8);
 
     const name = undefined;
 
-    const folio = undefined;
+    const folio = P.repeat(digit, 5);
 
     const arrive = undefined;
 
@@ -42,7 +42,7 @@
 
     const t = undefined;
 
-    const cert = undefined;
+    const cert = P.repeat(digit, 8);
 
     const n = undefined;
 

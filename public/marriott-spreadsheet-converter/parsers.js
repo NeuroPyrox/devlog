@@ -54,7 +54,7 @@ export const string = (expected) =>
       : nothing;
   });
 
-const charClass = (predicate) =>
+export const charClass = (predicate) =>
   parser((str, index) =>
     index < str.length && predicate(str[index])
       ? just([str[index], index + 1])
