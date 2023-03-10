@@ -27,6 +27,42 @@
     import * as P from "./parsers.js";
 
     const digit = P.charClass((char) => "0" <= char && char <= "9");
+    const notDigit = P.charClass((char) => char < "0" || "9" < char);
+
+    const month = Object.entries({
+      Jan: 1,
+      Feb: 2,
+      Mar: 3,
+      Apr: 4,
+      May: 5,
+      Jun: 6,
+      Jul: 7,
+      Aug: 8,
+      Sep: 9,
+      Oct: 10,
+      Nov: 11,
+      Dec: 12,
+    }).reduce(
+      (total, [key, value]) => total.or(P.string(key).map(() => value)),
+      P.fail
+    );
+
+    const twoDigitNumber = digit
+      .map((tens) => (ones) => parseInt(tens + ones))
+      .apply(digit);
+
+    const maxDaysPerMonth = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+    const date = twoDigitNumber.chain((day) =>
+      month.chain((month) =>
+        twoDigitNumber.chain((year) =>
+          maxDaysPerMonth[month - 1] < day ||
+          (day === 29 && month === 4 && (year % 4 !== 0 || year === 0))
+            ? P.fail
+            : { day, month, year }
+        )
+      )
+    );
 
     const mbv = P.repeat(digit, 9);
 
@@ -36,9 +72,9 @@
 
     const folio = P.repeat(digit, 5);
 
-    const arrive = undefined;
+    const arrive = date;
 
-    const depart = undefined;
+    const depart = date;
 
     const t = undefined;
 
