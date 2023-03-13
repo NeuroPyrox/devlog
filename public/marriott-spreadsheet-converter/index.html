@@ -64,6 +64,8 @@
       )
     );
 
+    const integer = P.many1(digit).map((array) => parseInt(array.join("")));
+
     const mbv = P.repeat(digit, 9);
 
     const confo = P.repeat(digit, 8);
@@ -76,15 +78,15 @@
 
     const depart = date;
 
-    const t = undefined;
+    const t = P.string("R").or(P.string("D"));
 
     const cert = P.repeat(digit, 8);
 
-    const n = undefined;
+    const n = integer;
 
-    const amount = undefined;
-
-    const r = undefined;
+    const amount = P.constant(0)
+      .or(integer.filter((i) => i % 30 === 0))
+      .skipRight(P.string(".00"));
 
     const row = undefined;
   </script>

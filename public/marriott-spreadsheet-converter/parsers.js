@@ -1,8 +1,8 @@
 import { just, nothing } from "./maybe.js";
 
-// In this module, "str" refers to a string and "string" refers to the parser conbinator
+// In this module, [str] refers to a string and [string] refers to the parser combinator
 
-// Parse returns a maybe monad of a parse result and the next index
+// [parse] returns a maybe monad of a parse result and the next index
 const parser = (parse) => ({
   parse,
   // TODO better error messages
@@ -27,6 +27,12 @@ const parser = (parse) => ({
       .apply(other),
   or: (other) =>
     parser((str, index) => parse(str, index).or(() => other.parse(str, index))),
+  filter: (predicate) =>
+    parser((str, index) =>
+      parse(str, index).chain(([result, index]) =>
+        predicate(result) ? just([result, index]) : nothing
+      )
+    ),
 });
 
 export const constant = (x) => parser((_, index) => just([x, index]));
