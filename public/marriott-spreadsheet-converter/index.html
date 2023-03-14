@@ -53,6 +53,7 @@
 
     const maxDaysPerMonth = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
+    // TODO stop using [chain]
     const date = twoDigitNumber.chain((day) =>
       month.chain((month) =>
         twoDigitNumber.chain((year) =>
