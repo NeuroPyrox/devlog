@@ -53,17 +53,17 @@
 
     const maxDaysPerMonth = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
-    // TODO stop using [chain]
-    const date = twoDigitNumber.chain((day) =>
-      month.chain((month) =>
-        twoDigitNumber.chain((year) =>
-          maxDaysPerMonth[month - 1] < day ||
-          (day === 29 && month === 4 && (year % 4 !== 0 || year === 0))
-            ? P.fail
-            : { day, month, year }
-        )
-      )
-    );
+    const date = twpDititNumber
+      .map((day) => (month) => (year) => {
+        day, month, year;
+      })
+      .apply(month)
+      .apply(twoDigitNumber)
+      .filter(
+        ({ day, month, year }) =>
+          day <= maxDaysPerMonth[month - 1] &&
+          (month !== 4 || day !== 29 || (year % 4 === 0 && year !== 0))
+      );
 
     const integer = P.many1(digit).map((array) => parseInt(array.join("")));
 
