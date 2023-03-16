@@ -92,3 +92,6 @@ export const simpleString = string('"')
 
 export const untilChar = (endChar) =>
   many(charClass((char) => char !== endChar)).map((chars) => chars.join(""));
+
+export const apply = (f, ...args) =>
+  args.reduce((result, arg) => result.apply(arg), constant(f));

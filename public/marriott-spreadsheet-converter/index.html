@@ -47,23 +47,28 @@
       P.fail
     );
 
-    const twoDigitNumber = digit
-      .map((tens) => (ones) => parseInt(tens + ones))
-      .apply(digit);
+    const twoDigitNumber = P.apply(
+      (tens) => (ones) => parseInt(tens + ones),
+      digit,
+      digit
+    );
 
     const maxDaysPerMonth = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
-    const date = twpDititNumber
-      .map((day) => (month) => (year) => {
-        day, month, year;
-      })
-      .apply(month)
-      .apply(twoDigitNumber)
-      .filter(
-        ({ day, month, year }) =>
-          day <= maxDaysPerMonth[month - 1] &&
-          (month !== 4 || day !== 29 || (year % 4 === 0 && year !== 0))
-      );
+    const date = P.apply(
+      (day) => (month) => (year) => ({
+        day,
+        month,
+        year,
+      }),
+      twoDigitNumber,
+      month,
+      twoDigitNumber
+    ).filter(
+      ({ day, month, year }) =>
+        day <= maxDaysPerMonth[month - 1] &&
+        (month !== 4 || day !== 29 || (year % 4 === 0 && year !== 0))
+    );
 
     const integer = P.many1(digit).map((array) => parseInt(array.join("")));
 
