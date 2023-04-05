@@ -67,6 +67,18 @@ export const charClass = (predicate) =>
       : nothing
   );
 
+export const regex = (r) => {
+  if (!r.sticky) {
+    throw new Error("{r} must be a sticky regex!");
+  }
+  return parser((str, index) => {
+    r.lastIndex = index;
+    return r.test(str)
+      ? just([str.substring(index, r.lastIndex), r.lastIndex])
+      : nothing;
+  });
+};
+
 export const inParentheses = (p) =>
   string("(").skipLeft(p).skipRight(string(")"));
 
