@@ -26,8 +26,7 @@
     import { just, nothing } from "./maybe.js";
     import * as P from "./parsers.js";
 
-    const digit = P.charClass((char) => "0" <= char && char <= "9");
-    const notDigit = P.charClass((char) => char < "0" || "9" < char);
+    const digit = P.charClass((char) => char.match(/\d/));
 
     const month = Object.entries({
       Jan: 1,
@@ -69,6 +68,8 @@
         day <= maxDaysPerMonth[month - 1] &&
         (month !== 4 || day !== 29 || (year % 4 === 0 && year !== 0))
     );
+    
+    const nameChar = P.charClass(char => char.match(/[A-Za-z]/));
 
     const integer = P.many1(digit).map((array) => parseInt(array.join("")));
 
