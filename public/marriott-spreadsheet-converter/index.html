@@ -26,8 +26,6 @@
     import { just, nothing } from "./maybe.js";
     import * as P from "./parsers.js";
 
-    const digit = P.charClass((char) => char.match(/\d/));
-
     const month = Object.entries({
       Jan: 1,
       Feb: 2,
@@ -46,11 +44,7 @@
       P.fail
     );
 
-    const twoDigitNumber = P.apply(
-      (tens) => (ones) => parseInt(tens + ones),
-      digit,
-      digit
-    );
+    const twoDigitNumber = P.regex(/\d{2}/y).map(parseInt);
 
     const maxDaysPerMonth = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
@@ -69,17 +63,17 @@
         (month !== 4 || day !== 29 || (year % 4 === 0 && year !== 0))
     );
     
-    const nameChar = P.charClass(char => char.match(/[A-Za-z]/));
+    const nameChar = P.regex(/[A-Za-z]/y);
 
-    const integer = P.many1(digit).map((array) => parseInt(array.join("")));
+    const integer = P.regex(/\d+/y).map(parseInt);
 
-    const mbv = P.repeat(digit, 9);
+    const mbv = P.regex(/\d{9}/y);
 
-    const confo = P.repeat(digit, 8);
+    const confo = P.regex(/\d{8}/y);
 
     const name = undefined;
 
-    const folio = P.repeat(digit, 5);
+    const folio = P.regex(/\d{5}/y);
 
     const arrive = date;
 
@@ -87,7 +81,7 @@
 
     const t = P.string("R").or(P.string("D"));
 
-    const cert = P.repeat(digit, 8);
+    const cert = P.regex(/\d{8}/y);
 
     const n = integer;
 
