@@ -78,8 +78,8 @@
     const arrive = date;
 
     const depart = date;
-
-    const t = P.string("R").or(P.string("D"));
+    
+    const t = P.regex(/R|D/y);
 
     const cert = P.regex(/\d{8}/y);
 
