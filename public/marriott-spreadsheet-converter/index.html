@@ -62,8 +62,11 @@
         day <= maxDaysPerMonth[month - 1] &&
         (month !== 4 || day !== 29 || (year % 4 === 0 && year !== 0))
     );
-    
-    const nameChar = P.regex(/[A-Za-z]/y);
+
+    const nameSegment = P.regex(/[A-Z]/y).map(
+      (segment) =>
+        segment.charAt(0).toUpperCase() + segment.slice(1).toLowerCase()
+    );
 
     const integer = P.regex(/\d+/y).map(parseInt);
 
@@ -78,7 +81,7 @@
     const arrive = date;
 
     const depart = date;
-    
+
     const t = P.regex(/R|D/y);
 
     const cert = P.regex(/\d{8}/y);
