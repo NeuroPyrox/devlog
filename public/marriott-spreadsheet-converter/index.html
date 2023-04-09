@@ -97,9 +97,9 @@
 
     const n = integer;
 
-    // TODO flip or
-    const amount = P.constant(0)
-      .or(integer.filter((i) => i % 30 === 0))
+    const amount = integer
+      .filter((i) => i % 30 === 0)
+      .or(P.constant(0))
       .skipRight(P.string(".00"));
 
     const row = undefined;
