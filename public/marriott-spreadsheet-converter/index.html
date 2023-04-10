@@ -70,6 +70,9 @@
 
     const integer = P.regex(/\d+/y).map(parseInt);
 
+    const space = P.string(" ");
+    const spaces = P.many1(space);
+
     const mbv = P.regex(/\d{9}/y);
 
     const confo = P.regex(/\d{8}/y);
@@ -91,11 +94,19 @@
 
     const depart = date;
 
-    const t = P.regex(/R|D/y);
+    const room = P.regex(/\d\d\d/y)
+      .map(parseInt)
+      .filter(
+        (i) =>
+          (100 <= i && i <= 109 && i !== 108) ||
+          (200 <= i && i <= 426 && 0 <= i % 100 && i % 100 <= 26)
+      );
 
     const cert = P.regex(/\d{8}/y);
 
-    const n = integer;
+    const type = P.regex(/R|D/y);
+
+    const nights = integer;
 
     const amount = integer
       .filter((i) => i % 30 === 0)
