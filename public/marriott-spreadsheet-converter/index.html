@@ -63,38 +63,38 @@
         (month !== 4 || day !== 29 || (year % 4 === 0 && year !== 0))
     );
 
-    const nameSegment = P.regex(/[A-Z]*/y).map(
-      (segment) =>
-        segment.charAt(0).toUpperCase() + segment.slice(1).toLowerCase()
-    );
-
     const integer = P.regex(/\d+/y).map(parseInt);
 
     const space = P.string(" ");
-    const spaces = P.many1(space);
+    const spaces = P.regex(/ +/y);
 
-    const mbv = P.regex(/\d{9}/y);
+    const mbv = P.regex(/    \d{9}/y);
 
-    const confo = P.regex(/\d{8}/y);
+    const confo = P.regex(/  \d{8}/y);
 
-    const name = P.apply(
-      (head) => (tail) => {
-        const segments = [head, ...tail];
-        return segments.some((segment) => segment === "")
-          ? "INVALID NAME"
-          : segments.reverse().join(" ");
-      },
+    const nameSegment = P.regex(/[A-Z]+/y).map(
+      (segment) =>
+        segment.charAt(0).toUpperCase() + segment.slice(1).toLowerCase()
+    );
+    const innerName = P.apply(
+      (head) => (tail) => [head, ...tail].reverse().join(" "),
       nameSegment,
       P.many(P.string("/").skipLeft(nameSegment))
-    );
+    )
+      .skipRight(spaces)
+      .skipRight(P.end);
+    const name = P.string("  ")
+      .skipLeft(P.regex(/[A-Z/ ]{26} /y))
+      .map((outer) => innerName.parse(outer).match(null))
+      .filter((x) => x !== null);
 
     const folio = P.regex(/\d{5}/y);
 
-    const arrive = date;
+    const arrive = P.string("  ").skipLeft(date);
 
-    const depart = date;
+    const depart = P.string("  ").skipLeft(date);
 
-    const room = P.regex(/\d\d\d/y)
+    const room = P.regex(/  \d\d\d/y)
       .map(parseInt)
       .filter(
         (i) =>
@@ -102,17 +102,28 @@
           (200 <= i && i <= 426 && 0 <= i % 100 && i % 100 <= 26)
       );
 
-    const cert = P.regex(/\d{8}/y);
+    const cert = P.string("   ")
+      .skipLeft(P.regex(/\d{8}/y))
+      .skipRight(P.string("    "));
 
-    const type = P.regex(/R|D/y);
+    const nights = P.regex(/ [0-9 ]{6}/y)
+      .map((outer) =>
+        spaces.skipLeft(integer).skipRight(P.end).parse(outer).match(null)
+      )
+      .filter((x) => x !== null);
 
-    const nights = integer;
-
-    const amount = integer
-      .filter((i) => i % 30 === 0)
-      .or(P.constant(0))
+    const amount = P.regex(/ [0-9 ]{7}/y)
+      .map((outer) =>
+        spaces
+          .skipLeft(integer.or(P.constant(0)))
+          .skipRight(P.end)
+          .parse(outer)
+          .match(null)
+      )
+      .filter((x) => x !== null)
       .skipRight(P.string(".00"));
 
-    const row = undefined;
+    const rRow = undefined;
+    const dRow = undefined;
   </script>
 </html>
