@@ -3,6 +3,7 @@ export const just = (x) => ({
   map: (f) => just(f(x)),
   chain: (f) => f(x),
   or: () => just(x),
+  match: () => x,
   unwrap: () => x,
 });
 
@@ -11,6 +12,7 @@ export const nothing = {
   map: () => nothing,
   chain: () => nothing,
   or: (f) => f(),
+  match: x => x
 };
 
 export const maybe = (value) =>
