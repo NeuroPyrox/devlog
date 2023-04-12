@@ -85,8 +85,8 @@
       .skipRight(P.end);
     const name = P.string("  ")
       .skipLeft(P.regex(/[A-Z/ ]{26} /y))
-      .map((outer) => innerName.parse(outer).match(null))
-      .filter((x) => x !== null);
+      .map((outer) => innerName.parse(outer).unwrap())
+      .filter((x) => x !== nothing);
 
     const folio = P.regex(/\d{5}/y);
 
@@ -108,9 +108,9 @@
 
     const nights = P.regex(/ [0-9 ]{6}/y)
       .map((outer) =>
-        spaces.skipLeft(integer).skipRight(P.end).parse(outer).match(null)
+        spaces.skipLeft(integer).skipRight(P.end).parse(outer).unwrap()
       )
-      .filter((x) => x !== null);
+      .filter((x) => x !== nothing);
 
     const amount = P.regex(/ [0-9 ]{7}/y)
       .map((outer) =>
@@ -118,9 +118,9 @@
           .skipLeft(integer.or(P.constant(0)))
           .skipRight(P.end)
           .parse(outer)
-          .match(null)
+          .unwrap()
       )
-      .filter((x) => x !== null)
+      .filter((x) => x !== nothing)
       .skipRight(P.string(".00"));
 
     const rRow = undefined;
