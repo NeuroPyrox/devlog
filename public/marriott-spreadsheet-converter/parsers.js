@@ -5,8 +5,7 @@ import { just, nothing } from "./maybe.js";
 // [parse] returns a maybe monad of a parse result and the next index
 const parser = (parse) => ({
   parse,
-  // TODO better error messages
-  parseWhole: (str) => parse(str, 0).unwrap()[0],
+  parseWhole: (str) => parse(str, 0).map(([x]) => x),
   map: (f) =>
     parser((str, index) =>
       parse(str, index).map(([result, index]) => [f(result), index])
