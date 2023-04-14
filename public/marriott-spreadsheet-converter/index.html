@@ -80,13 +80,10 @@
       (head) => (tail) => [head, ...tail].reverse().join(" "),
       nameSegment,
       P.many(P.string("/").skipLeft(nameSegment))
-    )
-      .skipRight(spaces)
-      .skipRight(P.end);
+    ).skipRight(spaces);
     const name = P.string("  ")
       .skipLeft(P.regex(/[A-Z/ ]{26} /y))
-      .map((outer) => innerName.parse(outer).unwrap())
-      .filter((x) => x !== nothing);
+      .nest(innerName);
 
     const folio = P.regex(/\d{5}/y);
 
@@ -106,21 +103,10 @@
       .skipLeft(P.regex(/\d{8}/y))
       .skipRight(P.string("    "));
 
-    const nights = P.regex(/ [0-9 ]{6}/y)
-      .map((outer) =>
-        spaces.skipLeft(integer).skipRight(P.end).parse(outer).unwrap()
-      )
-      .filter((x) => x !== nothing);
+    const nights = P.regex(/ [0-9 ]{6}/y).nest(spaces.skipLeft(integer));
 
     const amount = P.regex(/ [0-9 ]{7}/y)
-      .map((outer) =>
-        spaces
-          .skipLeft(integer.or(P.constant(0)))
-          .skipRight(P.end)
-          .parse(outer)
-          .unwrap()
-      )
-      .filter((x) => x !== nothing)
+      .nest(spaces.skipLeft(integer.or(P.constant(0))))
       .skipRight(P.string(".00"));
 
     const rRow = undefined;
