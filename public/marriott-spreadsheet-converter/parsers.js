@@ -2,6 +2,7 @@ import { just, nothing } from "./maybe.js";
 
 // In this module, [str] refers to a string and [string] refers to the parser combinator
 
+// TODO use class
 // [parse] returns a maybe monad of a parse result and the next index
 const parser = (parse) => ({
   parse,
@@ -30,6 +31,15 @@ const parser = (parse) => ({
     parser((str, index) =>
       parse(str, index).chain(([result, index]) =>
         predicate(result) ? just([result, index]) : nothing
+      )
+    ),
+  nest: (other) =>
+    parser((str, index) =>
+      parse(str, index).chain(([a, index]) =>
+        other
+          .skipRight(end)
+          .parse(a)
+          .map(([b]) => [b, index])
       )
     ),
 });
