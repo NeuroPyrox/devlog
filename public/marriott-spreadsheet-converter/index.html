@@ -99,17 +99,30 @@
           (200 <= i && i <= 426 && 0 <= i % 100 && i % 100 <= 26)
       );
 
-    const cert = P.string("   ")
-      .skipLeft(P.regex(/\d{8}/y))
-      .skipRight(P.string("    "));
+    const cert = P.string("   ").skipLeft(P.regex(/\d{8}/y));
 
     const nights = P.regex(/ [0-9 ]{6}/y).nest(spaces.skipLeft(integer));
 
     const amount = P.regex(/ [0-9 ]{7}/y)
       .nest(spaces.skipLeft(integer.or(P.constant(0))))
-      .skipRight(P.string(".00"));
+      .skipRight(P.regex(/.00 {17}/y));
 
-    const rRow = undefined;
+    const rRow = P.apply(
+      (name) => (folio) => (arrive) => (room) => (cert) => (amount) => ({
+        name,
+        folio,
+        arrive,
+        room,
+        cert,
+        amount,
+      }),
+      mbv.skipLeft(confo).skipLeft(name),
+      folio,
+      arrive,
+      depart.skipLeft(room),
+      cert,
+      P.string("     R").skipLeft(nights).skipLeft(amount)
+    );
     const dRow = undefined;
   </script>
 </html>
