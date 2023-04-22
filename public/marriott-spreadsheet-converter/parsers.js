@@ -93,6 +93,7 @@ export const inParentheses = (p) =>
 
 export const many = (p) => many1(p).or(constant([]));
 
+// TODO make non-recursive
 export const many1 = (p) =>
   p.map((head) => (tail) => [head, ...tail]).apply(lazy(() => many(p)));
 
