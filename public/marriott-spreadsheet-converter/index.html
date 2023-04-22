@@ -26,6 +26,11 @@
     import { just, nothing } from "./maybe.js";
     import * as P from "./parsers.js";
 
+    const test = (x) => {
+      console.log(x);
+      return x;
+    };
+
     const month = Object.entries({
       Jan: 1,
       Feb: 2,
@@ -125,27 +130,34 @@
       P.string("     R").skipLeft(nights).skipLeft(amount)
     );
     const dRow = P.apply(
-      (name) => (folio) => (arrive) => (room) => (cert) => (amount) => ({
-        name,
-        folio,
-        arrive,
-        room,
-        cert,
-        amount,
-      }),
+      (name) => (folio) => (arrive) => (room) => (cert) =>
+        `${name}\t${arrive}\t${folio}\t${cert}\t${room}\t0`,
       mbv.skipLeft(confo).skipLeft(name),
       folio,
       arrive,
       depart.skipLeft(room),
-      P.string(" ").skipLeft(cert),
-      P.string("    D").skipLeft(nights).skipLeft(amount)
+      P.string(" ")
+        .skipLeft(cert)
+        .skipRight(P.regex(/    D {15}.00/y))
+    );
+
+    const separator = P.regex(/ {21}/y);
+    const begin = P.regex(/ {0,4}/y);
+    const end = P.regex(/ {0,17}/y);
+
+    // TODO make [join] combinator
+    const row = rRow.or(dRow);
+    const sheet = P.apply(
+      (head) => (tail) => [head, ...tail].join("\n"),
+      begin.skipLeft(row),
+      P.many1(separator.skipLeft(row)).skipRight(end)
     );
 
     const [textAreaFrom, textAreaTo] =
       document.getElementsByTagName("textarea");
     textAreaFrom.addEventListener(
       "input",
-      (x) => (textAreaTo.value = rRow.parseWhole(x.target.value).unwrap())
+      (x) => (textAreaTo.value = sheet.parseWhole(x.target.value).unwrap())
     );
   </script>
 </html>
