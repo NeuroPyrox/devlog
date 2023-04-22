@@ -139,5 +139,13 @@
       P.string(" ").skipLeft(cert),
       P.string("    D").skipLeft(nights).skipLeft(amount)
     );
+
+    const [textAreaFrom, textAreaTo] =
+      document.getElementsByTagName("textarea");
+    textAreaFrom.addEventListener("input", (x) => {
+      const result = rRow.parseWhole(x.target.value).unwrap();
+      console.log(result);
+      textAreaTo.value = `${result}`;
+    });
   </script>
 </html>
