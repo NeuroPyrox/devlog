@@ -68,7 +68,7 @@
     const space = P.string(" ");
     const spaces = P.regex(/ +/y);
 
-    const mbv = P.regex(/    \d{9}/y);
+    const mbv = P.regex(/\d{9}/y);
 
     const confo = P.regex(/  \d{8}/y);
 
@@ -89,7 +89,7 @@
 
     const arrive = P.string("  ").skipLeft(date);
 
-    const depart = P.string("  ").skipLeft(date);
+    const depart = arrive;
 
     const room = P.regex(/  \d\d\d/y)
       .map(parseInt)
@@ -105,7 +105,7 @@
 
     const amount = P.regex(/ [0-9 ]{7}/y)
       .nest(spaces.skipLeft(integer.or(P.constant(0))))
-      .skipRight(P.regex(/.00 {17}/y));
+      .skipRight(P.string(".00"));
 
     const rRow = P.apply(
       (name) => (folio) => (arrive) => (room) => (cert) => (amount) => ({
@@ -123,6 +123,21 @@
       cert,
       P.string("     R").skipLeft(nights).skipLeft(amount)
     );
-    const dRow = undefined;
+    const dRow = P.apply(
+      (name) => (folio) => (arrive) => (room) => (cert) => (amount) => ({
+        name,
+        folio,
+        arrive,
+        room,
+        cert,
+        amount,
+      }),
+      mbv.skipLeft(confo).skipLeft(name),
+      folio,
+      arrive,
+      depart.skipLeft(room),
+      P.string(" ").skipLeft(cert),
+      P.string("    D").skipLeft(nights).skipLeft(amount)
+    );
   </script>
 </html>
