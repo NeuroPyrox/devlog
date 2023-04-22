@@ -57,11 +57,18 @@
       twoDigitNumber,
       month,
       twoDigitNumber
-    ).filter(
-      ({ day, month, year }) =>
-        day <= maxDaysPerMonth[month - 1] &&
-        (month !== 4 || day !== 29 || (year % 4 === 0 && year !== 0))
-    );
+    )
+      .filter(
+        ({ day, month, year }) =>
+          day <= maxDaysPerMonth[month - 1] &&
+          (month !== 4 || day !== 29 || (year % 4 === 0 && year !== 0))
+      )
+      .map(({ day, month, year }) => {
+        [day, month, year] = [day, month, year].map((x) =>
+          x.toString().padStart(2, "0")
+        );
+        return `${month}.${day}.${year}`;
+      });
 
     const integer = P.regex(/\d+/y).map(parseInt);
 
@@ -108,14 +115,8 @@
       .skipRight(P.string(".00"));
 
     const rRow = P.apply(
-      (name) => (folio) => (arrive) => (room) => (cert) => (amount) => ({
-        name,
-        folio,
-        arrive,
-        room,
-        cert,
-        amount,
-      }),
+      (name) => (folio) => (arrive) => (room) => (cert) => (amount) =>
+        `${name}\t${arrive}\t${folio}\t${cert}\t${room}\t${amount}`,
       mbv.skipLeft(confo).skipLeft(name),
       folio,
       arrive,
@@ -142,10 +143,9 @@
 
     const [textAreaFrom, textAreaTo] =
       document.getElementsByTagName("textarea");
-    textAreaFrom.addEventListener("input", (x) => {
-      const result = rRow.parseWhole(x.target.value).unwrap();
-      console.log(result);
-      textAreaTo.value = `${result}`;
-    });
+    textAreaFrom.addEventListener(
+      "input",
+      (x) => (textAreaTo.value = rRow.parseWhole(x.target.value).unwrap())
+    );
   </script>
 </html>
