@@ -91,12 +91,23 @@ export const regex = (r) => {
 export const inParentheses = (p) =>
   string("(").skipLeft(p).skipRight(string(")"));
 
-export const many = (p) => many1(p).or(constant([]));
+export const many = (p) =>
+  parser((str, index) => {
+    const result = [];
+    while (true) {
+      const current = p.parse(str, index).unwrap();
+      if (current === nothing) {
+        return result;
+      }
+      result.push(current[0]);
+      index = current[1];
+    }
+  });
+
+export const many1 = (p) =>
+  p.map((head) => (tail) => [head, ...tail]).apply(many(p));
 
 // TODO make non-recursive
-export const many1 = (p) =>
-  p.map((head) => (tail) => [head, ...tail]).apply(lazy(() => many(p)));
-
 export const repeat = (p, count) =>
   count <= 0
     ? constant([])
