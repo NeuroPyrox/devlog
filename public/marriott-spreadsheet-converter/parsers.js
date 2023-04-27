@@ -97,23 +97,30 @@ export const many = (p) =>
     while (true) {
       const current = p.parse(str, index).unwrap();
       if (current === nothing) {
-        return result;
+        return just([result, index]);
       }
       result.push(current[0]);
       index = current[1];
     }
   });
 
+// TODO push end instead of beginning
 export const many1 = (p) =>
   p.map((head) => (tail) => [head, ...tail]).apply(many(p));
 
-// TODO make non-recursive
-export const repeat = (p, count) =>
-  count <= 0
-    ? constant([])
-    : p
-        .map((head) => (tail) => [head, ...tail])
-        .apply(lazy(() => repeat(p, count - 1)));
+export const repeat = (p, count) => 
+  parser((str, index) => {
+    const result = [];
+    while (result.length < count) {
+      const current = p.parse(str, index).unwrap();
+      if (current === nothing) {
+        return nothing;
+      }
+      result.push(current[0]);
+      index = current[1];
+    }
+    return just([result, index]);
+  });
 
 export const spaces1 = many1(charClass((char) => char === " "));
 
