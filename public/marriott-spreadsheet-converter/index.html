@@ -89,11 +89,9 @@
       (segment) =>
         segment.charAt(0).toUpperCase() + segment.slice(1).toLowerCase()
     );
-    const innerName = P.apply(
-      (head) => (tail) => [head, ...tail].reverse().join(" "),
-      nameSegment,
-      P.many(P.string("/").skipLeft(nameSegment))
-    ).skipRight(spaces);
+    const innerName = P.separated(nameSegment, P.string("/"))
+      .map((segments) => segments.reverse().join(" "))
+      .skipRight(spaces);
     const name = P.string("  ")
       .skipLeft(P.regex(/[A-Z/ ]{26} /y))
       .nest(innerName);
@@ -146,13 +144,11 @@
     const begin = P.regex(/ {0,4}/y);
     const end = P.regex(/ {0,17}/y);
 
-    // TODO make [join] combinator
+    // TODO validation
     const row = rRow.or(dRow);
-    const sheet = P.apply(
-      (head) => (tail) => [head, ...tail].join("\n"),
-      begin.skipLeft(row),
-      P.many1(separator.skipLeft(row)).skipRight(end)
-    );
+    const sheet = begin
+      .skipLeft(P.separated(row, separator).map((rows) => rows.join("\n")))
+      .skipRight(end);
 
     const [textAreaFrom, textAreaTo] =
       document.getElementsByTagName("textarea");

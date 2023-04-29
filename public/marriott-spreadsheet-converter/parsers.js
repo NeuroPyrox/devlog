@@ -108,7 +108,7 @@ export const many = (p) =>
 export const many1 = (p) =>
   p.map((head) => (tail) => [head, ...tail]).apply(many(p));
 
-export const repeat = (p, count) => 
+export const repeat = (p, count) =>
   parser((str, index) => {
     const result = [];
     while (result.length < count) {
@@ -135,3 +135,11 @@ export const untilChar = (endChar) =>
 
 export const apply = (f, ...args) =>
   args.reduce((result, arg) => result.apply(arg), constant(f));
+
+export const separated = (p, separator) =>
+  many(p.skipRight(separator))
+    .map((start) => (last) => {
+      start.push(last);
+      return start;
+    })
+    .apply(p);
