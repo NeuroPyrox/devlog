@@ -108,7 +108,9 @@
           (200 <= i && i <= 426 && 0 <= i % 100 && i % 100 <= 26)
       );
 
-    const cert = P.string("   ").skipLeft(P.regex(/\d{8}/y));
+    const cert = P.regex(/   \d{8} /y)
+      .map((x) => [x.slice(3, 11), "R"])
+      .or(P.regex(/    \d{8}/y).map((x) => [x.slice(3, 11), "D"]));
 
     const nights = P.regex(/ [0-9 ]{6}/y).nest(spaces.skipLeft(integer));
 
@@ -117,18 +119,27 @@
       .skipRight(P.string(".00"));
 
     const rRow = P.apply(
-      (name) => (folio) => (arrive) => (room) => (cert) => (amount) =>
-        `${name}\t${arrive}\t${folio}\t${cert}\t${room}\t${amount}`,
+      (name) =>
+        (folio) =>
+        (arrive) =>
+        (room) =>
+        ([cert]) =>
+        (amount) =>
+          `${name}\t${arrive}\t${folio}\t${cert}\t${room}\t${amount}`,
       mbv.skipLeft(confo).skipLeft(name),
       folio,
       arrive,
       depart.skipLeft(room),
       cert,
-      P.string("     R").skipLeft(nights).skipLeft(amount)
+      P.string("    R").skipLeft(nights).skipLeft(amount)
     );
     const dRow = P.apply(
-      (name) => (folio) => (arrive) => (room) => (cert) =>
-        `${name}\t${arrive}\t${folio}\t${cert}\t${room}\t0`,
+      (name) =>
+        (folio) =>
+        (arrive) =>
+        (room) =>
+        ([cert]) =>
+          `${name}\t${arrive}\t${folio}\t${cert}\t${room}\t0`,
       mbv.skipLeft(confo).skipLeft(name),
       folio,
       arrive,
@@ -136,6 +147,22 @@
       P.string(" ")
         .skipLeft(cert)
         .skipRight(P.regex(/    D {15}.00/y))
+    );
+    // TODO
+    const newRow = P.apply(
+      (name) =>
+        (folio) =>
+        (arrive) =>
+        (room) =>
+        ([cert]) =>
+        (amount) =>
+          `${name}\t${arrive}\t${folio}\t${cert}\t${room}\t${amount}`,
+      mbv.skipLeft(confo).skipLeft(name),
+      folio,
+      arrive,
+      depart.skipLeft(room),
+      cert,
+      P.string("    R").skipLeft(nights).skipLeft(amount)
     );
 
     const separator = P.regex(/ {21}/y);
