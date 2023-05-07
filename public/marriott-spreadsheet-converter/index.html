@@ -66,7 +66,7 @@
       .filter(
         ({ day, month, year }) =>
           day <= maxDaysPerMonth[month - 1] &&
-          (month !== 4 || day !== 29 || (year % 4 === 0 && year !== 0))
+          (month !== 2 || day !== 29 || (year % 4 === 0 && year !== 0))
       )
       .map(({ day, month, year }) => {
         [day, month, year] = [day, month, year].map((x) =>
