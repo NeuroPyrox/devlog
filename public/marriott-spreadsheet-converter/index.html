@@ -112,6 +112,8 @@
       .map((x) => [x.slice(3, 11), "R"])
       .or(P.regex(/    \d{8}/y).map((x) => [x.slice(3, 11), "D"]));
 
+    const type = P.regex(/    [RD]/y).map((x) => x[4]);
+
     const nights = P.regex(/ [0-9 ]{6}/y).nest(spaces.skipLeft(integer));
 
     const amount = P.regex(/ [0-9 ]{7}/y)
@@ -124,6 +126,7 @@
         (arrive) =>
         (room) =>
         ([cert]) =>
+        (type) =>
         (amount) =>
           `${name}\t${arrive}\t${folio}\t${cert}\t${room}\t${amount}`,
       mbv.skipLeft(confo).skipLeft(name),
@@ -131,7 +134,8 @@
       arrive,
       depart.skipLeft(room),
       cert,
-      P.string("    R").skipLeft(nights).skipLeft(amount)
+      type,
+      nights.skipLeft(amount)
     );
     const dRow = P.apply(
       (name) =>
@@ -139,14 +143,16 @@
         (arrive) =>
         (room) =>
         ([cert]) =>
-          `${name}\t${arrive}\t${folio}\t${cert}\t${room}\t0`,
+        (type) =>
+        (amount) =>
+          `${name}\t${arrive}\t${folio}\t${cert}\t${room}\t${amount}`,
       mbv.skipLeft(confo).skipLeft(name),
       folio,
       arrive,
       depart.skipLeft(room),
-      P.string(" ")
-        .skipLeft(cert)
-        .skipRight(P.regex(/    D {15}.00/y))
+      cert,
+      type,
+      P.regex(/ {15}.00/y).map(() => 0)
     );
     // TODO
     const newRow = P.apply(
@@ -155,6 +161,7 @@
         (arrive) =>
         (room) =>
         ([cert]) =>
+        (type) =>
         (amount) =>
           `${name}\t${arrive}\t${folio}\t${cert}\t${room}\t${amount}`,
       mbv.skipLeft(confo).skipLeft(name),
@@ -162,7 +169,8 @@
       arrive,
       depart.skipLeft(room),
       cert,
-      P.string("    R").skipLeft(nights).skipLeft(amount)
+      type,
+      nights.skipLeft(amount).or(P.regex(/ {15}.00/y).map(() => 0))
     );
 
     const separator = P.regex(/ {21}/y);
