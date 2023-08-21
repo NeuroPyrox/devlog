@@ -110,7 +110,7 @@
 
     const cert = P.regex(/   \d{8} /y)
       .map((x) => [x.slice(3, 11), "R"])
-      .or(P.regex(/    \d{8}/y).map((x) => [x.slice(3, 11), "D"]));
+      .or(P.regex(/    \d{8}/y).map((x) => [x.slice(4, 12), "D"]));
 
     const type = P.regex(/    [RD]/y).map((x) => x[4]);
 
