@@ -15,7 +15,7 @@
   (htmlBuilder /homepage-v2                 .js)
   (htmlBuilder /homepage-v1                 .js)
   (router      /browserconfig.xml           .js)
-  (router      /login-v5                       /index.js)
+  (router      /chores-v0                      /index.js)
   (router      /login-v4                       /index.js)
   (router      /marriott-spreadsheet-converter /index.js)
   (router      /cookie-counter                 .js)
