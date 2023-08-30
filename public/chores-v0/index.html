@@ -14,10 +14,8 @@
     <meta name="theme-color" content="#006600" />
   </head>
   <body>
-    <input type="text">
-    <button>
-      Login
-    </button>
+    Username:<input type="text" />Password:<input type="text" />
+    <button>Login</button>
     <table>
       <tr>
         <th>Username</th>
@@ -67,4 +65,64 @@
     </table>
     Bounty for supervising the supervisor: 6
   </body>
+  <script type="module">
+    import * as html from "./html.js";
+
+    function* main() {
+      yield "Username:";
+      yield html.textInput();
+      yield "Password:";
+      yield html.textInput();
+      yield html.button("Login");
+      yield html.table(function*() {
+        yield html.tr(function*() {
+          yield html.th("Username");
+          yield html.th("Password");
+          yield html.th("Points");
+        });
+        yield html.tr(function*() {
+          yield html.td("Alice");
+          yield html.td("123");
+          yield html.td("1");
+        });
+        yield html.tr(function*() {
+          yield html.td("Bob");
+          yield html.td("456");
+          yield html.td("2");
+        });
+      });
+      yield html.table(function*() {
+        yield html.tr(function*() {
+          yield html.th("Chore");
+          yield html.th("Reward");
+          yield html.th("Stake");
+          yield html.th("Assigned");
+          yield html.th("Done");
+        });
+        yield html.tr(function*() {
+          yield html.td("Dishes");
+          yield html.td("1");
+          yield html.td("2");
+          yield html.td("Alice");
+          yield html.td("no");
+        });
+        yield html.tr(function*() {
+          yield html.td("Take devices");
+          yield html.td("3");
+          yield html.td("4");
+          yield html.td("Bob");
+          yield html.td("no");
+        });
+        yield html.tr(function*() {
+          yield html.td("Supervise");
+          yield html.td("4");
+          yield html.td("5");
+          yield html.td("Alice");
+          yield html.td("yes");
+        });
+      });
+    }
+
+    html.start(document.body, main);
+  </script>
 </html>
