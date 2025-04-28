@@ -6,7 +6,9 @@
     "node": "16.x.x"
   },
   "dependencies": {
-    "sqlite3": "^5.0.1"
+    "@tailwindcss/cli": "^4.1.4",
+    "sqlite3": "^5.1.7",
+    "tailwindcss": "^4.1.4"
   },
   "type": "module"
 }
