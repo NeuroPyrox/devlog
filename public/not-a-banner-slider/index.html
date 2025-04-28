@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Not a Banner Slider</title>
+    <meta charset="utf8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link href="./not-a-banner-slider/index.css" rel="stylesheet"/>
+  </head>
+  <body>
+    <p>Work in progress</p>
+    <p>TODO use Tailwind and React</p>
+    <p>
+      I call this "not a banner slider" because someone on Upwork was asking for
+      someone to create a banner slider for them, but the reference work they
+      gave me (they wanted it to be like the ones on
+      <a href="eneba.com">eneba.com</a>) didn't have anything I would call a
+      "banner slider", so this is my best guess as to what they meant. This
+      person didn't end up hiring me, but I decided to complete the task anyways
+      as practice.
+    </p>
+    <div id="container1">
+      <div id="container2">
+        <div class="scroll-button" id="left-scroll-button">&lt</div>
+        <div class="item"></div>
+        <div class="item"></div>
+        <div class="item"></div>
+        <div class="item"></div>
+        <div class="item"></div>
+        <div class="item"></div>
+        <div class="item"></div>
+        <div class="item"></div>
+        <div class="item"></div>
+        <div class="item"></div>
+        <div class="item"></div>
+        <div class="item"></div>
+        <div class="scroll-button" id="right-scroll-button">&gt</div>
+      </div>
+    </div>
+  </body>
+  <script>
+    for (const item of document.getElementsByClassName("item")) {
+      item.style.backgroundColor = `hsl(${Math.floor(Math.random() * 360)},50%,50%)`;
+    }
+    const container2 = document.getElementById("container2");
+    document
+      .getElementById("left-scroll-button")
+      .addEventListener("click", () =>
+        container2.scrollBy(-container2.offsetWidth, 0)
+      );
+    document
+      .getElementById("right-scroll-button")
+      .addEventListener("click", () =>
+        container2.scrollBy(container2.offsetWidth, 0)
+      );
+  </script>
+</html>

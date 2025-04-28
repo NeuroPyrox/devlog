@@ -1,0 +1,48 @@
+
+#container1 {
+  max-width: 1200px;
+  margin: auto;
+  position: relative;
+}
+
+#container2 {
+  display: flex;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+}
+
+.item {
+  background-color: grey;
+  width: 200px;
+  height: 300px;
+  margin: 10px;
+  flex-shrink: 0;
+}
+
+.scroll-button {
+  background-color: white;
+  opacity: 0.5;
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+  position: absolute;
+  align-self: center;
+  text-align: center;
+  line-height: 80px;
+  font-size: xx-large;
+  display: none;
+  user-select: none;
+  cursor: pointer;
+}
+
+.scroll-button:hover {
+  opacity: 1;
+}
+
+#container2:hover > .scroll-button {
+  display: inline;
+}
+
+#right-scroll-button {
+  right: 0;
+}

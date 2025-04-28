@@ -25,4 +25,5 @@ export default P.end
     });
     res.end();
   })
-  .or(P.endIn("/").map(() => htmlHandler(`${__dirname}/index.html`)));
+  .or(P.endIn("/").map(() => htmlHandler(`${__dirname}/index.html`)))
+  .or(moduleHandler("html"));
